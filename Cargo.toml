@@ -8,6 +8,7 @@ license = "MIT"
 repository = "https://git.sr.ht/~danprobst/qloxide"
 keywords = ["finance", "quantitative", "pricing", "instruments", "trading"]
 categories = ["finance"]
+readme = "README.md"
 
 [dependencies]
 thiserror = "2"
