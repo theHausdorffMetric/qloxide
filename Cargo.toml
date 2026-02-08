@@ -2,6 +2,12 @@
 name = "qloxide"
 version = "0.1.0"
 edition = "2024"
+authors = ["Daniel Probst <dan@probst.dev>"]
+description = "Financial instrument modeling, trade management, and pricing"
+license = "MIT"
+repository = "https://git.sr.ht/~danprobst/qloxide"
+keywords = ["finance", "quantitative", "pricing", "instruments", "trading"]
+categories = ["finance"]
 
 [dependencies]
 thiserror = "2"
