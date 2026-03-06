@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::dates::Date;
@@ -10,7 +11,7 @@ use crate::reference_data::Currency;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CashFlow {
     /// Cash amount (positive = receive, negative = pay).
-    pub amount: f64,
+    pub amount: Decimal,
     /// Currency of the cash flow.
     pub currency: Arc<Currency>,
     /// Payment date.
@@ -18,7 +19,7 @@ pub struct CashFlow {
 }
 
 impl CashFlow {
-    pub fn new(amount: f64, currency: Arc<Currency>, pay_date: Date) -> CashFlow {
+    pub fn new(amount: Decimal, currency: Arc<Currency>, pay_date: Date) -> CashFlow {
         CashFlow {
             amount,
             currency,
@@ -146,15 +147,15 @@ mod tests {
 
     #[test]
     fn cashflow_construction() {
-        let cf = CashFlow::new(1_000_000.0, usd(), Date::new(2025, 12, 15));
-        assert_eq!(cf.amount, 1_000_000.0);
+        let cf = CashFlow::new(Decimal::from(1_000_000), usd(), Date::new(2025, 12, 15));
+        assert_eq!(cf.amount, Decimal::from(1_000_000));
         assert_eq!(cf.currency.id, "USD");
         assert_eq!(cf.pay_date, Date::new(2025, 12, 15));
     }
 
     #[test]
     fn cashflow_serde_roundtrip() {
-        let cf = CashFlow::new(50_000.0, usd(), Date::new(2025, 6, 15));
+        let cf = CashFlow::new(Decimal::from(50_000), usd(), Date::new(2025, 6, 15));
         let json = serde_json::to_string(&cf).unwrap();
         let cf2: CashFlow = serde_json::from_str(&json).unwrap();
         assert_eq!(cf.amount, cf2.amount);

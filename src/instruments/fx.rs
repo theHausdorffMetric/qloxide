@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::dates::Date;
@@ -17,9 +18,9 @@ pub struct FxForward {
     pub quote_currency: Arc<Currency>,
     pub settlement: Settlement,
     /// Amount of base currency.
-    pub base_amount: f64,
+    pub base_amount: Decimal,
     /// Amount of quote currency (negative = we pay).
-    pub quote_amount: f64,
+    pub quote_amount: Decimal,
     /// Delivery date.
     pub delivery_date: Date,
 }
@@ -31,8 +32,8 @@ impl FxForward {
         base_currency: Arc<Currency>,
         quote_currency: Arc<Currency>,
         settlement: Settlement,
-        base_amount: f64,
-        quote_amount: f64,
+        base_amount: Decimal,
+        quote_amount: Decimal,
         delivery_date: Date,
     ) -> FxForward {
         FxForward {
@@ -48,7 +49,7 @@ impl FxForward {
     }
 
     /// Implied forward rate: quote_amount / base_amount.
-    pub fn forward_rate(&self) -> f64 {
+    pub fn forward_rate(&self) -> Decimal {
         self.quote_amount / self.base_amount
     }
 }
@@ -74,5 +75,9 @@ impl FinancialInstrument for FxForward {
 
     fn instrument_type(&self) -> &str {
         "FxForward"
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }

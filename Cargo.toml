@@ -16,3 +16,4 @@ serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1"
 jiff = { version = "0.2", features = ["serde"] }
 typetag = "0.2"
+rust_decimal = { version = "1", features = ["serde-with-str"] }

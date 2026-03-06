@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::dates::Date;
@@ -14,8 +15,8 @@ pub struct Future {
     pub currency: Arc<Currency>,
     pub settlement: Settlement,
     pub expiry: Date,
-    pub contract_size: f64,
-    pub tick_size: f64,
+    pub contract_size: Decimal,
+    pub tick_size: Decimal,
 }
 
 impl Future {
@@ -25,8 +26,8 @@ impl Future {
         currency: Arc<Currency>,
         settlement: Settlement,
         expiry: Date,
-        contract_size: f64,
-        tick_size: f64,
+        contract_size: Decimal,
+        tick_size: Decimal,
     ) -> Future {
         Future {
             id: id.to_string(),
@@ -60,5 +61,9 @@ impl FinancialInstrument for Future {
 
     fn instrument_type(&self) -> &str {
         "Future"
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }

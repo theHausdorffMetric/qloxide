@@ -52,4 +52,8 @@ impl FinancialInstrument for Equity {
     fn instrument_type(&self) -> &str {
         "Equity"
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }

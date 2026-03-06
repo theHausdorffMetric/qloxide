@@ -87,6 +87,9 @@ pub trait FinancialInstrument: Send + Sync + std::fmt::Debug {
 
     /// Human-readable instrument type name.
     fn instrument_type(&self) -> &str;
+
+    /// Downcast support.
+    fn as_any(&self) -> &dyn std::any::Any;
 }
 
 // Re-export instrument types for convenience

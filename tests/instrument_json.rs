@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use qloxide::Decimal;
 use qloxide::dates::Date;
 use qloxide::dates::daycount::DayCount;
 use qloxide::dates::rules::DateRule;
@@ -47,8 +48,8 @@ fn future_serde_roundtrip() {
         usd(),
         ice_settle(),
         Date::new(2025, 6, 14),
-        1000.0,
-        0.01,
+        Decimal::from(1000),
+        Decimal::new(1, 2),
     );
     let inst: Arc<dyn FinancialInstrument> = Arc::new(future);
 
@@ -71,7 +72,7 @@ fn option_serde_roundtrip() {
         usd(),
         Settlement::otc(),
         Date::new(2025, 6, 20),
-        190.0,
+        Decimal::from(190),
         PutOrCall::Call,
         OptionSettlement::Cash,
         Date::new(2025, 6, 22),
@@ -90,19 +91,19 @@ fn option_serde_roundtrip() {
 fn option_intrinsic_value() {
     let call = EuropeanOption::new(
         "C", "UND", "CR", usd(), Settlement::otc(),
-        Date::new(2025, 6, 20), 100.0, PutOrCall::Call,
+        Date::new(2025, 6, 20), Decimal::from(100), PutOrCall::Call,
         OptionSettlement::Cash, Date::new(2025, 6, 22),
     );
-    assert_eq!(call.intrinsic(110.0), 10.0);
-    assert_eq!(call.intrinsic(90.0), 0.0);
+    assert_eq!(call.intrinsic(Decimal::from(110)), Decimal::from(10));
+    assert_eq!(call.intrinsic(Decimal::from(90)), Decimal::ZERO);
 
     let put = EuropeanOption::new(
         "P", "UND", "CR", usd(), Settlement::otc(),
-        Date::new(2025, 6, 20), 100.0, PutOrCall::Put,
+        Date::new(2025, 6, 20), Decimal::from(100), PutOrCall::Put,
         OptionSettlement::Cash, Date::new(2025, 6, 22),
     );
-    assert_eq!(put.intrinsic(90.0), 10.0);
-    assert_eq!(put.intrinsic(110.0), 0.0);
+    assert_eq!(put.intrinsic(Decimal::from(90)), Decimal::from(10));
+    assert_eq!(put.intrinsic(Decimal::from(110)), Decimal::ZERO);
 }
 
 // ── Bond ─────────────────────────────────────────────────────────────
@@ -116,8 +117,8 @@ fn bond_serde_roundtrip() {
         Settlement::otc(),
         Date::new(2025, 1, 15),
         Date::new(2030, 1, 15),
-        1_000_000.0,
-        0.045,
+        Decimal::from(1_000_000),
+        Decimal::new(45, 3), // 0.045
         DayCount::Thirty360,
         2,
     );
@@ -131,7 +132,7 @@ fn bond_serde_roundtrip() {
     assert_eq!(deserialized.maturity(), Some(Date::new(2030, 1, 15)));
 
     // Coupon amount: 1M * 4.5% / 2 = 22500
-    assert_eq!(bond.coupon_amount(), 22_500.0);
+    assert_eq!(bond.coupon_amount(), Decimal::from(22_500));
 }
 
 // ── Swap ─────────────────────────────────────────────────────────────
@@ -144,8 +145,8 @@ fn swap_serde_roundtrip() {
         usd(),
         Settlement::otc(),
         FixedLeg {
-            notional: 10_000_000.0,
-            rate: 0.035,
+            notional: Decimal::from(10_000_000),
+            rate: Decimal::new(35, 3), // 0.035
             day_count: DayCount::Thirty360,
             frequency: Frequency::SemiAnnual,
             start_date: Date::new(2025, 1, 15),
@@ -153,9 +154,9 @@ fn swap_serde_roundtrip() {
             direction: PayReceive::Pay,
         },
         FloatingLeg {
-            notional: 10_000_000.0,
+            notional: Decimal::from(10_000_000),
             rate_index_id: "USD-SOFR-3M".to_string(),
-            spread: 0.001,
+            spread: Decimal::new(1, 3), // 0.001
             day_count: DayCount::Act360,
             frequency: Frequency::Quarterly,
             start_date: Date::new(2025, 1, 15),
@@ -187,8 +188,8 @@ fn fx_forward_serde_roundtrip() {
         gbp(),
         usd(),
         Settlement::otc(),
-        1_000_000.0,
-        -1_260_000.0,
+        Decimal::from(1_000_000),
+        Decimal::from(-1_260_000),
         Date::new(2025, 12, 15),
     );
 
@@ -199,7 +200,7 @@ fn fx_forward_serde_roundtrip() {
     let deserialized: Arc<dyn FinancialInstrument> = serde_json::from_str(&json).unwrap();
     assert_eq!(deserialized.id(), "GBPUSD-6M");
 
-    assert!((fx.forward_rate() - (-1.26)).abs() < 1e-10);
+    assert_eq!(fx.forward_rate(), Decimal::new(-126, 2)); // -1.26
 }
 
 // ── Basket ───────────────────────────────────────────────────────────
@@ -209,7 +210,7 @@ fn basket_serde_roundtrip() {
     let equity = Arc::new(Equity::new("AAPL", "APPLE", usd(), Settlement::otc()));
     let option = Arc::new(EuropeanOption::new(
         "AAPL-C-190", "AAPL", "OCC", usd(), Settlement::otc(),
-        Date::new(2025, 6, 20), 190.0, PutOrCall::Call,
+        Date::new(2025, 6, 20), Decimal::from(190), PutOrCall::Call,
         OptionSettlement::Cash, Date::new(2025, 6, 22),
     ));
 
@@ -219,8 +220,8 @@ fn basket_serde_roundtrip() {
         usd(),
         Settlement::otc(),
         vec![
-            (0.7, equity as Arc<dyn FinancialInstrument>),
-            (0.3, option as Arc<dyn FinancialInstrument>),
+            (Decimal::new(7, 1), equity as Arc<dyn FinancialInstrument>),
+            (Decimal::new(3, 1), option as Arc<dyn FinancialInstrument>),
         ],
     );
 
@@ -250,17 +251,17 @@ fn nested_basket_serde_roundtrip() {
 
     let inner_basket = Arc::new(Basket::new(
         "INNER", "FUND", usd(), Settlement::otc(),
-        vec![(0.5, eq1), (0.5, eq2)],
+        vec![(Decimal::new(5, 1), eq1), (Decimal::new(5, 1), eq2)],
     )) as Arc<dyn FinancialInstrument>;
 
     let future = Arc::new(Future::new(
         "ES-Jun25", "SP500", usd(), Settlement::otc(),
-        Date::new(2025, 6, 20), 50.0, 0.25,
+        Date::new(2025, 6, 20), Decimal::from(50), Decimal::new(25, 2),
     )) as Arc<dyn FinancialInstrument>;
 
     let outer_basket = Basket::new(
         "OUTER", "FUND", usd(), Settlement::otc(),
-        vec![(0.8, inner_basket), (0.2, future)],
+        vec![(Decimal::new(8, 1), inner_basket), (Decimal::new(2, 1), future)],
     );
 
     let inst: Arc<dyn FinancialInstrument> = Arc::new(outer_basket);
@@ -292,8 +293,8 @@ fn deserialize_future_from_json() {
             "timezone": "Europe/London"
         },
         "expiry": "2025-07-14",
-        "contract_size": 1000.0,
-        "tick_size": 0.01
+        "contract_size": "1000",
+        "tick_size": "0.01"
     }
     "#;
 

@@ -1,0 +1,10 @@
+{
+    "id": "DEAL-001",
+    "instrument_id": "ICE-BRN-K26",
+    "direction": "Buy",
+    "quantity": "5",
+    "price": "71.80",
+    "timestamp": "2026-03-02T10:14:32Z",
+    "counterparty": "ICE_CLEAR",
+    "venue": "ICE"
+}

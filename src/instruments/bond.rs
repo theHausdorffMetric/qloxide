@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::dates::Date;
@@ -19,9 +20,9 @@ pub struct Bond {
     /// Maturity date.
     pub maturity_date: Date,
     /// Face/notional value.
-    pub face_value: f64,
+    pub face_value: Decimal,
     /// Annual coupon rate (e.g., 0.05 for 5%).
-    pub coupon_rate: f64,
+    pub coupon_rate: Decimal,
     /// Day count convention for coupon accrual.
     pub day_count: DayCount,
     /// Number of coupon payments per year.
@@ -36,8 +37,8 @@ impl Bond {
         settlement: Settlement,
         issue_date: Date,
         maturity_date: Date,
-        face_value: f64,
-        coupon_rate: f64,
+        face_value: Decimal,
+        coupon_rate: Decimal,
         day_count: DayCount,
         frequency: u32,
     ) -> Bond {
@@ -56,8 +57,8 @@ impl Bond {
     }
 
     /// Coupon amount per period.
-    pub fn coupon_amount(&self) -> f64 {
-        self.face_value * self.coupon_rate / self.frequency as f64
+    pub fn coupon_amount(&self) -> Decimal {
+        self.face_value * self.coupon_rate / Decimal::from(self.frequency)
     }
 }
 
@@ -81,5 +82,9 @@ impl FinancialInstrument for Bond {
 
     fn instrument_type(&self) -> &str {
         "Bond"
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }

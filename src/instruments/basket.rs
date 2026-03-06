@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::dates::Date;
@@ -16,7 +17,7 @@ pub struct Basket {
     pub currency: Arc<Currency>,
     pub settlement: Settlement,
     /// Components: (weight, instrument).
-    pub components: Vec<(f64, Arc<dyn FinancialInstrument>)>,
+    pub components: Vec<(Decimal, Arc<dyn FinancialInstrument>)>,
 }
 
 impl Basket {
@@ -25,7 +26,7 @@ impl Basket {
         credit_id: &str,
         currency: Arc<Currency>,
         settlement: Settlement,
-        components: Vec<(f64, Arc<dyn FinancialInstrument>)>,
+        components: Vec<(Decimal, Arc<dyn FinancialInstrument>)>,
     ) -> Basket {
         Basket {
             id: id.to_string(),
@@ -71,5 +72,9 @@ impl FinancialInstrument for Basket {
 
     fn instrument_type(&self) -> &str {
         "Basket"
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }

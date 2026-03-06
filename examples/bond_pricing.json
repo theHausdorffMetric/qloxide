@@ -1,0 +1,22 @@
+{
+    "type": "Bond",
+    "id": "UST-2.875-2030",
+    "credit_id": "US-GOVT",
+    "currency": {
+        "id": "USD",
+        "settlement": "Null",
+        "day_count": "Act360"
+    },
+    "settlement": {
+        "venue": "OTC",
+        "session": "CLOSE",
+        "time": "17:00",
+        "timezone": "America/New_York"
+    },
+    "issue_date": "2025-06-15",
+    "maturity_date": "2030-06-15",
+    "face_value": "100",
+    "coupon_rate": "0.02875",
+    "day_count": "Act365Fixed",
+    "frequency": 2
+}

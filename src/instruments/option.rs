@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::dates::Date;
@@ -17,7 +18,7 @@ pub struct EuropeanOption {
     pub currency: Arc<Currency>,
     pub settlement: Settlement,
     pub expiry: Date,
-    pub strike: f64,
+    pub strike: Decimal,
     pub put_or_call: PutOrCall,
     pub exercise_style: ExerciseStyle,
     pub option_settlement: OptionSettlement,
@@ -33,7 +34,7 @@ impl EuropeanOption {
         currency: Arc<Currency>,
         settlement: Settlement,
         expiry: Date,
-        strike: f64,
+        strike: Decimal,
         put_or_call: PutOrCall,
         option_settlement: OptionSettlement,
         pay_date: Date,
@@ -54,10 +55,11 @@ impl EuropeanOption {
     }
 
     /// Intrinsic value at a given spot price.
-    pub fn intrinsic(&self, spot: f64) -> f64 {
+    pub fn intrinsic(&self, spot: Decimal) -> Decimal {
+        let zero = Decimal::ZERO;
         match self.put_or_call {
-            PutOrCall::Call => (spot - self.strike).max(0.0),
-            PutOrCall::Put => (self.strike - spot).max(0.0),
+            PutOrCall::Call => (spot - self.strike).max(zero),
+            PutOrCall::Put => (self.strike - spot).max(zero),
         }
     }
 }
@@ -82,5 +84,9 @@ impl FinancialInstrument for EuropeanOption {
 
     fn instrument_type(&self) -> &str {
         "EuropeanOption"
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::dates::Date;
@@ -19,9 +20,9 @@ pub enum PayReceive {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FixedLeg {
     /// Notional principal.
-    pub notional: f64,
+    pub notional: Decimal,
     /// Fixed rate (e.g., 0.03 for 3%).
-    pub rate: f64,
+    pub rate: Decimal,
     /// Day count convention.
     pub day_count: DayCount,
     /// Payment frequency.
@@ -38,11 +39,11 @@ pub struct FixedLeg {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FloatingLeg {
     /// Notional principal.
-    pub notional: f64,
+    pub notional: Decimal,
     /// Rate index id (e.g., "USD-SOFR-3M").
     pub rate_index_id: String,
     /// Spread over the floating rate (e.g., 0.001 for 10bp).
-    pub spread: f64,
+    pub spread: Decimal,
     /// Day count convention.
     pub day_count: DayCount,
     /// Payment frequency.
@@ -124,5 +125,9 @@ impl FinancialInstrument for Swap {
 
     fn instrument_type(&self) -> &str {
         "Swap"
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }
