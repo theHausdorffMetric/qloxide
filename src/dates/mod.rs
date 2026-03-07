@@ -61,6 +61,14 @@ impl Date {
         let days = (other.0 - self.0).get_days();
         days as f64 / 365.0
     }
+
+    /// Convert to a UTC midnight Timestamp.
+    pub fn as_of_midnight(&self) -> Timestamp {
+        let dt = self.0.at(0, 0, 0, 0);
+        let zoned = dt.to_zoned(jiff::tz::TimeZone::UTC)
+            .expect("midnight UTC is always unambiguous");
+        Timestamp(zoned.timestamp())
+    }
 }
 
 impl fmt::Display for Date {
@@ -319,6 +327,13 @@ mod tests {
         assert_eq!(json, "\"2025-06-14\"");
         let d2: Date = serde_json::from_str(&json).unwrap();
         assert_eq!(d, d2);
+    }
+
+    #[test]
+    fn date_as_of_midnight() {
+        let d = Date::new(2026, 3, 7);
+        let ts = d.as_of_midnight();
+        assert_eq!(ts, Timestamp::parse("2026-03-07T00:00:00Z").unwrap());
     }
 
     #[test]

@@ -1,3 +1,5 @@
+use std::fmt;
+
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -29,6 +31,27 @@ impl Deal {
         match self.direction {
             BuySell::Buy => self.quantity,
             BuySell::Sell => -self.quantity,
+        }
+    }
+}
+
+impl fmt::Display for Deal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} {} {} x {} @ {} [{}] {} {}",
+            self.id, self.direction, self.instrument_id,
+            self.quantity, self.price, self.venue,
+            self.counterparty, self.timestamp,
+        )
+    }
+}
+
+impl fmt::Display for BuySell {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            BuySell::Buy => write!(f, "BUY"),
+            BuySell::Sell => write!(f, "SELL"),
         }
     }
 }

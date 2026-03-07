@@ -1,5 +1,6 @@
 {
     "spot_date": "2025-06-15",
+    "as_of": "2025-06-15T00:00:00Z",
     "spots": {},
     "discount_curves": {
         "USD": {

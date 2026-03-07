@@ -1,10 +1,12 @@
 pub mod bond;
+pub mod future;
 
 use crate::core;
 use crate::curves::DiscountCurve;
-use crate::dates::Date;
+use crate::dates::{Date, Timestamp};
 use crate::instruments::FinancialInstrument;
 use crate::instruments::bond::Bond;
+use crate::instruments::future::Future as FutureInst;
 use crate::market_data::MarketData;
 
 /// Market data interface for pricing.
@@ -12,7 +14,10 @@ use crate::market_data::MarketData;
 /// Provides access to spot prices, discount curves, and (later) vol surfaces.
 /// Implementations may be backed by `MarketData` directly or by a caching layer.
 pub trait PricingContext: Send + Sync {
-    fn spot_date(&self) -> Date;
+    fn as_of(&self) -> Timestamp;
+    fn spot_date(&self) -> Date {
+        self.as_of().date()
+    }
     fn discount_curve(&self, currency: &str) -> core::Result<&DiscountCurve>;
     fn spot(&self, id: &str) -> core::Result<f64>;
 }
@@ -31,6 +36,9 @@ pub fn price(
     if let Some(b) = any.downcast_ref::<Bond>() {
         return bond::price_bond(b, ctx);
     }
+    if let Some(f) = any.downcast_ref::<FutureInst>() {
+        return future::price_future(f, ctx);
+    }
 
     Err(core::Error::Pricer(format!(
         "no pricer for instrument type '{}'",
@@ -39,6 +47,10 @@ pub fn price(
 }
 
 impl PricingContext for MarketData {
+    fn as_of(&self) -> Timestamp {
+        self.as_of()
+    }
+
     fn spot_date(&self) -> Date {
         self.spot_date()
     }
@@ -83,6 +95,9 @@ mod tests {
     }
 
     impl PricingContext for EmptyContext {
+        fn as_of(&self) -> crate::dates::Timestamp {
+            self.spot_date.as_of_midnight()
+        }
         fn spot_date(&self) -> Date {
             self.spot_date
         }

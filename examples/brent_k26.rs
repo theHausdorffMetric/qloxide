@@ -4,6 +4,8 @@ use std::sync::Arc;
 use qloxide::Decimal;
 use qloxide::instruments::FinancialInstrument;
 use qloxide::instruments::future::Future;
+use qloxide::market_data::MarketData;
+use qloxide::pricing;
 use qloxide::trades::Deal;
 
 fn main() {
@@ -37,21 +39,31 @@ fn main() {
         std::process::exit(1);
     });
 
+    // Load market data
+    let market_path = std::env::args()
+        .nth(3)
+        .unwrap_or_else(|| "examples/brent_k26_market.json".to_string());
+    let market_json = std::fs::read_to_string(&market_path).unwrap_or_else(|e| {
+        eprintln!("Failed to read {market_path}: {e}");
+        std::process::exit(1);
+    });
+    let market: MarketData = serde_json::from_str(&market_json).unwrap_or_else(|e| {
+        eprintln!("Failed to parse market data: {e}");
+        std::process::exit(1);
+    });
+
     // Resolve instrument
     let inst = registry.get(&deal.instrument_id).unwrap_or_else(|| {
         eprintln!("Unknown instrument: {}", deal.instrument_id);
         std::process::exit(1);
     });
 
-    // Get mark price from CLI or default
-    let mark_price: Decimal = std::env::args()
-        .nth(3)
-        .unwrap_or_else(|| "72.45".to_string())
-        .parse()
-        .unwrap_or_else(|e| {
-            eprintln!("Invalid mark price: {e}");
-            std::process::exit(1);
-        });
+    // Price via pricing module
+    let mark_price = pricing::price(inst.as_ref(), &market).unwrap_or_else(|e| {
+        eprintln!("Pricing failed: {e}");
+        std::process::exit(1);
+    });
+    let mark_price = Decimal::try_from(mark_price).unwrap();
 
     // Downcast to Future to get contract_size
     let future: &Future = inst
@@ -67,12 +79,7 @@ fn main() {
     let pnl = deal.signed_quantity() * (mark_price - deal.price) * future.contract_size;
 
     println!("=== Deal ===");
-    println!("ID:           {}", deal.id);
-    println!("Instrument:   {}", deal.instrument_id);
-    println!("Direction:    {:?}", deal.direction);
-    println!("Quantity:     {} lots", deal.quantity);
-    println!("Trade price:  ${}/bbl", deal.price);
-    println!("Timestamp:    {}", deal.timestamp);
+    println!("{deal}");
     println!();
     println!("=== Instrument ===");
     println!("ID:           {}", future.id);
@@ -80,7 +87,10 @@ fn main() {
     println!("Contract:     {} bbl", future.contract_size);
     println!("Expiry:       {}", future.expiry);
     println!();
-    println!("=== Mark-to-Market ===");
+    println!("=== Market Data ===");
+    println!("Spot date:    {}", market.spot_date());
     println!("Mark price:   ${}/bbl", mark_price);
+    println!();
+    println!("=== Mark-to-Market ===");
     println!("P&L:          ${}", pnl);
 }

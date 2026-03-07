@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::core;
 use crate::curves::DiscountCurve;
-use crate::dates::Date;
+use crate::dates::{Date, Timestamp};
 
 /// Container for market data: spot prices, discount curves, and (later)
 /// forward curves, vol surfaces, fixings.
@@ -14,14 +14,16 @@ use crate::dates::Date;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MarketData {
     spot_date: Date,
+    as_of: Timestamp,
     spots: HashMap<String, f64>,
     discount_curves: HashMap<String, DiscountCurve>,
 }
 
 impl MarketData {
-    pub fn new(spot_date: Date) -> MarketData {
+    pub fn new(spot_date: Date, as_of: Timestamp) -> MarketData {
         MarketData {
             spot_date,
+            as_of,
             spots: HashMap::new(),
             discount_curves: HashMap::new(),
         }
@@ -29,6 +31,10 @@ impl MarketData {
 
     pub fn spot_date(&self) -> Date {
         self.spot_date
+    }
+
+    pub fn as_of(&self) -> Timestamp {
+        self.as_of
     }
 
     /// Add a spot price for an instrument.
@@ -62,23 +68,27 @@ mod tests {
     use super::*;
     use crate::dates::daycount::DayCount;
 
+    fn md(date: Date) -> MarketData {
+        MarketData::new(date, date.as_of_midnight())
+    }
+
     #[test]
     fn add_and_retrieve_spot() {
-        let mut md = MarketData::new(Date::new(2025, 6, 1));
+        let mut md = md(Date::new(2025, 6, 1));
         md.add_spot("ICE-BRN-Aug25", 72.50);
         assert!((md.spot("ICE-BRN-Aug25").unwrap() - 72.50).abs() < 1e-12);
     }
 
     #[test]
     fn missing_spot_errors() {
-        let md = MarketData::new(Date::new(2025, 6, 1));
+        let md = md(Date::new(2025, 6, 1));
         assert!(md.spot("MISSING").is_err());
     }
 
     #[test]
     fn add_and_retrieve_discount_curve() {
         let base = Date::new(2025, 1, 1);
-        let mut md = MarketData::new(base);
+        let mut md = md(base);
         let curve = DiscountCurve::flat(base, DayCount::Act365Fixed, 0.05);
         md.add_discount_curve("USD", curve);
 
@@ -90,14 +100,14 @@ mod tests {
 
     #[test]
     fn missing_curve_errors() {
-        let md = MarketData::new(Date::new(2025, 6, 1));
+        let md = md(Date::new(2025, 6, 1));
         assert!(md.discount_curve("EUR").is_err());
     }
 
     #[test]
     fn multiple_currencies() {
         let base = Date::new(2025, 1, 1);
-        let mut md = MarketData::new(base);
+        let mut md = md(base);
         md.add_discount_curve("USD", DiscountCurve::flat(base, DayCount::Act365Fixed, 0.05));
         md.add_discount_curve("EUR", DiscountCurve::flat(base, DayCount::Act365Fixed, 0.03));
 

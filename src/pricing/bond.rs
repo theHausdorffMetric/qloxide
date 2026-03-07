@@ -101,6 +101,9 @@ mod tests {
     }
 
     impl PricingContext for TestContext {
+        fn as_of(&self) -> crate::dates::Timestamp {
+            self.spot_date.as_of_midnight()
+        }
         fn spot_date(&self) -> Date {
             self.spot_date
         }

@@ -8,7 +8,8 @@ pub mod basket;
 
 use serde::{Deserialize, Serialize};
 
-use crate::dates::Date;
+use crate::core;
+use crate::dates::{Date, Zoned};
 use crate::reference_data::Currency;
 
 /// Settlement conventions for a financial instrument.
@@ -32,6 +33,34 @@ impl Settlement {
             time: time.to_string(),
             timezone: timezone.to_string(),
         }
+    }
+
+    /// Combine this settlement's time and timezone with a calendar date to
+    /// produce a `Zoned` datetime representing the settlement instant.
+    pub fn at_date(&self, date: Date) -> core::Result<Zoned> {
+        let parts: Vec<&str> = self.time.split(':').collect();
+        if parts.len() != 2 {
+            return Err(core::Error::Instrument(
+                format!("invalid settlement time '{}': expected HH:MM", self.time),
+            ));
+        }
+        let hour: i8 = parts[0].parse().map_err(|_| {
+            core::Error::Instrument(format!("invalid hour in '{}'", self.time))
+        })?;
+        let minute: i8 = parts[1].parse().map_err(|_| {
+            core::Error::Instrument(format!("invalid minute in '{}'", self.time))
+        })?;
+        let tz = jiff::tz::TimeZone::get(&self.timezone).map_err(|e| {
+            core::Error::Instrument(format!("invalid timezone '{}': {}", self.timezone, e))
+        })?;
+        let dt = date.inner().at(hour, minute, 0, 0);
+        let zoned = dt.to_zoned(tz).map_err(|e| {
+            core::Error::Instrument(format!(
+                "cannot resolve {} {} in {}: {}",
+                date, self.time, self.timezone, e
+            ))
+        })?;
+        Ok(Zoned::from_jiff(zoned))
     }
 
     /// Default settlement for OTC instruments.
@@ -100,3 +129,48 @@ pub use future::Future;
 pub use fx::FxForward;
 pub use option::EuropeanOption;
 pub use swap::{FixedLeg, FloatingLeg, PayReceive, Swap};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dates::Timestamp;
+
+    #[test]
+    fn settlement_at_date_ice_london() {
+        let s = Settlement::new("ICE", "SETTLE", "19:30", "Europe/London");
+        let z = s.at_date(Date::new(2026, 3, 31)).unwrap();
+        // 2026-03-31 is BST (UTC+1), so 19:30 London = 18:30 UTC
+        let expected = Timestamp::parse("2026-03-31T18:30:00Z").unwrap();
+        assert_eq!(z.timestamp(), expected);
+    }
+
+    #[test]
+    fn settlement_at_date_otc_new_york() {
+        let s = Settlement::otc(); // 17:00 America/New_York
+        // 2026-03-07 is EST (UTC-5), so 17:00 NY = 22:00 UTC
+        let z = s.at_date(Date::new(2026, 3, 7)).unwrap();
+        let expected = Timestamp::parse("2026-03-07T22:00:00Z").unwrap();
+        assert_eq!(z.timestamp(), expected);
+    }
+
+    #[test]
+    fn settlement_at_date_otc_new_york_dst() {
+        let s = Settlement::otc(); // 17:00 America/New_York
+        // 2026-07-01 is EDT (UTC-4), so 17:00 NY = 21:00 UTC
+        let z = s.at_date(Date::new(2026, 7, 1)).unwrap();
+        let expected = Timestamp::parse("2026-07-01T21:00:00Z").unwrap();
+        assert_eq!(z.timestamp(), expected);
+    }
+
+    #[test]
+    fn settlement_at_date_invalid_time() {
+        let s = Settlement::new("ICE", "SETTLE", "bad", "Europe/London");
+        assert!(s.at_date(Date::new(2026, 3, 7)).is_err());
+    }
+
+    #[test]
+    fn settlement_at_date_invalid_timezone() {
+        let s = Settlement::new("ICE", "SETTLE", "19:30", "Fake/Zone");
+        assert!(s.at_date(Date::new(2026, 3, 7)).is_err());
+    }
+}
