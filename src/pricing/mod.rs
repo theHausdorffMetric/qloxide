@@ -11,7 +11,7 @@ use crate::market_data::MarketData;
 ///
 /// Provides access to spot prices, discount curves, and (later) vol surfaces.
 /// Implementations may be backed by `MarketData` directly or by a caching layer.
-pub trait PricingContext {
+pub trait PricingContext: Send + Sync {
     fn spot_date(&self) -> Date;
     fn discount_curve(&self, currency: &str) -> core::Result<&DiscountCurve>;
     fn spot(&self, id: &str) -> core::Result<f64>;

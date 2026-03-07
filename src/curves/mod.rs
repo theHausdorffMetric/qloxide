@@ -13,7 +13,9 @@ use crate::dates::daycount::{Compounding, DayCount};
 /// This single type serves all purposes: risk-free discounting, credit curves,
 /// funding curves, borrow curves. The identity (whose curve, what purpose)
 /// comes from how it is stored in market data.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize)]
+#[derive(Deserialize)]
+#[serde(from = "DiscountCurveRaw")]
 pub struct DiscountCurve {
     /// Valuation date (anchor for year fractions).
     base_date: Date,
@@ -22,6 +24,30 @@ pub struct DiscountCurve {
     /// Pillar points: (date, continuously_compounded_yield).
     /// Must be sorted by date. At least one pillar required.
     pillars: Vec<(Date, f64)>,
+    /// Pre-computed (year_fraction, r*t) at each pillar point.
+    /// Avoids per-call allocation in the hot path.
+    #[serde(skip)]
+    pillar_rts: Vec<(f64, f64)>,
+}
+
+/// Serde helper: deserializes without pillar_rts, then recomputes it.
+#[derive(Deserialize)]
+struct DiscountCurveRaw {
+    base_date: Date,
+    day_count: DayCount,
+    pillars: Vec<(Date, f64)>,
+}
+
+impl From<DiscountCurveRaw> for DiscountCurve {
+    fn from(raw: DiscountCurveRaw) -> Self {
+        let pillar_rts = Self::compute_pillar_rts(raw.base_date, raw.day_count, &raw.pillars);
+        DiscountCurve {
+            base_date: raw.base_date,
+            day_count: raw.day_count,
+            pillars: raw.pillars,
+            pillar_rts,
+        }
+    }
 }
 
 impl DiscountCurve {
@@ -44,21 +70,36 @@ impl DiscountCurve {
                 ));
             }
         }
+        let pillar_rts = Self::compute_pillar_rts(base_date, day_count, &pillars);
         Ok(DiscountCurve {
             base_date,
             day_count,
             pillars,
+            pillar_rts,
         })
     }
 
     /// Create a flat curve at a constant continuously compounded rate.
     pub fn flat(base_date: Date, day_count: DayCount, rate: f64) -> DiscountCurve {
         let far_date = base_date + 365 * 100; // ~100 years
+        let pillars = vec![(base_date + 1, rate), (far_date, rate)];
+        let pillar_rts = Self::compute_pillar_rts(base_date, day_count, &pillars);
         DiscountCurve {
             base_date,
             day_count,
-            pillars: vec![(base_date + 1, rate), (far_date, rate)],
+            pillars,
+            pillar_rts,
         }
+    }
+
+    fn compute_pillar_rts(base_date: Date, day_count: DayCount, pillars: &[(Date, f64)]) -> Vec<(f64, f64)> {
+        pillars
+            .iter()
+            .map(|&(d, r)| {
+                let t = day_count.year_fraction(base_date, d);
+                (t, r * t)
+            })
+            .collect()
     }
 
     pub fn base_date(&self) -> Date {
@@ -81,31 +122,21 @@ impl DiscountCurve {
             return 0.0;
         }
 
-        // Compute r*t at each pillar
-        let pillar_rts: Vec<(f64, f64)> = self
-            .pillars
-            .iter()
-            .map(|&(d, r)| {
-                let pt = self.year_fraction(d);
-                (pt, r * pt)
-            })
-            .collect();
-
-        // Linear interpolation (flat extrapolation)
-        if t <= pillar_rts[0].0 {
+        // Linear interpolation (flat extrapolation) on pre-computed pillar_rts
+        if t <= self.pillar_rts[0].0 {
             // Before first pillar: use first rate
             return self.pillars[0].1 * t;
         }
-        if t >= pillar_rts[pillar_rts.len() - 1].0 {
+        if t >= self.pillar_rts[self.pillar_rts.len() - 1].0 {
             // After last pillar: use last rate
             return self.pillars[self.pillars.len() - 1].1 * t;
         }
 
         // Find bracketing pillars
-        for i in 1..pillar_rts.len() {
-            if t <= pillar_rts[i].0 {
-                let (t0, rt0) = pillar_rts[i - 1];
-                let (t1, rt1) = pillar_rts[i];
+        for i in 1..self.pillar_rts.len() {
+            if t <= self.pillar_rts[i].0 {
+                let (t0, rt0) = self.pillar_rts[i - 1];
+                let (t1, rt1) = self.pillar_rts[i];
                 let w = (t - t0) / (t1 - t0);
                 return rt0 + w * (rt1 - rt0);
             }
