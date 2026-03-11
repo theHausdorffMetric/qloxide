@@ -11,7 +11,14 @@
         "venue": "OTC",
         "session": "CLOSE",
         "time": "17:00",
-        "timezone": "America/New_York"
+        "timezone": "America/New_York",
+        "payment_lag": {
+            "BusinessDays": {
+                "calendar": "Weekday",
+                "step": 2,
+                "slip_forward": true
+            }
+        }
     },
     "issue_date": "2025-06-15",
     "maturity_date": "2030-06-15",

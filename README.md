@@ -41,7 +41,7 @@ let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
 
 let future = Future::new(
     "ICE-BRN-Jun25", "Brent", usd,
-    Settlement::new("ICE", "SETTLE", "19:30", "Europe/London"),
+    Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
     Date::new(2025, 6, 14), 1000.0, 0.01,
 );
 

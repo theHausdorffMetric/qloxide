@@ -35,6 +35,9 @@ pub enum Error {
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
+    #[error("config: {0}")]
+    Config(String),
+
     #[error("{0}")]
     Other(String),
 }

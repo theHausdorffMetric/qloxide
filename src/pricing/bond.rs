@@ -115,6 +115,9 @@ mod tests {
         fn spot(&self, _id: &str) -> crate::core::Result<f64> {
             Err(crate::core::Error::MarketData("not implemented".to_string()))
         }
+        fn settlement_price(&self, _id: &str) -> crate::core::Result<f64> {
+            Err(crate::core::Error::MarketData("not implemented".to_string()))
+        }
     }
 
     fn test_bond(face: u32, coupon: &str, freq: u32) -> Bond {

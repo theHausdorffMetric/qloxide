@@ -1,0 +1,122 @@
+[
+  {
+    "type": "Future",
+    "id": "ICE-BRN-F26",
+    "underlying": "Brent",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2025-11-28",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  },
+  {
+    "type": "Future",
+    "id": "ICE-BRN-G26",
+    "underlying": "Brent",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2025-12-31",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  },
+  {
+    "type": "Future",
+    "id": "ICE-BRN-H26",
+    "underlying": "Brent",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2026-01-30",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  },
+  {
+    "type": "Future",
+    "id": "ICE-BRN-J26",
+    "underlying": "Brent",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2026-02-27",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  },
+  {
+    "type": "Future",
+    "id": "ICE-BRN-K26",
+    "underlying": "Brent",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2026-03-31",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  },
+  {
+    "type": "Future",
+    "id": "ICE-BRN-M26",
+    "underlying": "Brent",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2026-04-30",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  },
+  {
+    "type": "Future",
+    "id": "ICE-BRN-N26",
+    "underlying": "Brent",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2026-05-29",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  },
+  {
+    "type": "Future",
+    "id": "ICE-BRN-Q26",
+    "underlying": "Brent",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2026-06-30",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  },
+  {
+    "type": "Future",
+    "id": "ICE-BRN-U26",
+    "underlying": "Brent",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2026-07-31",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  },
+  {
+    "type": "Future",
+    "id": "ICE-BRN-V26",
+    "underlying": "Brent",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2026-08-31",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  },
+  {
+    "type": "Future",
+    "id": "ICE-BRN-X26",
+    "underlying": "Brent",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2026-09-30",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  },
+  {
+    "type": "Future",
+    "id": "ICE-BRN-Z26",
+    "underlying": "Brent",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2026-10-30",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  }
+]

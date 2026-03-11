@@ -13,9 +13,7 @@ pub fn price_future(future: &Future, ctx: &dyn PricingContext) -> core::Result<f
         Err(_) => ctx.spot_date() > future.expiry,
     };
     if expired {
-        return Err(core::Error::Pricer(format!(
-            "{} expired on {}", future.id, future.expiry
-        )));
+        return ctx.settlement_price(&future.id);
     }
     ctx.spot(&future.id)
 }
@@ -37,6 +35,7 @@ mod tests {
         as_of: Timestamp,
         spot_date: Date,
         spots: HashMap<String, f64>,
+        settlements: HashMap<String, f64>,
     }
 
     impl TestContext {
@@ -45,6 +44,7 @@ mod tests {
                 as_of: spot_date.as_of_midnight(),
                 spot_date,
                 spots: HashMap::new(),
+                settlements: HashMap::new(),
             }
         }
     }
@@ -65,6 +65,12 @@ mod tests {
                 .copied()
                 .ok_or_else(|| core::Error::MarketData(format!("no spot for '{}'", id)))
         }
+        fn settlement_price(&self, id: &str) -> core::Result<f64> {
+            self.settlements
+                .get(id)
+                .copied()
+                .ok_or_else(|| core::Error::MarketData(format!("no settlement price for '{}'", id)))
+        }
     }
 
     #[test]
@@ -72,7 +78,7 @@ mod tests {
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let future = Future::new(
             "ICE-BRN-K26", "Brent", usd,
-            Settlement::new("ICE", "SETTLE", "19:30", "Europe/London"),
+            Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
             Date::new(2026, 3, 31),
             Decimal::from(1000),
             "0.01".parse().unwrap(),
@@ -86,22 +92,21 @@ mod tests {
     }
 
     #[test]
-    fn expired_future_errors() {
+    fn expired_future_uses_settlement_price() {
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let future = Future::new(
             "ICE-BRN-K26", "Brent", usd,
-            Settlement::new("ICE", "SETTLE", "19:30", "Europe/London"),
+            Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
             Date::new(2026, 3, 31),
             Decimal::from(1000),
             "0.01".parse().unwrap(),
         );
 
         let mut ctx = TestContext::from_date(Date::new(2026, 4, 15));
-        ctx.spots.insert("ICE-BRN-K26".to_string(), 72.45);
+        ctx.settlements.insert("ICE-BRN-K26".to_string(), 73.10);
 
-        let result = price_future(&future, &ctx);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("expired"));
+        let px = price_future(&future, &ctx).unwrap();
+        assert!((px - 73.10).abs() < 1e-12);
     }
 
     #[test]
@@ -109,7 +114,7 @@ mod tests {
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let future = Future::new(
             "ICE-BRN-K26", "Brent", usd,
-            Settlement::new("ICE", "SETTLE", "19:30", "Europe/London"),
+            Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
             Date::new(2026, 3, 31),
             Decimal::from(1000),
             "0.01".parse().unwrap(),
@@ -127,7 +132,7 @@ mod tests {
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let future = Future::new(
             "ICE-BRN-K26", "Brent", usd,
-            Settlement::new("ICE", "SETTLE", "19:30", "Europe/London"),
+            Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
             Date::new(2026, 3, 31),
             Decimal::from(1000),
             "0.01".parse().unwrap(),
@@ -143,7 +148,7 @@ mod tests {
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let future = Future::new(
             "ICE-BRN-K26", "Brent", usd,
-            Settlement::new("ICE", "SETTLE", "19:30", "Europe/London"),
+            Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
             Date::new(2026, 3, 31),
             Decimal::from(1000),
             "0.01".parse().unwrap(),
@@ -153,6 +158,7 @@ mod tests {
             as_of: Timestamp::parse("2026-03-31T14:00:00Z").unwrap(),
             spot_date: Date::new(2026, 3, 31),
             spots: HashMap::new(),
+            settlements: HashMap::new(),
         };
         ctx.spots.insert("ICE-BRN-K26".to_string(), 72.00);
 
@@ -166,20 +172,21 @@ mod tests {
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let future = Future::new(
             "ICE-BRN-K26", "Brent", usd,
-            Settlement::new("ICE", "SETTLE", "19:30", "Europe/London"),
+            Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
             Date::new(2026, 3, 31),
             Decimal::from(1000),
             "0.01".parse().unwrap(),
         );
 
-        let ctx = TestContext {
+        let mut ctx = TestContext {
             as_of: Timestamp::parse("2026-03-31T20:00:00Z").unwrap(),
             spot_date: Date::new(2026, 3, 31),
             spots: HashMap::new(),
+            settlements: HashMap::new(),
         };
+        ctx.settlements.insert("ICE-BRN-K26".to_string(), 71.95);
 
-        let result = price_future(&future, &ctx);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("expired"));
+        let px = price_future(&future, &ctx).unwrap();
+        assert!((px - 71.95).abs() < 1e-12);
     }
 }

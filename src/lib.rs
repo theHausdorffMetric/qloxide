@@ -11,3 +11,6 @@ pub mod instruments;
 pub mod market_data;
 pub mod pricing;
 pub mod trades;
+pub mod config;
+pub mod portfolio;
+pub mod reports;

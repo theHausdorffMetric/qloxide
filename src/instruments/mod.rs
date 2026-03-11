@@ -10,6 +10,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::core;
 use crate::dates::{Date, Zoned};
+use crate::dates::calendar::Calendar;
+use crate::dates::rules::DateRule;
 use crate::reference_data::Currency;
 
 /// Settlement conventions for a financial instrument.
@@ -23,15 +25,19 @@ pub struct Settlement {
     pub time: String,
     /// IANA timezone (e.g., "Europe/London").
     pub timezone: String,
+    /// Payment lag: how many business days after trade/expiry until cash moves.
+    pub payment_lag: DateRule,
 }
 
 impl Settlement {
-    pub fn new(venue: &str, session: &str, time: &str, timezone: &str) -> Settlement {
+    pub fn new(venue: &str, session: &str, time: &str, timezone: &str,
+               payment_lag: DateRule) -> Settlement {
         Settlement {
             venue: venue.to_string(),
             session: session.to_string(),
             time: time.to_string(),
             timezone: timezone.to_string(),
+            payment_lag,
         }
     }
 
@@ -63,13 +69,19 @@ impl Settlement {
         Ok(Zoned::from_jiff(zoned))
     }
 
-    /// Default settlement for OTC instruments.
+    /// Compute the payment date by applying the settlement lag.
+    pub fn pay_date(&self, date: Date) -> Date {
+        self.payment_lag.apply(date)
+    }
+
+    /// Default settlement for OTC instruments (T+2 weekday calendar).
     pub fn otc() -> Settlement {
         Settlement {
             venue: "OTC".to_string(),
             session: "CLOSE".to_string(),
             time: "17:00".to_string(),
             timezone: "America/New_York".to_string(),
+            payment_lag: DateRule::step_forward(Calendar::Weekday, 2),
         }
     }
 }
@@ -137,7 +149,7 @@ mod tests {
 
     #[test]
     fn settlement_at_date_ice_london() {
-        let s = Settlement::new("ICE", "SETTLE", "19:30", "Europe/London");
+        let s = Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null);
         let z = s.at_date(Date::new(2026, 3, 31)).unwrap();
         // 2026-03-31 is BST (UTC+1), so 19:30 London = 18:30 UTC
         let expected = Timestamp::parse("2026-03-31T18:30:00Z").unwrap();
@@ -146,7 +158,7 @@ mod tests {
 
     #[test]
     fn settlement_at_date_otc_new_york() {
-        let s = Settlement::otc(); // 17:00 America/New_York
+        let s = Settlement::otc(); // 17:00 America/New_York, T+2
         // 2026-03-07 is EST (UTC-5), so 17:00 NY = 22:00 UTC
         let z = s.at_date(Date::new(2026, 3, 7)).unwrap();
         let expected = Timestamp::parse("2026-03-07T22:00:00Z").unwrap();
@@ -155,7 +167,7 @@ mod tests {
 
     #[test]
     fn settlement_at_date_otc_new_york_dst() {
-        let s = Settlement::otc(); // 17:00 America/New_York
+        let s = Settlement::otc(); // 17:00 America/New_York, T+2
         // 2026-07-01 is EDT (UTC-4), so 17:00 NY = 21:00 UTC
         let z = s.at_date(Date::new(2026, 7, 1)).unwrap();
         let expected = Timestamp::parse("2026-07-01T21:00:00Z").unwrap();
@@ -164,13 +176,34 @@ mod tests {
 
     #[test]
     fn settlement_at_date_invalid_time() {
-        let s = Settlement::new("ICE", "SETTLE", "bad", "Europe/London");
+        let s = Settlement::new("ICE", "SETTLE", "bad", "Europe/London", DateRule::Null);
         assert!(s.at_date(Date::new(2026, 3, 7)).is_err());
     }
 
     #[test]
     fn settlement_at_date_invalid_timezone() {
-        let s = Settlement::new("ICE", "SETTLE", "19:30", "Fake/Zone");
+        let s = Settlement::new("ICE", "SETTLE", "19:30", "Fake/Zone", DateRule::Null);
         assert!(s.at_date(Date::new(2026, 3, 7)).is_err());
+    }
+
+    #[test]
+    fn pay_date_t_plus_2_midweek() {
+        // Wednesday 2026-03-11 + T+2 = Friday 2026-03-13
+        let s = Settlement::otc();
+        assert_eq!(s.pay_date(Date::new(2026, 3, 11)), Date::new(2026, 3, 13));
+    }
+
+    #[test]
+    fn pay_date_t_plus_2_over_weekend() {
+        // Thursday 2026-03-12 + T+2 = Monday 2026-03-16 (skips Sat/Sun)
+        let s = Settlement::otc();
+        assert_eq!(s.pay_date(Date::new(2026, 3, 12)), Date::new(2026, 3, 16));
+    }
+
+    #[test]
+    fn pay_date_null_rule() {
+        let s = Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null);
+        let d = Date::new(2026, 3, 11);
+        assert_eq!(s.pay_date(d), d);
     }
 }

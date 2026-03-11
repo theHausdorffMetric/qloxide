@@ -17,7 +17,7 @@ fn gbp() -> Arc<Currency> {
 }
 
 fn ice_settle() -> Settlement {
-    Settlement::new("ICE", "SETTLE", "19:30", "Europe/London")
+    Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null)
 }
 
 // ── Equity ───────────────────────────────────────────────────────────
@@ -290,7 +290,8 @@ fn deserialize_future_from_json() {
             "venue": "ICE",
             "session": "SETTLE",
             "time": "19:30",
-            "timezone": "Europe/London"
+            "timezone": "Europe/London",
+            "payment_lag": "Null"
         },
         "expiry": "2025-07-14",
         "contract_size": "1000",

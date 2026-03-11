@@ -20,6 +20,7 @@ pub trait PricingContext: Send + Sync {
     }
     fn discount_curve(&self, currency: &str) -> core::Result<&DiscountCurve>;
     fn spot(&self, id: &str) -> core::Result<f64>;
+    fn settlement_price(&self, id: &str) -> core::Result<f64>;
 }
 
 /// Price a financial instrument.
@@ -61,6 +62,10 @@ impl PricingContext for MarketData {
 
     fn spot(&self, id: &str) -> core::Result<f64> {
         self.spot(id)
+    }
+
+    fn settlement_price(&self, id: &str) -> core::Result<f64> {
+        self.settlement_price(id)
     }
 }
 
@@ -106,6 +111,9 @@ mod tests {
         }
         fn spot(&self, id: &str) -> core::Result<f64> {
             Err(core::Error::MarketData(format!("no spot for '{}'", id)))
+        }
+        fn settlement_price(&self, id: &str) -> core::Result<f64> {
+            Err(core::Error::MarketData(format!("no settlement price for '{}'", id)))
         }
     }
 }
