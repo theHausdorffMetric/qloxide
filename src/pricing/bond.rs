@@ -12,8 +12,8 @@ pub fn price_bond(bond: &Bond, ctx: &dyn PricingContext) -> core::Result<f64> {
     let spot_date = ctx.spot_date();
 
     let months_per_period = 12 / bond.frequency as i32;
-    let coupon_rate_f64 = decimal_to_f64(bond.coupon_rate);
-    let face_value_f64 = decimal_to_f64(bond.face_value);
+    let coupon_rate_f64 = decimal_to_f64(bond.coupon_rate)?;
+    let face_value_f64 = decimal_to_f64(bond.face_value)?;
 
     let mut pv = 0.0;
 
@@ -52,9 +52,10 @@ pub fn price_bond(bond: &Bond, ctx: &dyn PricingContext) -> core::Result<f64> {
     Ok(pv)
 }
 
-fn decimal_to_f64(d: rust_decimal::Decimal) -> f64 {
-    use std::str::FromStr;
-    f64::from_str(&d.to_string()).unwrap_or(0.0)
+fn decimal_to_f64(d: rust_decimal::Decimal) -> core::Result<f64> {
+    use rust_decimal::prelude::ToPrimitive;
+    d.to_f64()
+        .ok_or_else(|| core::Error::Pricer(format!("cannot convert Decimal '{}' to f64", d)))
 }
 
 /// Add months to a date, clamping to end of month.
