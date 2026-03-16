@@ -12,10 +12,10 @@
     "ICE-BRN-Z26": 70.65
   },
   "settlement_prices": {
-    "ICE-BRN-F26": 73.20,
-    "ICE-BRN-G26": 73.05,
-    "ICE-BRN-H26": 72.90,
-    "ICE-BRN-J26": 72.75
+    "ICE-BRN-F26": 63.20,
+    "ICE-BRN-G26": 61.92,
+    "ICE-BRN-H26": 70.69,
+    "ICE-BRN-J26": 72.48
   },
   "discount_curves": {
     "USD": {
