@@ -150,6 +150,23 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
         }
         let expired = inst.maturity()
             .is_some_and(|m| market_data.valuation_date() > m);
+
+        // Options price via the model, not a quoted market price: check
+        // their actual inputs (underlying instrument + vol surface) instead.
+        if let Some(opt) = inst.as_any().downcast_ref::<crate::instruments::EuropeanOption>() {
+            if !instruments.contains_key(&opt.underlying) {
+                warnings.push(format!(
+                    "option '{}': unknown underlying '{}'", id, opt.underlying,
+                ));
+            }
+            if !expired && !market_data.has_vol_surface(&opt.underlying) {
+                warnings.push(format!(
+                    "option '{}': no vol surface for underlying '{}'", id, opt.underlying,
+                ));
+            }
+            continue;
+        }
+
         if expired {
             if market_data.settlement_price(id).is_err() {
                 warnings.push(format!(
@@ -468,6 +485,74 @@ market_data = ["market.json"]
             portfolio.warnings.iter().any(|w| w.contains("defined inconsistently")),
             "expected currency inconsistency warning, got: {:?}",
             portfolio.warnings,
+        );
+    }
+
+    #[test]
+    fn option_warnings_check_underlying_and_vol_surface() {
+        let dir = tempfile::tempdir().unwrap();
+        write_test_files(dir.path());
+
+        // Option referencing a missing underlying; no vol surface in market data
+        fs::write(
+            dir.path().join("instruments.json"),
+            r#"[
+  {
+    "type": "Future",
+    "id": "ICE-BRN-K26",
+    "underlying": "Brent",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2026-03-31",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  },
+  {
+    "type": "EuropeanOption",
+    "id": "OPT-NO-VOL",
+    "underlying": "ICE-BRN-K26",
+    "credit_id": "ICE",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2026-03-27",
+    "strike": "75",
+    "put_or_call": "Call",
+    "exercise_style": "European",
+    "option_settlement": "Cash"
+  },
+  {
+    "type": "EuropeanOption",
+    "id": "OPT-NO-UNDERLYING",
+    "underlying": "MISSING",
+    "credit_id": "ICE",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2026-03-27",
+    "strike": "75",
+    "put_or_call": "Call",
+    "exercise_style": "European",
+    "option_settlement": "Cash"
+  }
+]"#,
+        )
+        .unwrap();
+
+        let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
+        assert!(
+            portfolio.warnings.iter()
+                .any(|w| w.contains("OPT-NO-VOL") && w.contains("no vol surface")),
+            "expected vol surface warning, got: {:?}", portfolio.warnings,
+        );
+        assert!(
+            portfolio.warnings.iter()
+                .any(|w| w.contains("OPT-NO-UNDERLYING") && w.contains("unknown underlying")),
+            "expected unknown underlying warning, got: {:?}", portfolio.warnings,
+        );
+        // Options must NOT trigger the generic "no market price" warning
+        assert!(
+            !portfolio.warnings.iter()
+                .any(|w| w.contains("OPT-") && w.contains("no market price")),
+            "options should not warn about market prices: {:?}", portfolio.warnings,
         );
     }
 

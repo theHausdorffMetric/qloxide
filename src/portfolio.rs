@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use crate::Decimal;
 use crate::config::Portfolio;
 use crate::core;
+use crate::instruments::FinancialInstrument;
 use crate::instruments::future::Future;
+use crate::instruments::option::EuropeanOption;
 use crate::pricing;
 use crate::trades::{BuySell, Deal};
 
@@ -107,18 +109,28 @@ fn value_deal(deal: &Deal, portfolio: &Portfolio) -> core::Result<Valuation> {
         core::Error::Pricer(format!("cannot convert mark {} to decimal: {}", mark_f64, e))
     })?;
 
-    let contract_size = inst
-        .as_any()
-        .downcast_ref::<Future>()
-        .map(|f| f.contract_size)
-        .unwrap_or(Decimal::ONE);
-
-    let pnl = deal.signed_quantity() * (mark - deal.price) * contract_size;
+    let pnl = deal.signed_quantity() * (mark - deal.price) * contract_size(inst.as_ref(), portfolio);
 
     let realized = inst.maturity()
         .is_some_and(|m| md.valuation_date() > m);
 
     Ok(Valuation { mark, pnl, realized })
+}
+
+/// Contract size for dollar-terms P&L: futures carry their own; options
+/// inherit the underlying future's (a 10-lot option on 1000-bbl contracts
+/// moving $0.50/bbl is $5,000). Everything else defaults to 1.
+fn contract_size(inst: &dyn FinancialInstrument, portfolio: &Portfolio) -> Decimal {
+    let any = inst.as_any();
+    any.downcast_ref::<Future>()
+        .map(|f| f.contract_size)
+        .or_else(|| {
+            any.downcast_ref::<EuropeanOption>()
+                .and_then(|o| portfolio.instruments.get(&o.underlying))
+                .and_then(|u| u.as_any().downcast_ref::<Future>())
+                .map(|f| f.contract_size)
+        })
+        .unwrap_or(Decimal::ONE)
 }
 
 /// Compute P&L totals from valued deals: (realized, unrealized).
@@ -260,6 +272,58 @@ mod tests {
         let (realized, unrealized) = pnl_totals(&valued);
         assert_eq!(realized, Decimal::ZERO);
         assert_eq!(unrealized, Decimal::from(7000));
+    }
+
+    #[test]
+    fn option_pnl_uses_underlying_contract_size() {
+        use crate::curves::DiscountCurve;
+        use crate::dates::Date;
+        use crate::dates::daycount::DayCount;
+        use crate::dates::rules::DateRule;
+        use crate::instruments::{OptionSettlement, PutOrCall, Settlement};
+        use crate::market_data::{MarketData, VolSurface};
+        use crate::reference_data::Currency;
+        use std::sync::Arc;
+
+        let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
+        let settle = Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null);
+        let future = crate::instruments::Future::new(
+            "FUT", "Brent", usd.clone(), settle.clone(),
+            Date::new(2026, 6, 30), Decimal::from(1000), "0.01".parse().unwrap(),
+        );
+        let option = crate::instruments::EuropeanOption::new(
+            "OPT", "FUT", "ICE", usd, settle,
+            Date::new(2026, 6, 25), Decimal::from(75),
+            PutOrCall::Call, OptionSettlement::Cash,
+        );
+
+        let valuation_date = Date::new(2026, 3, 10);
+        let mut md = MarketData::new(valuation_date, valuation_date.as_of_midnight());
+        md.add_market_price("FUT", 72.45);
+        md.add_discount_curve("USD", DiscountCurve::flat(valuation_date, DayCount::Act360, 0.04));
+        md.add_vol_surface("FUT", VolSurface::Flat { vol: 0.30 });
+
+        let mut instruments: HashMap<String, Arc<dyn FinancialInstrument>> = HashMap::new();
+        instruments.insert("FUT".to_string(), Arc::new(future));
+        instruments.insert("OPT".to_string(), Arc::new(option));
+
+        let deals = vec![make_deal("D1", "OPT", BuySell::Buy, 10, "2.50")];
+        let portfolio = Portfolio {
+            instruments,
+            deals: deals.clone(),
+            market_data: md,
+            warnings: vec![],
+            reports: vec![],
+        };
+
+        let valued = valuate(&deals, &portfolio);
+        let val = valued[0].valuation.as_ref().unwrap();
+        // P&L is in dollar terms: signed_qty * (mark - trade) * 1000 (the
+        // underlying future's contract size, not the default of 1)
+        let expected = Decimal::from(10) * (val.mark - "2.50".parse::<Decimal>().unwrap())
+            * Decimal::from(1000);
+        assert_eq!(val.pnl, expected);
+        assert!(val.mark > Decimal::ZERO);
     }
 
     #[test]

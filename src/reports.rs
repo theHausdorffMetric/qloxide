@@ -52,10 +52,14 @@ pub fn instruments(portfolio: &Portfolio) -> String {
                 .unwrap_or_else(|_| "N/A".to_string());
             (p, "settled")
         } else {
-            let p = md.market_price(id)
-                .map(|s| format!("{:.2}", s))
-                .unwrap_or_else(|_| "N/A".to_string());
-            (p, "active")
+            match md.market_price(id) {
+                Ok(p) => (format!("{:.2}", p), "active"),
+                // No quote — fall back to the model price (options)
+                Err(_) => match crate::pricing::price(inst.as_ref(), md) {
+                    Ok(p) => (format!("{:.2}", p), "model"),
+                    Err(_) => ("N/A".to_string(), "active"),
+                },
+            }
         };
 
         writeln!(out, "{:<16} {:>10}  {:>10}  {}", id, expiry, price, status).unwrap();
@@ -135,7 +139,7 @@ fn format_pnl(valued: &[ValuedDeal], deal_count: usize) -> String {
                 writeln!(out, "{:<10} {:<16} {:>5} {:>5}  {:>8}  {:>8}  {:>10}  {}",
                     v.deal.id, v.deal.instrument_id,
                     format!("{:?}", v.deal.direction), v.deal.quantity,
-                    v.deal.price, val.mark, val.pnl, label).unwrap();
+                    v.deal.price, val.mark.round_dp(4), val.pnl.round_dp(2), label).unwrap();
             }
             Err(e) => {
                 unpriced += 1;
@@ -149,9 +153,9 @@ fn format_pnl(valued: &[ValuedDeal], deal_count: usize) -> String {
 
     let (realized, unrealized) = pnl_totals(valued);
     writeln!(out, "{:-<82}", "").unwrap();
-    writeln!(out, "{:>62} {:>10}", "Realized:", realized).unwrap();
-    writeln!(out, "{:>62} {:>10}", "Unrealized:", unrealized).unwrap();
-    writeln!(out, "{:>62} {:>10}", "Total:", realized + unrealized).unwrap();
+    writeln!(out, "{:>62} {:>10}", "Realized:", realized.round_dp(2)).unwrap();
+    writeln!(out, "{:>62} {:>10}", "Unrealized:", unrealized.round_dp(2)).unwrap();
+    writeln!(out, "{:>62} {:>10}", "Total:", (realized + unrealized).round_dp(2)).unwrap();
     if unpriced > 0 {
         writeln!(out, "WARNING: {unpriced} deal(s) could not be priced and are excluded from totals").unwrap();
     }
