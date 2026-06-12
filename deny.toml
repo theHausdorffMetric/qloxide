@@ -10,8 +10,8 @@ all-features = true
 yanked = "deny"
 
 [licenses]
-# qloxide is MIT-licensed and published on crates.io: every transitive
-# dependency must be distributable under a permissive license.
+# qloxide is GPL-3.0-or-later; dependencies must be GPLv3-compatible.
+# Permissive-only allowlist (Apache-2.0 is one-way compatible into GPLv3).
 allow = [
     "MIT",
     "Apache-2.0",
@@ -19,6 +19,11 @@ allow = [
     "Unlicense",
 ]
 confidence-threshold = 0.8
+
+# The workspace crate itself is copyleft; dependencies stay permissive-only.
+exceptions = [
+    { name = "qloxide", allow = ["GPL-3.0-or-later"] },
+]
 
 [bans]
 # Duplicate major versions bloat the build and widen the audit surface;

@@ -103,4 +103,5 @@ cargo run -- --config examples/brent/pricing.toml
 
 ## License
 
-MIT
+GPL-3.0-or-later. Versions up to 0.1.0 were published under MIT; that grant
+remains valid for those versions.
