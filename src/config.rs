@@ -157,30 +157,39 @@ fn read_json_file(path: &Path) -> core::Result<String> {
 }
 
 /// Deserialize a JSON string as either a single instrument or an array.
+///
+/// Dispatches on the first non-whitespace byte rather than try-and-fall-back,
+/// so an error inside an array element is reported as that element's error
+/// instead of a misleading "expected a single object" failure.
 fn deserialize_instruments(
     json: &str,
     path: &Path,
 ) -> core::Result<Vec<Arc<dyn FinancialInstrument>>> {
-    // Try array first
-    if let Ok(arr) = serde_json::from_str::<Vec<Arc<dyn FinancialInstrument>>>(json) {
-        return Ok(arr);
+    if json.trim_start().starts_with('[') {
+        serde_json::from_str::<Vec<Arc<dyn FinancialInstrument>>>(json).map_err(|e| {
+            core::Error::Config(format!("invalid instrument JSON {}: {}", path.display(), e))
+        })
+    } else {
+        let single: Arc<dyn FinancialInstrument> = serde_json::from_str(json).map_err(|e| {
+            core::Error::Config(format!("invalid instrument JSON {}: {}", path.display(), e))
+        })?;
+        Ok(vec![single])
     }
-    // Try single object
-    let single: Arc<dyn FinancialInstrument> = serde_json::from_str(json).map_err(|e| {
-        core::Error::Config(format!("invalid instrument JSON {}: {}", path.display(), e))
-    })?;
-    Ok(vec![single])
 }
 
 /// Deserialize a JSON string as either a single deal or an array.
+/// Same first-byte dispatch as [`deserialize_instruments`].
 fn deserialize_deals(json: &str, path: &Path) -> core::Result<Vec<Deal>> {
-    if let Ok(arr) = serde_json::from_str::<Vec<Deal>>(json) {
-        return Ok(arr);
+    if json.trim_start().starts_with('[') {
+        serde_json::from_str::<Vec<Deal>>(json).map_err(|e| {
+            core::Error::Config(format!("invalid deal JSON {}: {}", path.display(), e))
+        })
+    } else {
+        let single: Deal = serde_json::from_str(json).map_err(|e| {
+            core::Error::Config(format!("invalid deal JSON {}: {}", path.display(), e))
+        })?;
+        Ok(vec![single])
     }
-    let single: Deal = serde_json::from_str(json).map_err(|e| {
-        core::Error::Config(format!("invalid deal JSON {}: {}", path.display(), e))
-    })?;
-    Ok(vec![single])
 }
 
 #[cfg(test)]
@@ -397,6 +406,26 @@ market_data = ["market.json"]
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("duplicate deal"), "{}", err);
+    }
+
+    #[test]
+    fn malformed_array_element_reports_element_error() {
+        let dir = tempfile::tempdir().unwrap();
+        write_test_files(dir.path());
+
+        // Array whose single element is missing required fields
+        fs::write(
+            dir.path().join("instruments.json"),
+            r#"[{"type": "Future", "id": "BROKEN"}]"#,
+        )
+        .unwrap();
+
+        let result = load(&dir.path().join("pricing.toml"));
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        // The error must describe the element problem (missing field),
+        // not a misleading "expected a single object" failure.
+        assert!(err.contains("missing field"), "unhelpful error: {}", err);
     }
 
     #[test]
