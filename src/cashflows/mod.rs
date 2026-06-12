@@ -142,12 +142,7 @@ mod tests {
     fn schedule_quarterly() {
         let start = Date::new(2025, 1, 15);
         let end = Date::new(2026, 1, 15);
-        let sched = CashFlowSchedule::generate(
-            start,
-            end,
-            Frequency::Quarterly,
-            &DateRule::Null,
-        );
+        let sched = CashFlowSchedule::generate(start, end, Frequency::Quarterly, &DateRule::Null);
         // 1Y with quarterly = 5 dates (start + 4 periods)
         assert_eq!(sched.dates.len(), 5);
         assert_eq!(sched.dates[0], start);
@@ -161,22 +156,14 @@ mod tests {
     fn schedule_semiannual() {
         let start = Date::new(2025, 6, 1);
         let end = Date::new(2027, 6, 1);
-        let sched = CashFlowSchedule::generate(
-            start,
-            end,
-            Frequency::SemiAnnual,
-            &DateRule::Null,
-        );
+        let sched = CashFlowSchedule::generate(start, end, Frequency::SemiAnnual, &DateRule::Null);
         assert_eq!(sched.dates.len(), 5); // start + 4 semi-annual dates
         assert_eq!(sched.periods().len(), 4);
     }
 
     #[test]
     fn schedule_bullet() {
-        let sched = CashFlowSchedule::bullet(
-            Date::new(2025, 1, 1),
-            Date::new(2030, 1, 1),
-        );
+        let sched = CashFlowSchedule::bullet(Date::new(2025, 1, 1), Date::new(2030, 1, 1));
         assert_eq!(sched.dates.len(), 2);
         assert_eq!(sched.periods().len(), 1);
     }
@@ -188,12 +175,7 @@ mod tests {
         let rule = DateRule::ModifiedFollowing {
             calendar: Calendar::Weekday,
         };
-        let sched = CashFlowSchedule::generate(
-            start,
-            end,
-            Frequency::Quarterly,
-            &rule,
-        );
+        let sched = CashFlowSchedule::generate(start, end, Frequency::Quarterly, &rule);
         // All intermediate dates should be weekdays
         for &d in &sched.dates[1..sched.dates.len() - 1] {
             let wd = d.weekday();

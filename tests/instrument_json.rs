@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use qloxide::Decimal;
+use qloxide::cashflows::Frequency;
 use qloxide::dates::Date;
 use qloxide::dates::daycount::DayCount;
 use qloxide::dates::rules::DateRule;
-use qloxide::cashflows::Frequency;
 use qloxide::instruments::*;
 use qloxide::reference_data::Currency;
 
@@ -91,16 +91,28 @@ fn option_serde_roundtrip() {
 #[test]
 fn option_intrinsic_value() {
     let call = EuropeanOption::new(
-        "C", "UND", "CR", usd(), Settlement::otc(),
-        Date::new(2025, 6, 20), Decimal::from(100), PutOrCall::Call,
+        "C",
+        "UND",
+        "CR",
+        usd(),
+        Settlement::otc(),
+        Date::new(2025, 6, 20),
+        Decimal::from(100),
+        PutOrCall::Call,
         OptionSettlement::Cash,
     );
     assert_eq!(call.intrinsic(Decimal::from(110)), Decimal::from(10));
     assert_eq!(call.intrinsic(Decimal::from(90)), Decimal::ZERO);
 
     let put = EuropeanOption::new(
-        "P", "UND", "CR", usd(), Settlement::otc(),
-        Date::new(2025, 6, 20), Decimal::from(100), PutOrCall::Put,
+        "P",
+        "UND",
+        "CR",
+        usd(),
+        Settlement::otc(),
+        Date::new(2025, 6, 20),
+        Decimal::from(100),
+        PutOrCall::Put,
         OptionSettlement::Cash,
     );
     assert_eq!(put.intrinsic(Decimal::from(90)), Decimal::from(10));
@@ -210,8 +222,14 @@ fn fx_forward_serde_roundtrip() {
 fn basket_serde_roundtrip() {
     let equity = Arc::new(Equity::new("AAPL", "APPLE", usd(), Settlement::otc()));
     let option = Arc::new(EuropeanOption::new(
-        "AAPL-C-190", "AAPL", "OCC", usd(), Settlement::otc(),
-        Date::new(2025, 6, 20), Decimal::from(190), PutOrCall::Call,
+        "AAPL-C-190",
+        "AAPL",
+        "OCC",
+        usd(),
+        Settlement::otc(),
+        Date::new(2025, 6, 20),
+        Decimal::from(190),
+        PutOrCall::Call,
         OptionSettlement::Cash,
     ));
 
@@ -251,18 +269,32 @@ fn nested_basket_serde_roundtrip() {
         as Arc<dyn FinancialInstrument>;
 
     let inner_basket = Arc::new(Basket::new(
-        "INNER", "FUND", usd(), Settlement::otc(),
+        "INNER",
+        "FUND",
+        usd(),
+        Settlement::otc(),
         vec![(Decimal::new(5, 1), eq1), (Decimal::new(5, 1), eq2)],
     )) as Arc<dyn FinancialInstrument>;
 
     let future = Arc::new(Future::new(
-        "ES-Jun25", "SP500", usd(), Settlement::otc(),
-        Date::new(2025, 6, 20), Decimal::from(50), Decimal::new(25, 2),
+        "ES-Jun25",
+        "SP500",
+        usd(),
+        Settlement::otc(),
+        Date::new(2025, 6, 20),
+        Decimal::from(50),
+        Decimal::new(25, 2),
     )) as Arc<dyn FinancialInstrument>;
 
     let outer_basket = Basket::new(
-        "OUTER", "FUND", usd(), Settlement::otc(),
-        vec![(Decimal::new(8, 1), inner_basket), (Decimal::new(2, 1), future)],
+        "OUTER",
+        "FUND",
+        usd(),
+        Settlement::otc(),
+        vec![
+            (Decimal::new(8, 1), inner_basket),
+            (Decimal::new(2, 1), future),
+        ],
     );
 
     let inst: Arc<dyn FinancialInstrument> = Arc::new(outer_basket);

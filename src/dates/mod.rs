@@ -72,7 +72,8 @@ impl Date {
     /// Convert to a UTC midnight Timestamp.
     pub fn as_of_midnight(&self) -> Timestamp {
         let dt = self.0.at(0, 0, 0, 0);
-        let zoned = dt.to_zoned(jiff::tz::TimeZone::UTC)
+        let zoned = dt
+            .to_zoned(jiff::tz::TimeZone::UTC)
             .expect("midnight UTC is always unambiguous");
         Timestamp(zoned.timestamp())
     }
@@ -421,9 +422,15 @@ mod tests {
         assert_eq!(Date::new(2025, 1, 31).add_months(1), Date::new(2025, 2, 28));
         assert_eq!(Date::new(2024, 1, 31).add_months(1), Date::new(2024, 2, 29));
         // Backwards across a year boundary
-        assert_eq!(Date::new(2025, 1, 15).add_months(-3), Date::new(2024, 10, 15));
+        assert_eq!(
+            Date::new(2025, 1, 15).add_months(-3),
+            Date::new(2024, 10, 15)
+        );
         // Plain forward
-        assert_eq!(Date::new(2025, 6, 14).add_months(6), Date::new(2025, 12, 14));
+        assert_eq!(
+            Date::new(2025, 6, 14).add_months(6),
+            Date::new(2025, 12, 14)
+        );
     }
 
     #[test]

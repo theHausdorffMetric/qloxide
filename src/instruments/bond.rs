@@ -132,11 +132,7 @@ mod tests {
     use std::sync::Arc;
 
     fn test_bond() -> Bond {
-        let usd = Arc::new(Currency::new(
-            "USD",
-            DateRule::Null,
-            DayCount::Act360,
-        ));
+        let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         Bond::new(
             "UST-5Y",
             "US-GOVT",
@@ -179,7 +175,10 @@ mod tests {
         // period (2 months), then two full 6-month periods.
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let bond = Bond::new(
-            "STUB", "X", usd, Settlement::otc(),
+            "STUB",
+            "X",
+            usd,
+            Settlement::otc(),
             Date::new(2025, 1, 1),
             Date::new(2026, 3, 1),
             Decimal::from(100),

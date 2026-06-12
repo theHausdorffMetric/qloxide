@@ -101,42 +101,44 @@ impl MarketData {
     /// duplicate keys are an error.
     pub fn merge(&mut self, other: MarketData) -> core::Result<()> {
         if self.valuation_date != other.valuation_date || self.as_of != other.as_of {
-            return Err(core::Error::MarketData(
-                format!(
-                    "valuation_date/as_of mismatch: {}/{} vs {}/{}",
-                    self.valuation_date, self.as_of, other.valuation_date, other.as_of,
-                ),
-            ));
+            return Err(core::Error::MarketData(format!(
+                "valuation_date/as_of mismatch: {}/{} vs {}/{}",
+                self.valuation_date, self.as_of, other.valuation_date, other.as_of,
+            )));
         }
         for (id, price) in other.market_prices {
             if self.market_prices.contains_key(&id) {
-                return Err(core::Error::MarketData(
-                    format!("duplicate market price '{}'", id),
-                ));
+                return Err(core::Error::MarketData(format!(
+                    "duplicate market price '{}'",
+                    id
+                )));
             }
             self.market_prices.insert(id, price);
         }
         for (id, price) in other.settlement_prices {
             if self.settlement_prices.contains_key(&id) {
-                return Err(core::Error::MarketData(
-                    format!("duplicate settlement price '{}'", id),
-                ));
+                return Err(core::Error::MarketData(format!(
+                    "duplicate settlement price '{}'",
+                    id
+                )));
             }
             self.settlement_prices.insert(id, price);
         }
         for (ccy, curve) in other.discount_curves {
             if self.discount_curves.contains_key(&ccy) {
-                return Err(core::Error::MarketData(
-                    format!("duplicate discount curve '{}'", ccy),
-                ));
+                return Err(core::Error::MarketData(format!(
+                    "duplicate discount curve '{}'",
+                    ccy
+                )));
             }
             self.discount_curves.insert(ccy, curve);
         }
         for (id, surface) in other.vol_surfaces {
             if self.vol_surfaces.contains_key(&id) {
-                return Err(core::Error::MarketData(
-                    format!("duplicate vol surface '{}'", id),
-                ));
+                return Err(core::Error::MarketData(format!(
+                    "duplicate vol surface '{}'",
+                    id
+                )));
             }
             self.vol_surfaces.insert(id, surface);
         }
@@ -196,11 +198,23 @@ mod tests {
     fn multiple_currencies() {
         let base = Date::new(2025, 1, 1);
         let mut md = md(base);
-        md.add_discount_curve("USD", DiscountCurve::flat(base, DayCount::Act365Fixed, 0.05));
-        md.add_discount_curve("EUR", DiscountCurve::flat(base, DayCount::Act365Fixed, 0.03));
+        md.add_discount_curve(
+            "USD",
+            DiscountCurve::flat(base, DayCount::Act365Fixed, 0.05),
+        );
+        md.add_discount_curve(
+            "EUR",
+            DiscountCurve::flat(base, DayCount::Act365Fixed, 0.03),
+        );
 
-        let usd_df = md.discount_curve("USD").unwrap().df_to(Date::new(2026, 1, 1));
-        let eur_df = md.discount_curve("EUR").unwrap().df_to(Date::new(2026, 1, 1));
+        let usd_df = md
+            .discount_curve("USD")
+            .unwrap()
+            .df_to(Date::new(2026, 1, 1));
+        let eur_df = md
+            .discount_curve("EUR")
+            .unwrap()
+            .df_to(Date::new(2026, 1, 1));
         assert!(usd_df < eur_df); // higher rate = lower discount factor
     }
 }

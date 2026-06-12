@@ -43,9 +43,13 @@ impl fmt::Display for Deal {
         write!(
             f,
             "{} {} {} x {} @ {} {} {}",
-            self.id, self.direction, self.instrument_id,
-            self.quantity, self.price,
-            self.counterparty, self.timestamp,
+            self.id,
+            self.direction,
+            self.instrument_id,
+            self.quantity,
+            self.price,
+            self.counterparty,
+            self.timestamp,
         )
     }
 }

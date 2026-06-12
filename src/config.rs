@@ -42,9 +42,7 @@ pub struct Portfolio {
 /// Each instrument/deal file may contain a single JSON object or an array.
 /// After loading, consistency checks run and warnings are collected.
 pub fn load(config_path: &Path) -> core::Result<Portfolio> {
-    let config_dir = config_path
-        .parent()
-        .unwrap_or_else(|| Path::new("."));
+    let config_dir = config_path.parent().unwrap_or_else(|| Path::new("."));
 
     let toml_str = std::fs::read_to_string(config_path).map_err(|e| {
         core::Error::Config(format!("cannot read {}: {}", config_path.display(), e))
@@ -62,9 +60,10 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
         for inst in loaded {
             let id = inst.id().to_string();
             if instruments.contains_key(&id) {
-                return Err(core::Error::Config(
-                    format!("duplicate instrument ID '{}'", id),
-                ));
+                return Err(core::Error::Config(format!(
+                    "duplicate instrument ID '{}'",
+                    id
+                )));
             }
             instruments.insert(id, inst);
         }
@@ -79,9 +78,10 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
         let loaded = deserialize_deals(&json, &path)?;
         for deal in loaded {
             if deal_ids.contains_key(&deal.id) {
-                return Err(core::Error::Config(
-                    format!("duplicate deal ID '{}'", deal.id),
-                ));
+                return Err(core::Error::Config(format!(
+                    "duplicate deal ID '{}'",
+                    deal.id
+                )));
             }
             deal_ids.insert(deal.id.clone(), true);
             deals.push(deal);
@@ -103,9 +103,8 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
             })?,
         }
     }
-    let market_data = market_data.ok_or_else(|| {
-        core::Error::Config("no market_data files specified".to_string())
-    })?;
+    let market_data = market_data
+        .ok_or_else(|| core::Error::Config("no market_data files specified".to_string()))?;
 
     // Consistency checks
     let mut warnings: Vec<String> = Vec::new();
@@ -145,23 +144,30 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
         let ccy = inst.currency().id.clone();
         if market_data.discount_curve(&ccy).is_err() {
             warnings.push(format!(
-                "instrument '{}': no discount curve for currency '{}'", id, ccy,
+                "instrument '{}': no discount curve for currency '{}'",
+                id, ccy,
             ));
         }
-        let expired = inst.maturity()
+        let expired = inst
+            .maturity()
             .is_some_and(|m| market_data.valuation_date() > m);
 
         // Options price via the model, not a quoted market price: check
         // their actual inputs (underlying instrument + vol surface) instead.
-        if let Some(opt) = inst.as_any().downcast_ref::<crate::instruments::EuropeanOption>() {
+        if let Some(opt) = inst
+            .as_any()
+            .downcast_ref::<crate::instruments::EuropeanOption>()
+        {
             if !instruments.contains_key(&opt.underlying) {
                 warnings.push(format!(
-                    "option '{}': unknown underlying '{}'", id, opt.underlying,
+                    "option '{}': unknown underlying '{}'",
+                    id, opt.underlying,
                 ));
             }
             if !expired && !market_data.has_vol_surface(&opt.underlying) {
                 warnings.push(format!(
-                    "option '{}': no vol surface for underlying '{}'", id, opt.underlying,
+                    "option '{}': no vol surface for underlying '{}'",
+                    id, opt.underlying,
                 ));
             }
             continue;
@@ -170,13 +176,12 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
         if expired {
             if market_data.settlement_price(id).is_err() {
                 warnings.push(format!(
-                    "instrument '{}': expired but no settlement price", id,
+                    "instrument '{}': expired but no settlement price",
+                    id,
                 ));
             }
         } else if market_data.market_price(id).is_err() {
-            warnings.push(format!(
-                "instrument '{}': no market price", id,
-            ));
+            warnings.push(format!("instrument '{}': no market price", id,));
         }
     }
 
@@ -190,9 +195,8 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
 }
 
 fn read_json_file(path: &Path) -> core::Result<String> {
-    std::fs::read_to_string(path).map_err(|e| {
-        core::Error::Config(format!("cannot read {}: {}", path.display(), e))
-    })
+    std::fs::read_to_string(path)
+        .map_err(|e| core::Error::Config(format!("cannot read {}: {}", path.display(), e)))
 }
 
 /// Deserialize a JSON string as either a single instrument or an array.
@@ -423,8 +427,18 @@ market_data = ["market.json"]
 
         let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
         assert_eq!(portfolio.warnings.len(), 2); // no market price + no curve
-        assert!(portfolio.warnings.iter().any(|w| w.contains("no market price")));
-        assert!(portfolio.warnings.iter().any(|w| w.contains("no discount curve")));
+        assert!(
+            portfolio
+                .warnings
+                .iter()
+                .any(|w| w.contains("no market price"))
+        );
+        assert!(
+            portfolio
+                .warnings
+                .iter()
+                .any(|w| w.contains("no discount curve"))
+        );
     }
 
     #[test]
@@ -482,7 +496,10 @@ market_data = ["market.json"]
 
         let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
         assert!(
-            portfolio.warnings.iter().any(|w| w.contains("defined inconsistently")),
+            portfolio
+                .warnings
+                .iter()
+                .any(|w| w.contains("defined inconsistently")),
             "expected currency inconsistency warning, got: {:?}",
             portfolio.warnings,
         );
@@ -539,20 +556,29 @@ market_data = ["market.json"]
 
         let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
         assert!(
-            portfolio.warnings.iter()
+            portfolio
+                .warnings
+                .iter()
                 .any(|w| w.contains("OPT-NO-VOL") && w.contains("no vol surface")),
-            "expected vol surface warning, got: {:?}", portfolio.warnings,
+            "expected vol surface warning, got: {:?}",
+            portfolio.warnings,
         );
         assert!(
-            portfolio.warnings.iter()
+            portfolio
+                .warnings
+                .iter()
                 .any(|w| w.contains("OPT-NO-UNDERLYING") && w.contains("unknown underlying")),
-            "expected unknown underlying warning, got: {:?}", portfolio.warnings,
+            "expected unknown underlying warning, got: {:?}",
+            portfolio.warnings,
         );
         // Options must NOT trigger the generic "no market price" warning
         assert!(
-            !portfolio.warnings.iter()
+            !portfolio
+                .warnings
+                .iter()
                 .any(|w| w.contains("OPT-") && w.contains("no market price")),
-            "options should not warn about market prices: {:?}", portfolio.warnings,
+            "options should not warn about market prices: {:?}",
+            portfolio.warnings,
         );
     }
 

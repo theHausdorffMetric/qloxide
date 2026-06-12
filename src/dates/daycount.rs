@@ -31,12 +31,8 @@ impl DayCount {
                 let days = to - from;
                 days as f64 / 365.0
             }
-            DayCount::Thirty360 => {
-                thirty360_day_count(from, to) as f64 / 360.0
-            }
-            DayCount::ActActIsda => {
-                act_act_isda(from, to)
-            }
+            DayCount::Thirty360 => thirty360_day_count(from, to) as f64 / 360.0,
+            DayCount::ActActIsda => act_act_isda(from, to),
         }
     }
 
@@ -248,11 +244,7 @@ mod tests {
     fn accrue_thirty360_half_year_is_exact() {
         // 100 face * 5% * half year under 30/360 = exactly 2.5
         let base: Decimal = "5".parse().unwrap(); // 100 * 0.05
-        let amount = DayCount::Thirty360.accrue(
-            base,
-            Date::new(2025, 1, 1),
-            Date::new(2025, 7, 1),
-        );
+        let amount = DayCount::Thirty360.accrue(base, Date::new(2025, 1, 1), Date::new(2025, 7, 1));
         assert_eq!(amount, "2.5".parse::<Decimal>().unwrap());
     }
 
@@ -261,11 +253,7 @@ mod tests {
         // 100 * 6% * 60/360 = exactly 1 — would carry f64 noise if the
         // fraction were computed before the multiplication
         let base: Decimal = "6".parse().unwrap();
-        let amount = DayCount::Thirty360.accrue(
-            base,
-            Date::new(2025, 1, 1),
-            Date::new(2025, 3, 1),
-        );
+        let amount = DayCount::Thirty360.accrue(base, Date::new(2025, 1, 1), Date::new(2025, 3, 1));
         assert_eq!(amount, Decimal::from(1));
     }
 
@@ -281,10 +269,7 @@ mod tests {
             DayCount::ActActIsda,
         ] {
             let via_f64 = dc.year_fraction(from, to);
-            let via_decimal = dc
-                .accrue(Decimal::ONE, from, to)
-                .to_f64()
-                .unwrap();
+            let via_decimal = dc.accrue(Decimal::ONE, from, to).to_f64().unwrap();
             assert!(
                 (via_f64 - via_decimal).abs() < 1e-12,
                 "{:?}: {} vs {}",

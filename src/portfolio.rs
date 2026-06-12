@@ -100,21 +100,31 @@ pub fn valuate(deals: &[Deal], portfolio: &Portfolio) -> Vec<ValuedDeal> {
 
 fn value_deal(deal: &Deal, portfolio: &Portfolio) -> core::Result<Valuation> {
     let md = &portfolio.market_data;
-    let inst = portfolio.instruments.get(&deal.instrument_id).ok_or_else(|| {
-        core::Error::Pricer(format!("unknown instrument '{}'", deal.instrument_id))
-    })?;
+    let inst = portfolio
+        .instruments
+        .get(&deal.instrument_id)
+        .ok_or_else(|| {
+            core::Error::Pricer(format!("unknown instrument '{}'", deal.instrument_id))
+        })?;
 
     let mark_f64 = pricing::price(inst.as_ref(), md)?;
     let mark = Decimal::try_from(mark_f64).map_err(|e| {
-        core::Error::Pricer(format!("cannot convert mark {} to decimal: {}", mark_f64, e))
+        core::Error::Pricer(format!(
+            "cannot convert mark {} to decimal: {}",
+            mark_f64, e
+        ))
     })?;
 
-    let pnl = deal.signed_quantity() * (mark - deal.price) * contract_size(inst.as_ref(), portfolio);
+    let pnl =
+        deal.signed_quantity() * (mark - deal.price) * contract_size(inst.as_ref(), portfolio);
 
-    let realized = inst.maturity()
-        .is_some_and(|m| md.valuation_date() > m);
+    let realized = inst.maturity().is_some_and(|m| md.valuation_date() > m);
 
-    Ok(Valuation { mark, pnl, realized })
+    Ok(Valuation {
+        mark,
+        pnl,
+        realized,
+    })
 }
 
 /// Contract size for dollar-terms P&L: futures carry their own; options
@@ -226,12 +236,22 @@ mod tests {
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let settle = Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null);
         let priced = crate::instruments::Future::new(
-            "PRICED", "Brent", usd.clone(), settle.clone(),
-            Date::new(2026, 6, 30), Decimal::from(1000), "0.01".parse().unwrap(),
+            "PRICED",
+            "Brent",
+            usd.clone(),
+            settle.clone(),
+            Date::new(2026, 6, 30),
+            Decimal::from(1000),
+            "0.01".parse().unwrap(),
         );
         let unpriced = crate::instruments::Future::new(
-            "UNPRICED", "Brent", usd, settle,
-            Date::new(2026, 6, 30), Decimal::from(1000), "0.01".parse().unwrap(),
+            "UNPRICED",
+            "Brent",
+            usd,
+            settle,
+            Date::new(2026, 6, 30),
+            Decimal::from(1000),
+            "0.01".parse().unwrap(),
         );
 
         let valuation_date = Date::new(2026, 3, 7);
@@ -266,7 +286,10 @@ mod tests {
 
         let v2 = valued.iter().find(|v| v.deal.id == "D2").unwrap();
         let err = v2.valuation.as_ref().unwrap_err().to_string();
-        assert!(err.contains("no market price"), "expected missing-market-price error, got: {err}");
+        assert!(
+            err.contains("no market price"),
+            "expected missing-market-price error, got: {err}"
+        );
 
         // Unpriced deals contribute nothing to totals
         let (realized, unrealized) = pnl_totals(&valued);
@@ -288,19 +311,33 @@ mod tests {
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let settle = Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null);
         let future = crate::instruments::Future::new(
-            "FUT", "Brent", usd.clone(), settle.clone(),
-            Date::new(2026, 6, 30), Decimal::from(1000), "0.01".parse().unwrap(),
+            "FUT",
+            "Brent",
+            usd.clone(),
+            settle.clone(),
+            Date::new(2026, 6, 30),
+            Decimal::from(1000),
+            "0.01".parse().unwrap(),
         );
         let option = crate::instruments::EuropeanOption::new(
-            "OPT", "FUT", "ICE", usd, settle,
-            Date::new(2026, 6, 25), Decimal::from(75),
-            PutOrCall::Call, OptionSettlement::Cash,
+            "OPT",
+            "FUT",
+            "ICE",
+            usd,
+            settle,
+            Date::new(2026, 6, 25),
+            Decimal::from(75),
+            PutOrCall::Call,
+            OptionSettlement::Cash,
         );
 
         let valuation_date = Date::new(2026, 3, 10);
         let mut md = MarketData::new(valuation_date, valuation_date.as_of_midnight());
         md.add_market_price("FUT", 72.45);
-        md.add_discount_curve("USD", DiscountCurve::flat(valuation_date, DayCount::Act360, 0.04));
+        md.add_discount_curve(
+            "USD",
+            DiscountCurve::flat(valuation_date, DayCount::Act360, 0.04),
+        );
         md.add_vol_surface("FUT", VolSurface::Flat { vol: 0.30 });
 
         let mut instruments: HashMap<String, Arc<dyn FinancialInstrument>> = HashMap::new();
@@ -320,7 +357,8 @@ mod tests {
         let val = valued[0].valuation.as_ref().unwrap();
         // P&L is in dollar terms: signed_qty * (mark - trade) * 1000 (the
         // underlying future's contract size, not the default of 1)
-        let expected = Decimal::from(10) * (val.mark - "2.50".parse::<Decimal>().unwrap())
+        let expected = Decimal::from(10)
+            * (val.mark - "2.50".parse::<Decimal>().unwrap())
             * Decimal::from(1000);
         assert_eq!(val.pnl, expected);
         assert!(val.mark > Decimal::ZERO);

@@ -3,9 +3,9 @@ use std::sync::Arc;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
+use crate::cashflows::Frequency;
 use crate::dates::Date;
 use crate::dates::daycount::DayCount;
-use crate::cashflows::Frequency;
 use crate::instruments::{FinancialInstrument, Settlement};
 use crate::reference_data::Currency;
 

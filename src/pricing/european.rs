@@ -33,7 +33,9 @@ fn black76_inputs(
 
     let f = ctx.market_price(&option.underlying)?;
     let k = decimal_to_f64(option.strike)?;
-    let r = ctx.discount_curve(&option.currency.id)?.zero_rate(option.expiry);
+    let r = ctx
+        .discount_curve(&option.currency.id)?
+        .zero_rate(option.expiry);
     let moneyness = (k / f).ln();
     let sigma = ctx.vol(&option.underlying, t, moneyness)?;
 

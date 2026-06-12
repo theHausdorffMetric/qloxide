@@ -22,9 +22,9 @@ pub fn price_future(future: &Future, ctx: &dyn PricingContext) -> core::Result<f
 mod tests {
     use super::*;
     use crate::curves::DiscountCurve;
-    use crate::dates::{Date, Timestamp};
     use crate::dates::daycount::DayCount;
     use crate::dates::rules::DateRule;
+    use crate::dates::{Date, Timestamp};
     use crate::instruments::Settlement;
     use crate::reference_data::Currency;
     use rust_decimal::Decimal;
@@ -57,7 +57,10 @@ mod tests {
             self.valuation_date
         }
         fn discount_curve(&self, currency: &str) -> core::Result<&DiscountCurve> {
-            Err(core::Error::MarketData(format!("no curve for '{}'", currency)))
+            Err(core::Error::MarketData(format!(
+                "no curve for '{}'",
+                currency
+            )))
         }
         fn market_price(&self, id: &str) -> core::Result<f64> {
             self.market_prices
@@ -72,7 +75,10 @@ mod tests {
                 .ok_or_else(|| core::Error::MarketData(format!("no settlement price for '{}'", id)))
         }
         fn vol(&self, id: &str, _tenor: f64, _moneyness: f64) -> core::Result<f64> {
-            Err(core::Error::MarketData(format!("no vol surface for '{}'", id)))
+            Err(core::Error::MarketData(format!(
+                "no vol surface for '{}'",
+                id
+            )))
         }
     }
 
@@ -80,7 +86,9 @@ mod tests {
     fn future_prices_at_market() {
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let future = Future::new(
-            "ICE-BRN-K26", "Brent", usd,
+            "ICE-BRN-K26",
+            "Brent",
+            usd,
             Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
             Date::new(2026, 3, 31),
             Decimal::from(1000),
@@ -98,7 +106,9 @@ mod tests {
     fn expired_future_uses_settlement_price() {
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let future = Future::new(
-            "ICE-BRN-K26", "Brent", usd,
+            "ICE-BRN-K26",
+            "Brent",
+            usd,
             Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
             Date::new(2026, 3, 31),
             Decimal::from(1000),
@@ -116,7 +126,9 @@ mod tests {
     fn on_expiry_date_prices_ok() {
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let future = Future::new(
-            "ICE-BRN-K26", "Brent", usd,
+            "ICE-BRN-K26",
+            "Brent",
+            usd,
             Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
             Date::new(2026, 3, 31),
             Decimal::from(1000),
@@ -134,7 +146,9 @@ mod tests {
     fn missing_market_price_errors() {
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let future = Future::new(
-            "ICE-BRN-K26", "Brent", usd,
+            "ICE-BRN-K26",
+            "Brent",
+            usd,
             Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
             Date::new(2026, 3, 31),
             Decimal::from(1000),
@@ -150,7 +164,9 @@ mod tests {
         // 14:00 UTC on expiry day, settlement is 19:30 London (BST = 18:30 UTC)
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let future = Future::new(
-            "ICE-BRN-K26", "Brent", usd,
+            "ICE-BRN-K26",
+            "Brent",
+            usd,
             Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
             Date::new(2026, 3, 31),
             Decimal::from(1000),
@@ -174,7 +190,9 @@ mod tests {
         // 20:00 UTC on expiry day, settlement is 19:30 London (BST = 18:30 UTC)
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let future = Future::new(
-            "ICE-BRN-K26", "Brent", usd,
+            "ICE-BRN-K26",
+            "Brent",
+            usd,
             Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
             Date::new(2026, 3, 31),
             Decimal::from(1000),

@@ -1,17 +1,17 @@
+pub mod basket;
 pub mod bond;
 pub mod equity;
 pub mod future;
 pub mod fx;
 pub mod option;
 pub mod swap;
-pub mod basket;
 
 use serde::{Deserialize, Serialize};
 
 use crate::core;
-use crate::dates::{Date, Time, Zoned};
 use crate::dates::calendar::Calendar;
 use crate::dates::rules::DateRule;
+use crate::dates::{Date, Time, Zoned};
 use crate::reference_data::Currency;
 
 /// Settlement conventions for a financial instrument.
@@ -66,8 +66,13 @@ impl Settlement {
     /// Construct from literals. Panics on an invalid time string — use
     /// JSON deserialization for untrusted input (cf. `Date::new` vs
     /// `Date::try_new`).
-    pub fn new(venue: &str, session: &str, time: &str, timezone: &str,
-               payment_lag: DateRule) -> Settlement {
+    pub fn new(
+        venue: &str,
+        session: &str,
+        time: &str,
+        timezone: &str,
+        payment_lag: DateRule,
+    ) -> Settlement {
         Settlement {
             venue: venue.to_string(),
             session: session.to_string(),

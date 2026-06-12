@@ -71,7 +71,10 @@ impl Black76Params {
             )));
         }
         if !self.r.is_finite() {
-            return Err(core::Error::Model(format!("rate {} must be finite", self.r)));
+            return Err(core::Error::Model(format!(
+                "rate {} must be finite",
+                self.r
+            )));
         }
         Ok(())
     }
@@ -184,10 +187,7 @@ mod tests {
     #[test]
     fn call_reference_value() {
         let p = black76_price(params(100.0, 100.0, 1.0, 0.01, 0.3), PutOrCall::Call).unwrap();
-        assert!(
-            (p - 11.80489728393353).abs() < 1e-12,
-            "got {p}"
-        );
+        assert!((p - 11.80489728393353).abs() < 1e-12, "got {p}");
     }
 
     #[test]
@@ -261,30 +261,58 @@ mod tests {
             let g = black76_greeks(base, pc).unwrap();
             let h = 1e-5;
 
-            let up = black76_price(params(base.f + h, base.k, base.t, base.r, base.sigma), pc).unwrap();
-            let dn = black76_price(params(base.f - h, base.k, base.t, base.r, base.sigma), pc).unwrap();
+            let up =
+                black76_price(params(base.f + h, base.k, base.t, base.r, base.sigma), pc).unwrap();
+            let dn =
+                black76_price(params(base.f - h, base.k, base.t, base.r, base.sigma), pc).unwrap();
             let fd_delta = (up - dn) / (2.0 * h);
-            assert!((g.delta - fd_delta).abs() < 1e-7, "{pc:?} delta {} vs fd {}", g.delta, fd_delta);
+            assert!(
+                (g.delta - fd_delta).abs() < 1e-7,
+                "{pc:?} delta {} vs fd {}",
+                g.delta,
+                fd_delta
+            );
 
             // Gamma needs a larger bump: with h=1e-5 the second difference
             // divides f64 cancellation noise by h²=1e-10 and drowns.
             let hg = 1e-3;
-            let gup = black76_price(params(base.f + hg, base.k, base.t, base.r, base.sigma), pc).unwrap();
-            let gdn = black76_price(params(base.f - hg, base.k, base.t, base.r, base.sigma), pc).unwrap();
+            let gup =
+                black76_price(params(base.f + hg, base.k, base.t, base.r, base.sigma), pc).unwrap();
+            let gdn =
+                black76_price(params(base.f - hg, base.k, base.t, base.r, base.sigma), pc).unwrap();
             let mid = black76_price(base, pc).unwrap();
             let fd_gamma = (gup - 2.0 * mid + gdn) / (hg * hg);
-            assert!((g.gamma - fd_gamma).abs() < 1e-6, "{pc:?} gamma {} vs fd {}", g.gamma, fd_gamma);
+            assert!(
+                (g.gamma - fd_gamma).abs() < 1e-6,
+                "{pc:?} gamma {} vs fd {}",
+                g.gamma,
+                fd_gamma
+            );
 
-            let vu = black76_price(params(base.f, base.k, base.t, base.r, base.sigma + h), pc).unwrap();
-            let vd = black76_price(params(base.f, base.k, base.t, base.r, base.sigma - h), pc).unwrap();
+            let vu =
+                black76_price(params(base.f, base.k, base.t, base.r, base.sigma + h), pc).unwrap();
+            let vd =
+                black76_price(params(base.f, base.k, base.t, base.r, base.sigma - h), pc).unwrap();
             let fd_vega = (vu - vd) / (2.0 * h);
-            assert!((g.vega - fd_vega).abs() < 1e-6, "{pc:?} vega {} vs fd {}", g.vega, fd_vega);
+            assert!(
+                (g.vega - fd_vega).abs() < 1e-6,
+                "{pc:?} vega {} vs fd {}",
+                g.vega,
+                fd_vega
+            );
 
             // theta = -dV/dT
-            let tu = black76_price(params(base.f, base.k, base.t + h, base.r, base.sigma), pc).unwrap();
-            let td = black76_price(params(base.f, base.k, base.t - h, base.r, base.sigma), pc).unwrap();
+            let tu =
+                black76_price(params(base.f, base.k, base.t + h, base.r, base.sigma), pc).unwrap();
+            let td =
+                black76_price(params(base.f, base.k, base.t - h, base.r, base.sigma), pc).unwrap();
             let fd_theta = -(tu - td) / (2.0 * h);
-            assert!((g.theta - fd_theta).abs() < 1e-6, "{pc:?} theta {} vs fd {}", g.theta, fd_theta);
+            assert!(
+                (g.theta - fd_theta).abs() < 1e-6,
+                "{pc:?} theta {} vs fd {}",
+                g.theta,
+                fd_theta
+            );
         }
     }
 }

@@ -43,10 +43,7 @@ pub trait PricingContext: Send + Sync {
 /// One uniform interface for all instrument types: the context provides
 /// everything (market prices, curves, vol surfaces); each pricer takes
 /// what it needs. Dispatches on the concrete instrument type.
-pub fn price(
-    inst: &dyn FinancialInstrument,
-    ctx: &dyn PricingContext,
-) -> core::Result<f64> {
+pub fn price(inst: &dyn FinancialInstrument, ctx: &dyn PricingContext) -> core::Result<f64> {
     let any = inst.as_any();
 
     if let Some(b) = any.downcast_ref::<Bond>() {
@@ -94,8 +91,8 @@ impl PricingContext for MarketData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::instruments::equity::Equity;
     use crate::instruments::Settlement;
+    use crate::instruments::equity::Equity;
 
     #[test]
     fn unsupported_instrument_errors() {
@@ -129,16 +126,28 @@ mod tests {
             self.valuation_date
         }
         fn discount_curve(&self, currency: &str) -> core::Result<&DiscountCurve> {
-            Err(core::Error::MarketData(format!("no curve for '{}'", currency)))
+            Err(core::Error::MarketData(format!(
+                "no curve for '{}'",
+                currency
+            )))
         }
         fn market_price(&self, id: &str) -> core::Result<f64> {
-            Err(core::Error::MarketData(format!("no market price for '{}'", id)))
+            Err(core::Error::MarketData(format!(
+                "no market price for '{}'",
+                id
+            )))
         }
         fn settlement_price(&self, id: &str) -> core::Result<f64> {
-            Err(core::Error::MarketData(format!("no settlement price for '{}'", id)))
+            Err(core::Error::MarketData(format!(
+                "no settlement price for '{}'",
+                id
+            )))
         }
         fn vol(&self, id: &str, _tenor: f64, _moneyness: f64) -> core::Result<f64> {
-            Err(core::Error::MarketData(format!("no vol surface for '{}'", id)))
+            Err(core::Error::MarketData(format!(
+                "no vol surface for '{}'",
+                id
+            )))
         }
     }
 }

@@ -126,10 +126,18 @@ impl Calendar {
         match self {
             Calendar::EveryDay => 1.0,
             Calendar::Weekday => {
-                if self.is_holiday(date) { 0.0 } else { 1.0 }
+                if self.is_holiday(date) {
+                    0.0
+                } else {
+                    1.0
+                }
             }
             Calendar::WeekdayAndHoliday { .. } => {
-                if self.is_holiday(date) { 0.0 } else { 1.0 }
+                if self.is_holiday(date) {
+                    0.0
+                } else {
+                    1.0
+                }
             }
             Calendar::Volatility {
                 calendar,
@@ -157,8 +165,7 @@ impl Calendar {
 
     /// Year fraction between two date-day-fraction points.
     pub fn year_fraction(&self, from: Date, from_frac: f64, to: Date, to_frac: f64) -> f64 {
-        let business_days =
-            self.count_business_days_fractional(from, from_frac, to, to_frac);
+        let business_days = self.count_business_days_fractional(from, from_frac, to, to_frac);
         business_days / self.standard_basis()
     }
 

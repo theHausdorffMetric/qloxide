@@ -46,18 +46,24 @@ mod tests {
             self.valuation_date
         }
         fn discount_curve(&self, currency: &str) -> crate::core::Result<&DiscountCurve> {
-            self.curves
-                .get(currency)
-                .ok_or_else(|| crate::core::Error::MarketData(format!("no curve for '{}'", currency)))
+            self.curves.get(currency).ok_or_else(|| {
+                crate::core::Error::MarketData(format!("no curve for '{}'", currency))
+            })
         }
         fn market_price(&self, _id: &str) -> crate::core::Result<f64> {
-            Err(crate::core::Error::MarketData("not implemented".to_string()))
+            Err(crate::core::Error::MarketData(
+                "not implemented".to_string(),
+            ))
         }
         fn settlement_price(&self, _id: &str) -> crate::core::Result<f64> {
-            Err(crate::core::Error::MarketData("not implemented".to_string()))
+            Err(crate::core::Error::MarketData(
+                "not implemented".to_string(),
+            ))
         }
         fn vol(&self, _id: &str, _tenor: f64, _moneyness: f64) -> crate::core::Result<f64> {
-            Err(crate::core::Error::MarketData("not implemented".to_string()))
+            Err(crate::core::Error::MarketData(
+                "not implemented".to_string(),
+            ))
         }
     }
 
@@ -88,10 +94,7 @@ mod tests {
     fn test_ctx_with_dc(rate: f64, dc: DayCount) -> TestContext {
         let base = Date::new(2025, 1, 1);
         let mut curves = HashMap::new();
-        curves.insert(
-            "USD".to_string(),
-            DiscountCurve::flat(base, dc, rate),
-        );
+        curves.insert("USD".to_string(), DiscountCurve::flat(base, dc, rate));
         TestContext {
             valuation_date: base,
             curves,
@@ -124,11 +127,7 @@ mod tests {
         // Each coupon ~ face * 0.05 * 0.5 = 2.50 (approx, depends on day count)
         // Total ~ 10 * 2.50 + 100 = 125
         // With Act365Fixed the year fractions won't be exactly 0.5, so allow tolerance
-        assert!(
-            (pv - 125.0).abs() < 0.50,
-            "pv={}, expected ~125",
-            pv,
-        );
+        assert!((pv - 125.0).abs() < 0.50, "pv={}, expected ~125", pv,);
     }
 
     #[test]
@@ -214,6 +213,9 @@ mod tests {
         let bond = test_bond_with_dc(100, "0.05", Frequency::SemiAnnual, DayCount::ActActIsda);
         let pv_low = price_bond(&bond, &test_ctx_with_dc(0.03, DayCount::ActActIsda)).unwrap();
         let pv_high = price_bond(&bond, &test_ctx_with_dc(0.07, DayCount::ActActIsda)).unwrap();
-        assert!(pv_low > pv_high, "lower rate should give higher price (ActActIsda)");
+        assert!(
+            pv_low > pv_high,
+            "lower rate should give higher price (ActActIsda)"
+        );
     }
 }
