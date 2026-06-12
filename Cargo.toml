@@ -15,6 +15,7 @@ thiserror = "2"
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1"
 jiff = { version = "0.2", features = ["serde"] }
+libm = "0.2"
 typetag = "0.2"
 rust_decimal = { version = "1", features = ["serde-with-str"] }
 toml = "1.1"

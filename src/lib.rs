@@ -1,6 +1,7 @@
 pub use rust_decimal::Decimal;
 
 pub mod core;
+pub mod math;
 pub mod dates;
 pub mod reference_data;
 pub mod cashflows;
