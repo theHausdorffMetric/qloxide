@@ -110,6 +110,28 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
     // Consistency checks
     let mut warnings: Vec<String> = Vec::new();
 
+    // Currencies are embedded by value in each instrument's JSON; two
+    // instruments declaring the same currency id with different
+    // conventions is a silent-mismatch hazard.
+    let mut currencies: HashMap<String, (String, crate::reference_data::Currency)> = HashMap::new();
+    let mut sorted_ids: Vec<&String> = instruments.keys().collect();
+    sorted_ids.sort(); // deterministic "first seen" for stable warnings
+    for id in sorted_ids {
+        let ccy = instruments[id].currency();
+        match currencies.get(&ccy.id) {
+            None => {
+                currencies.insert(ccy.id.clone(), (id.clone(), ccy.clone()));
+            }
+            Some((first_inst, first_ccy)) if first_ccy != ccy => {
+                warnings.push(format!(
+                    "currency '{}' defined inconsistently: instrument '{}' disagrees with '{}'",
+                    ccy.id, id, first_inst,
+                ));
+            }
+            Some(_) => {}
+        }
+    }
+
     for deal in &deals {
         if !instruments.contains_key(&deal.instrument_id) {
             return Err(core::Error::Config(format!(
@@ -406,6 +428,47 @@ market_data = ["market.json"]
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("duplicate deal"), "{}", err);
+    }
+
+    #[test]
+    fn inconsistent_currency_definitions_warn() {
+        let dir = tempfile::tempdir().unwrap();
+        write_test_files(dir.path());
+
+        // Second instrument declares USD with a different day count
+        fs::write(
+            dir.path().join("instruments.json"),
+            r#"[
+  {
+    "type": "Future",
+    "id": "ICE-BRN-K26",
+    "underlying": "Brent",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2026-03-31",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  },
+  {
+    "type": "Future",
+    "id": "ICE-BRN-M26",
+    "underlying": "Brent",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act365Fixed"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2026-05-29",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  }
+]"#,
+        )
+        .unwrap();
+
+        let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
+        assert!(
+            portfolio.warnings.iter().any(|w| w.contains("defined inconsistently")),
+            "expected currency inconsistency warning, got: {:?}",
+            portfolio.warnings,
+        );
     }
 
     #[test]

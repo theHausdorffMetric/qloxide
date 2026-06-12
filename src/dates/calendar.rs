@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::dates::Date;
 
 /// Holiday calendar for business day calculations.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Calendar {
     /// Every day is a business day (no holidays, no weekends).
     EveryDay,

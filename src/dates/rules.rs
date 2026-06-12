@@ -4,7 +4,7 @@ use crate::dates::Date;
 use crate::dates::calendar::Calendar;
 
 /// Rule for adjusting dates to business days.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum DateRule {
     /// No adjustment — use the date as-is.
     Null,
