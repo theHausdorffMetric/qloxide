@@ -21,7 +21,7 @@ pub fn price_bond(bond: &Bond, ctx: &dyn PricingContext) -> core::Result<f64> {
     let mut period_start = bond.issue_date;
     let mut i = 1;
     loop {
-        let coupon_date = add_months(bond.issue_date, months_per_period * i);
+        let coupon_date = bond.issue_date.add_months(months_per_period * i);
         let coupon_date = if coupon_date > bond.maturity_date {
             bond.maturity_date
         } else {
@@ -56,31 +56,6 @@ fn decimal_to_f64(d: rust_decimal::Decimal) -> core::Result<f64> {
     use rust_decimal::prelude::ToPrimitive;
     d.to_f64()
         .ok_or_else(|| core::Error::Pricer(format!("cannot convert Decimal '{}' to f64", d)))
-}
-
-/// Add months to a date, clamping to end of month.
-fn add_months(date: crate::dates::Date, months: i32) -> crate::dates::Date {
-    let total = date.year() as i32 * 12 + (date.month() as i32 - 1) + months;
-    let y = (total / 12) as i16;
-    let m = (total % 12 + 1) as i8;
-    let max_day = days_in_month(y, m);
-    let d = date.day().min(max_day);
-    crate::dates::Date::new(y, m, d)
-}
-
-fn days_in_month(year: i16, month: i8) -> i8 {
-    match month {
-        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
-        4 | 6 | 9 | 11 => 30,
-        2 => {
-            if (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 {
-                29
-            } else {
-                28
-            }
-        }
-        _ => unreachable!("invalid month: {}", month),
-    }
 }
 
 #[cfg(test)]

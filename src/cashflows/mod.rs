@@ -77,10 +77,10 @@ impl CashFlowSchedule {
         let mut unadjusted = vec![end];
 
         // Generate backwards from end
-        let mut current = add_months(end, -months);
+        let mut current = end.add_months(-months);
         while current > start {
             unadjusted.push(current);
-            current = add_months(current, -months);
+            current = current.add_months(-months);
         }
         unadjusted.push(start);
         unadjusted.reverse();
@@ -108,35 +108,6 @@ impl CashFlowSchedule {
     /// The accrual periods: pairs of (period_start, period_end).
     pub fn periods(&self) -> Vec<(Date, Date)> {
         self.dates.windows(2).map(|w| (w[0], w[1])).collect()
-    }
-}
-
-/// Add months to a date, clamping to the last day of the target month.
-fn add_months(date: Date, months: i32) -> Date {
-    let total_months = date.year() as i32 * 12 + (date.month() as i32 - 1) + months;
-    let target_year = (total_months / 12) as i16;
-    let target_month = (total_months % 12 + 1) as i8;
-
-    // Clamp day to the target month's length
-    let day = date.day();
-    let max_day = days_in_month(target_year, target_month);
-    let clamped_day = day.min(max_day);
-
-    Date::new(target_year, target_month, clamped_day)
-}
-
-fn days_in_month(year: i16, month: i8) -> i8 {
-    match month {
-        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
-        4 | 6 | 9 | 11 => 30,
-        2 => {
-            if (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 {
-                29
-            } else {
-                28
-            }
-        }
-        _ => unreachable!("invalid month: {}", month),
     }
 }
 
@@ -208,16 +179,6 @@ mod tests {
         );
         assert_eq!(sched.dates.len(), 2);
         assert_eq!(sched.periods().len(), 1);
-    }
-
-    #[test]
-    fn add_months_end_of_month() {
-        // Jan 31 + 1 month = Feb 28 (non-leap) or Feb 29 (leap)
-        let d = add_months(Date::new(2025, 1, 31), 1);
-        assert_eq!(d, Date::new(2025, 2, 28));
-
-        let d_leap = add_months(Date::new(2024, 1, 31), 1);
-        assert_eq!(d_leap, Date::new(2024, 2, 29));
     }
 
     #[test]

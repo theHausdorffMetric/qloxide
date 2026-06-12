@@ -62,6 +62,13 @@ impl Date {
         days as f64 / 365.0
     }
 
+    /// Add calendar months, clamping the day to the target month's length
+    /// (e.g. Jan 31 + 1 month = Feb 28/29). Panics on overflow.
+    pub fn add_months(&self, months: i32) -> Date {
+        let span = jiff::Span::new().months(months);
+        Date(self.0.checked_add(span).expect("date overflow"))
+    }
+
     /// Convert to a UTC midnight Timestamp.
     pub fn as_of_midnight(&self) -> Timestamp {
         let dt = self.0.at(0, 0, 0, 0);
@@ -327,6 +334,17 @@ mod tests {
         assert_eq!(json, "\"2025-06-14\"");
         let d2: Date = serde_json::from_str(&json).unwrap();
         assert_eq!(d, d2);
+    }
+
+    #[test]
+    fn add_months_clamps_to_end_of_month() {
+        // Jan 31 + 1 month = Feb 28 (non-leap) or Feb 29 (leap)
+        assert_eq!(Date::new(2025, 1, 31).add_months(1), Date::new(2025, 2, 28));
+        assert_eq!(Date::new(2024, 1, 31).add_months(1), Date::new(2024, 2, 29));
+        // Backwards across a year boundary
+        assert_eq!(Date::new(2025, 1, 15).add_months(-3), Date::new(2024, 10, 15));
+        // Plain forward
+        assert_eq!(Date::new(2025, 6, 14).add_months(6), Date::new(2025, 12, 14));
     }
 
     #[test]
