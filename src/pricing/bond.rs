@@ -2,53 +2,20 @@ use crate::core;
 use crate::instruments::bond::Bond;
 use crate::pricing::PricingContext;
 
-/// Price a fixed-rate bond as the sum of discounted cash flows.
+/// Price a fixed-rate bond as the sum of discounted contractual cash flows.
 ///
-/// Generates coupon dates from issue to maturity, discounts each future
-/// coupon payment and the final principal repayment. Coupon periods use
-/// the bond's day count convention for accrual fractions.
+/// The flows (coupons + principal) come from [`Bond::cash_flows`]; this
+/// function only discounts the ones that pay after the valuation date.
 pub fn price_bond(bond: &Bond, ctx: &dyn PricingContext) -> core::Result<f64> {
     let curve = ctx.discount_curve(&bond.currency.id)?;
     let spot_date = ctx.spot_date();
 
-    let months_per_period = bond.frequency.months();
-    let coupon_rate_f64 = decimal_to_f64(bond.coupon_rate)?;
-    let face_value_f64 = decimal_to_f64(bond.face_value)?;
-
     let mut pv = 0.0;
-
-    // Generate coupon dates forward from issue date
-    let mut period_start = bond.issue_date;
-    let mut i = 1;
-    loop {
-        let coupon_date = bond.issue_date.add_months(months_per_period * i);
-        let coupon_date = if coupon_date > bond.maturity_date {
-            bond.maturity_date
-        } else {
-            coupon_date
-        };
-
-        // Only include future cash flows
-        if coupon_date > spot_date {
-            let yf = bond.day_count.year_fraction(period_start, coupon_date);
-            let coupon = face_value_f64 * coupon_rate_f64 * yf;
-            let df = curve.df_to(coupon_date);
-            pv += coupon * df;
+    for flow in bond.cash_flows() {
+        if flow.pay_date > spot_date {
+            pv += decimal_to_f64(flow.amount)? * curve.df_to(flow.pay_date);
         }
-
-        if coupon_date >= bond.maturity_date {
-            break;
-        }
-        period_start = coupon_date;
-        i += 1;
     }
-
-    // Principal repayment at maturity
-    if bond.maturity_date > spot_date {
-        let df = curve.df_to(bond.maturity_date);
-        pv += face_value_f64 * df;
-    }
-
     Ok(pv)
 }
 
