@@ -2,13 +2,22 @@ use std::collections::HashMap;
 
 use crate::Decimal;
 use crate::config::Portfolio;
+use crate::core;
 use crate::instruments::future::Future;
 use crate::pricing;
 use crate::trades::{BuySell, Deal};
 
-/// A deal enriched with mark-to-market valuation.
+/// A deal enriched with mark-to-market valuation — or the reason it
+/// could not be priced. Every input deal produces exactly one
+/// `ValuedDeal`; pricing failures are never silently dropped.
 pub struct ValuedDeal {
     pub deal: Deal,
+    pub valuation: core::Result<Valuation>,
+}
+
+/// Successful mark-to-market result for one deal.
+#[derive(Debug)]
+pub struct Valuation {
     pub mark: Decimal,
     pub pnl: Decimal,
     pub realized: bool,
@@ -60,48 +69,55 @@ pub fn compress(deals: &[Deal]) -> Vec<Deal> {
     positions
 }
 
-/// Mark a set of deals against market data, producing valued deals.
+/// Mark a set of deals against market data, producing one valued deal
+/// per input deal. Deals that cannot be priced carry the error.
 pub fn valuate(deals: &[Deal], portfolio: &Portfolio) -> Vec<ValuedDeal> {
-    let md = &portfolio.market_data;
-
     deals
         .iter()
-        .filter_map(|deal| {
-            let inst = portfolio.instruments.get(&deal.instrument_id)?;
-
-            let mark_f64 = pricing::price(inst.as_ref(), md).ok()?;
-            let mark = Decimal::try_from(mark_f64).ok()?;
-
-            let contract_size = inst
-                .as_any()
-                .downcast_ref::<Future>()
-                .map(|f| f.contract_size)
-                .unwrap_or(Decimal::ONE);
-
-            let pnl = deal.signed_quantity() * (mark - deal.price) * contract_size;
-
-            let realized = inst.maturity()
-                .is_some_and(|m| md.spot_date() > m);
-
-            Some(ValuedDeal {
-                deal: deal.clone(),
-                mark,
-                pnl,
-                realized,
-            })
+        .map(|deal| ValuedDeal {
+            deal: deal.clone(),
+            valuation: value_deal(deal, portfolio),
         })
         .collect()
 }
 
-/// Compute P&L totals from valued deals.
+fn value_deal(deal: &Deal, portfolio: &Portfolio) -> core::Result<Valuation> {
+    let md = &portfolio.market_data;
+    let inst = portfolio.instruments.get(&deal.instrument_id).ok_or_else(|| {
+        core::Error::Pricer(format!("unknown instrument '{}'", deal.instrument_id))
+    })?;
+
+    let mark_f64 = pricing::price(inst.as_ref(), md)?;
+    let mark = Decimal::try_from(mark_f64).map_err(|e| {
+        core::Error::Pricer(format!("cannot convert mark {} to decimal: {}", mark_f64, e))
+    })?;
+
+    let contract_size = inst
+        .as_any()
+        .downcast_ref::<Future>()
+        .map(|f| f.contract_size)
+        .unwrap_or(Decimal::ONE);
+
+    let pnl = deal.signed_quantity() * (mark - deal.price) * contract_size;
+
+    let realized = inst.maturity()
+        .is_some_and(|m| md.spot_date() > m);
+
+    Ok(Valuation { mark, pnl, realized })
+}
+
+/// Compute P&L totals from valued deals: (realized, unrealized).
+/// Unpriced deals contribute nothing — callers should report them.
 pub fn pnl_totals(valued: &[ValuedDeal]) -> (Decimal, Decimal) {
     let mut realized = Decimal::ZERO;
     let mut unrealized = Decimal::ZERO;
     for v in valued {
-        if v.realized {
-            realized += v.pnl;
-        } else {
-            unrealized += v.pnl;
+        if let Ok(val) = &v.valuation {
+            if val.realized {
+                realized += val.pnl;
+            } else {
+                unrealized += val.pnl;
+            }
         }
     }
     (realized, unrealized)
@@ -168,6 +184,67 @@ mod tests {
         assert_eq!(positions[0].quantity, Decimal::from(15));
         assert_eq!(positions[1].instrument_id, "ICE-BRN-M26");
         assert_eq!(positions[1].quantity, Decimal::from(5));
+    }
+
+    #[test]
+    fn valuate_is_total_over_input_deals() {
+        use crate::dates::Date;
+        use crate::dates::daycount::DayCount;
+        use crate::dates::rules::DateRule;
+        use crate::instruments::{FinancialInstrument, Settlement};
+        use crate::market_data::MarketData;
+        use crate::reference_data::Currency;
+        use std::sync::Arc;
+
+        let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
+        let settle = Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null);
+        let priced = crate::instruments::Future::new(
+            "PRICED", "Brent", usd.clone(), settle.clone(),
+            Date::new(2026, 6, 30), Decimal::from(1000), "0.01".parse().unwrap(),
+        );
+        let unpriced = crate::instruments::Future::new(
+            "UNPRICED", "Brent", usd, settle,
+            Date::new(2026, 6, 30), Decimal::from(1000), "0.01".parse().unwrap(),
+        );
+
+        let spot_date = Date::new(2026, 3, 7);
+        let mut md = MarketData::new(spot_date, spot_date.as_of_midnight());
+        md.add_spot("PRICED", 72.50); // no spot for UNPRICED
+
+        let mut instruments: HashMap<String, Arc<dyn FinancialInstrument>> = HashMap::new();
+        instruments.insert("PRICED".to_string(), Arc::new(priced));
+        instruments.insert("UNPRICED".to_string(), Arc::new(unpriced));
+
+        let deals = vec![
+            make_deal("D1", "PRICED", BuySell::Buy, 10, "71.80"),
+            make_deal("D2", "UNPRICED", BuySell::Buy, 5, "70.00"),
+        ];
+        let portfolio = Portfolio {
+            instruments,
+            deals: deals.clone(),
+            market_data: md,
+            warnings: vec![],
+            reports: vec![],
+        };
+
+        let valued = valuate(&deals, &portfolio);
+        // Every input deal appears in the output — failures are not dropped
+        assert_eq!(valued.len(), 2);
+
+        let v1 = valued.iter().find(|v| v.deal.id == "D1").unwrap();
+        let val = v1.valuation.as_ref().unwrap();
+        assert_eq!(val.mark, "72.50".parse::<Decimal>().unwrap());
+        // 10 * (72.50 - 71.80) * 1000 = 7000
+        assert_eq!(val.pnl, Decimal::from(7000));
+
+        let v2 = valued.iter().find(|v| v.deal.id == "D2").unwrap();
+        let err = v2.valuation.as_ref().unwrap_err().to_string();
+        assert!(err.contains("no spot"), "expected missing-spot error, got: {err}");
+
+        // Unpriced deals contribute nothing to totals
+        let (realized, unrealized) = pnl_totals(&valued);
+        assert_eq!(realized, Decimal::ZERO);
+        assert_eq!(unrealized, Decimal::from(7000));
     }
 
     #[test]
