@@ -11,7 +11,7 @@ pub fn price_bond(bond: &Bond, ctx: &dyn PricingContext) -> core::Result<f64> {
     let curve = ctx.discount_curve(&bond.currency.id)?;
     let spot_date = ctx.spot_date();
 
-    let months_per_period = 12 / bond.frequency as i32;
+    let months_per_period = bond.frequency.months();
     let coupon_rate_f64 = decimal_to_f64(bond.coupon_rate)?;
     let face_value_f64 = decimal_to_f64(bond.face_value)?;
 
@@ -86,6 +86,7 @@ fn days_in_month(year: i16, month: i8) -> i8 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cashflows::Frequency;
     use crate::curves::DiscountCurve;
     use crate::dates::Date;
     use crate::dates::daycount::DayCount;
@@ -121,11 +122,11 @@ mod tests {
         }
     }
 
-    fn test_bond(face: u32, coupon: &str, freq: u32) -> Bond {
+    fn test_bond(face: u32, coupon: &str, freq: Frequency) -> Bond {
         test_bond_with_dc(face, coupon, freq, DayCount::Act365Fixed)
     }
 
-    fn test_bond_with_dc(face: u32, coupon: &str, freq: u32, dc: DayCount) -> Bond {
+    fn test_bond_with_dc(face: u32, coupon: &str, freq: Frequency, dc: DayCount) -> Bond {
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         Bond::new(
             "UST-5Y",
@@ -161,7 +162,7 @@ mod tests {
     #[test]
     fn zero_coupon_bond_prices_at_df() {
         // Zero coupon: price = face * df(maturity)
-        let bond = test_bond(100, "0", 1);
+        let bond = test_bond(100, "0", Frequency::Annual);
         let ctx = test_ctx(0.05);
         let pv = price_bond(&bond, &ctx).unwrap();
         // df(maturity) from curve directly — exact match
@@ -177,7 +178,7 @@ mod tests {
     #[test]
     fn zero_rate_prices_at_par() {
         // At zero rates, PV = sum of coupons + face
-        let bond = test_bond(100, "0.05", 2);
+        let bond = test_bond(100, "0.05", Frequency::SemiAnnual);
         let ctx = test_ctx(0.0);
         let pv = price_bond(&bond, &ctx).unwrap();
         // 5% coupon, semi-annual, 5 years = 10 periods
@@ -193,7 +194,7 @@ mod tests {
 
     #[test]
     fn higher_rate_lower_price() {
-        let bond = test_bond(100, "0.05", 2);
+        let bond = test_bond(100, "0.05", Frequency::SemiAnnual);
         let pv_low = price_bond(&bond, &test_ctx(0.03)).unwrap();
         let pv_high = price_bond(&bond, &test_ctx(0.07)).unwrap();
         assert!(pv_low > pv_high, "lower rate should give higher price");
@@ -202,7 +203,7 @@ mod tests {
     #[test]
     fn par_bond_prices_near_par() {
         // A 5% bond discounted at 5% should price near 100
-        let bond = test_bond(100, "0.05", 2);
+        let bond = test_bond(100, "0.05", Frequency::SemiAnnual);
         let ctx = test_ctx(0.05);
         let pv = price_bond(&bond, &ctx).unwrap();
         // Not exactly 100 due to day count fractions, but close
@@ -215,7 +216,7 @@ mod tests {
 
     #[test]
     fn annual_coupon_bond() {
-        let bond = test_bond(1000, "0.04", 1);
+        let bond = test_bond(1000, "0.04", Frequency::Annual);
         let ctx = test_ctx(0.04);
         let pv = price_bond(&bond, &ctx).unwrap();
         assert!(
@@ -230,7 +231,7 @@ mod tests {
         // 30/360 semi-annual periods are exactly 0.5, so coupon accrual is clean.
         // Not exactly par because the curve uses continuous compounding while
         // par pricing assumes semi-annual discrete compounding.
-        let bond = test_bond_with_dc(100, "0.05", 2, DayCount::Thirty360);
+        let bond = test_bond_with_dc(100, "0.05", Frequency::SemiAnnual, DayCount::Thirty360);
         let ctx = test_ctx_with_dc(0.05, DayCount::Thirty360);
         let pv = price_bond(&bond, &ctx).unwrap();
         assert!(
@@ -244,7 +245,7 @@ mod tests {
     fn thirty360_zero_rate_total_coupons() {
         // At zero rates with 30/360: each semi-annual coupon = 100 * 0.06 * 0.5 = 3.00
         // 10 periods + 100 face = 130.00
-        let bond = test_bond_with_dc(100, "0.06", 2, DayCount::Thirty360);
+        let bond = test_bond_with_dc(100, "0.06", Frequency::SemiAnnual, DayCount::Thirty360);
         let ctx = test_ctx_with_dc(0.0, DayCount::Thirty360);
         let pv = price_bond(&bond, &ctx).unwrap();
         assert!(
@@ -259,7 +260,7 @@ mod tests {
         // ActActIsda weights by actual days per year.
         // Not exactly par: continuous compounding vs annual discrete,
         // plus ActActIsda year fractions aren't exactly 1.0 (leap years).
-        let bond = test_bond_with_dc(100, "0.05", 1, DayCount::ActActIsda);
+        let bond = test_bond_with_dc(100, "0.05", Frequency::Annual, DayCount::ActActIsda);
         let ctx = test_ctx_with_dc(0.05, DayCount::ActActIsda);
         let pv = price_bond(&bond, &ctx).unwrap();
         assert!(
@@ -271,7 +272,7 @@ mod tests {
 
     #[test]
     fn act_act_isda_higher_rate_lower_price() {
-        let bond = test_bond_with_dc(100, "0.05", 2, DayCount::ActActIsda);
+        let bond = test_bond_with_dc(100, "0.05", Frequency::SemiAnnual, DayCount::ActActIsda);
         let pv_low = price_bond(&bond, &test_ctx_with_dc(0.03, DayCount::ActActIsda)).unwrap();
         let pv_high = price_bond(&bond, &test_ctx_with_dc(0.07, DayCount::ActActIsda)).unwrap();
         assert!(pv_low > pv_high, "lower rate should give higher price (ActActIsda)");

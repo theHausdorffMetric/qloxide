@@ -3,6 +3,7 @@ use std::sync::Arc;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
+use crate::cashflows::Frequency;
 use crate::dates::Date;
 use crate::dates::daycount::DayCount;
 use crate::instruments::{FinancialInstrument, Settlement};
@@ -25,8 +26,8 @@ pub struct Bond {
     pub coupon_rate: Decimal,
     /// Day count convention for coupon accrual.
     pub day_count: DayCount,
-    /// Number of coupon payments per year.
-    pub frequency: u32,
+    /// Coupon payment frequency.
+    pub frequency: Frequency,
 }
 
 impl Bond {
@@ -40,7 +41,7 @@ impl Bond {
         face_value: Decimal,
         coupon_rate: Decimal,
         day_count: DayCount,
-        frequency: u32,
+        frequency: Frequency,
     ) -> Bond {
         Bond {
             id: id.to_string(),
@@ -58,7 +59,7 @@ impl Bond {
 
     /// Coupon amount per period.
     pub fn coupon_amount(&self) -> Decimal {
-        self.face_value * self.coupon_rate / Decimal::from(self.frequency)
+        self.face_value * self.coupon_rate / Decimal::from(self.frequency.per_year())
     }
 }
 

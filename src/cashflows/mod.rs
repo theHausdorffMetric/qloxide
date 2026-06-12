@@ -47,6 +47,11 @@ impl Frequency {
             Frequency::Annual => 12,
         }
     }
+
+    /// Number of periods per year.
+    pub fn per_year(&self) -> u32 {
+        (12 / self.months()) as u32
+    }
 }
 
 /// A schedule of dates for cash flow generation (e.g., swap coupon dates).

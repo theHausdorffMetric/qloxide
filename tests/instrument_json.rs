@@ -120,7 +120,7 @@ fn bond_serde_roundtrip() {
         Decimal::from(1_000_000),
         Decimal::new(45, 3), // 0.045
         DayCount::Thirty360,
-        2,
+        Frequency::SemiAnnual,
     );
     let inst: Arc<dyn FinancialInstrument> = Arc::new(bond.clone());
 

@@ -25,5 +25,5 @@
     "face_value": "100",
     "coupon_rate": "0.02875",
     "day_count": "Act365Fixed",
-    "frequency": 2
+    "frequency": "SemiAnnual"
 }
