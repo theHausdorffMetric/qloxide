@@ -122,6 +122,10 @@ mod tests {
     }
 
     fn test_bond(face: u32, coupon: &str, freq: u32) -> Bond {
+        test_bond_with_dc(face, coupon, freq, DayCount::Act365Fixed)
+    }
+
+    fn test_bond_with_dc(face: u32, coupon: &str, freq: u32, dc: DayCount) -> Bond {
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         Bond::new(
             "UST-5Y",
@@ -132,17 +136,21 @@ mod tests {
             Date::new(2030, 1, 1),
             Decimal::from(face),
             coupon.parse().unwrap(),
-            DayCount::Act365Fixed,
+            dc,
             freq,
         )
     }
 
     fn test_ctx(rate: f64) -> TestContext {
+        test_ctx_with_dc(rate, DayCount::Act365Fixed)
+    }
+
+    fn test_ctx_with_dc(rate: f64, dc: DayCount) -> TestContext {
         let base = Date::new(2025, 1, 1);
         let mut curves = HashMap::new();
         curves.insert(
             "USD".to_string(),
-            DiscountCurve::flat(base, DayCount::Act365Fixed, rate),
+            DiscountCurve::flat(base, dc, rate),
         );
         TestContext {
             spot_date: base,
@@ -215,5 +223,57 @@ mod tests {
             "4% annual bond at 4% should be near 1000, got {}",
             pv,
         );
+    }
+
+    #[test]
+    fn thirty360_par_bond_near_par() {
+        // 30/360 semi-annual periods are exactly 0.5, so coupon accrual is clean.
+        // Not exactly par because the curve uses continuous compounding while
+        // par pricing assumes semi-annual discrete compounding.
+        let bond = test_bond_with_dc(100, "0.05", 2, DayCount::Thirty360);
+        let ctx = test_ctx_with_dc(0.05, DayCount::Thirty360);
+        let pv = price_bond(&bond, &ctx).unwrap();
+        assert!(
+            (pv - 100.0).abs() < 0.5,
+            "30/360 par bond should be near par, got {}",
+            pv,
+        );
+    }
+
+    #[test]
+    fn thirty360_zero_rate_total_coupons() {
+        // At zero rates with 30/360: each semi-annual coupon = 100 * 0.06 * 0.5 = 3.00
+        // 10 periods + 100 face = 130.00
+        let bond = test_bond_with_dc(100, "0.06", 2, DayCount::Thirty360);
+        let ctx = test_ctx_with_dc(0.0, DayCount::Thirty360);
+        let pv = price_bond(&bond, &ctx).unwrap();
+        assert!(
+            (pv - 130.0).abs() < 0.01,
+            "30/360 zero-rate 6% bond should be 130.00, got {}",
+            pv,
+        );
+    }
+
+    #[test]
+    fn act_act_isda_par_bond() {
+        // ActActIsda weights by actual days per year.
+        // Not exactly par: continuous compounding vs annual discrete,
+        // plus ActActIsda year fractions aren't exactly 1.0 (leap years).
+        let bond = test_bond_with_dc(100, "0.05", 1, DayCount::ActActIsda);
+        let ctx = test_ctx_with_dc(0.05, DayCount::ActActIsda);
+        let pv = price_bond(&bond, &ctx).unwrap();
+        assert!(
+            (pv - 100.0).abs() < 1.0,
+            "ActActIsda par bond should be near par, got {}",
+            pv,
+        );
+    }
+
+    #[test]
+    fn act_act_isda_higher_rate_lower_price() {
+        let bond = test_bond_with_dc(100, "0.05", 2, DayCount::ActActIsda);
+        let pv_low = price_bond(&bond, &test_ctx_with_dc(0.03, DayCount::ActActIsda)).unwrap();
+        let pv_high = price_bond(&bond, &test_ctx_with_dc(0.07, DayCount::ActActIsda)).unwrap();
+        assert!(pv_low > pv_high, "lower rate should give higher price (ActActIsda)");
     }
 }
