@@ -7,6 +7,12 @@ the minor version).
 
 ## [Unreleased]
 
+### Added
+
+- `ARCHITECTURE.md` — design decisions, reasoning, and rejected
+  alternatives, shipped with the crate (migrated from the development
+  mono-repo).
+
 ## [0.2.0] — 2026-06-12
 
 ### License

@@ -6,7 +6,9 @@ A Rust library for financial instrument modeling, trade management, and pricing.
 
 ## Architecture
 
-Strict layered hierarchy — each layer depends only on layers below it:
+Design decisions, reasoning, and rejected alternatives are documented in
+[ARCHITECTURE.md](ARCHITECTURE.md). The short version: strict layered
+hierarchy — each layer depends only on layers below it:
 
 | Layer | Contents | Status |
 |-------|----------|--------|
