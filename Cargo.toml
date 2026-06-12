@@ -18,7 +18,18 @@ jiff = { version = "0.2", features = ["serde"] }
 typetag = "0.2"
 rust_decimal = { version = "1", features = ["serde-with-str"] }
 toml = "0.8"
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive"], optional = true }
+
+[features]
+default = ["cli"]
+# The qloxide binary (clap-based report runner). Library consumers can
+# opt out with default-features = false.
+cli = ["dep:clap"]
+
+[[bin]]
+name = "qloxide"
+path = "src/main.rs"
+required-features = ["cli"]
 
 [dev-dependencies]
 tempfile = "3"
