@@ -117,9 +117,7 @@ impl Calendar {
                     .count() as i32;
                 sign * (weekdays - holiday_count)
             }
-            Calendar::Volatility { calendar, .. } => {
-                calendar.count_business_days(from, to) * sign.signum()
-            }
+            Calendar::Volatility { calendar, .. } => calendar.count_business_days(from, to),
         }
     }
 
@@ -322,6 +320,20 @@ mod tests {
         let monday = Date::new(2025, 6, 16);
         assert_eq!(vol_cal.day_weight(saturday), 0.1);
         assert_eq!(vol_cal.day_weight(monday), 1.0);
+    }
+
+    #[test]
+    fn volatility_count_business_days_matches_wrapped() {
+        let vol_cal = Calendar::Volatility {
+            name: "VolCal".to_string(),
+            calendar: Box::new(Calendar::Weekday),
+            holiday_weight: 0.1,
+        };
+        let monday = Date::new(2025, 6, 16);
+        let next_monday = Date::new(2025, 6, 23);
+        assert_eq!(vol_cal.count_business_days(monday, next_monday), 5);
+        // Reversed direction must be negative, same as the wrapped calendar
+        assert_eq!(vol_cal.count_business_days(next_monday, monday), -5);
     }
 
     #[test]
