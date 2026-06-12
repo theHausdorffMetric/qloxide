@@ -71,6 +71,9 @@ mod tests {
                 .copied()
                 .ok_or_else(|| core::Error::MarketData(format!("no settlement price for '{}'", id)))
         }
+        fn vol(&self, id: &str, _tenor: f64, _moneyness: f64) -> core::Result<f64> {
+            Err(core::Error::MarketData(format!("no vol surface for '{}'", id)))
+        }
     }
 
     #[test]

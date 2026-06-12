@@ -1,3 +1,5 @@
+pub mod vol;
+
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
@@ -6,11 +8,13 @@ use crate::core;
 use crate::curves::DiscountCurve;
 use crate::dates::{Date, Timestamp};
 
-/// Container for market data: market prices, discount curves, and (later)
-/// forward curves, vol surfaces, fixings.
+pub use vol::VolSurface;
+
+/// Container for market data: market prices, discount curves, vol surfaces,
+/// and (later) forward curves and fixings.
 ///
-/// Keyed by string identifiers — instrument IDs for market_prices, currency IDs
-/// for discount curves.
+/// Keyed by string identifiers — instrument IDs for market_prices and
+/// vol_surfaces, currency IDs for discount curves.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MarketData {
     valuation_date: Date,
@@ -19,6 +23,8 @@ pub struct MarketData {
     #[serde(default)]
     settlement_prices: HashMap<String, f64>,
     discount_curves: HashMap<String, DiscountCurve>,
+    #[serde(default)]
+    vol_surfaces: HashMap<String, VolSurface>,
 }
 
 impl MarketData {
@@ -29,6 +35,7 @@ impl MarketData {
             market_prices: HashMap::new(),
             settlement_prices: HashMap::new(),
             discount_curves: HashMap::new(),
+            vol_surfaces: HashMap::new(),
         }
     }
 
@@ -71,6 +78,23 @@ impl MarketData {
         self.discount_curves.insert(currency.to_string(), curve);
     }
 
+    /// Add a vol surface for an underlying instrument.
+    pub fn add_vol_surface(&mut self, id: &str, surface: VolSurface) {
+        self.vol_surfaces.insert(id.to_string(), surface);
+    }
+
+    /// Look up a vol surface by underlying instrument ID.
+    pub fn vol_surface(&self, id: &str) -> core::Result<&VolSurface> {
+        self.vol_surfaces
+            .get(id)
+            .ok_or_else(|| core::Error::MarketData(format!("no vol surface for '{}'", id)))
+    }
+
+    /// True if a vol surface exists for the given underlying.
+    pub fn has_vol_surface(&self, id: &str) -> bool {
+        self.vol_surfaces.contains_key(id)
+    }
+
     /// Merge another `MarketData` into this one.
     ///
     /// `valuation_date` and `as_of` must match. Spots and discount curves are merged;
@@ -107,6 +131,14 @@ impl MarketData {
                 ));
             }
             self.discount_curves.insert(ccy, curve);
+        }
+        for (id, surface) in other.vol_surfaces {
+            if self.vol_surfaces.contains_key(&id) {
+                return Err(core::Error::MarketData(
+                    format!("duplicate vol surface '{}'", id),
+                ));
+            }
+            self.vol_surfaces.insert(id, surface);
         }
         Ok(())
     }

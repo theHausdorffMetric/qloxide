@@ -23,6 +23,10 @@ pub trait PricingContext: Send + Sync {
     fn discount_curve(&self, currency: &str) -> core::Result<&DiscountCurve>;
     fn market_price(&self, id: &str) -> core::Result<f64>;
     fn settlement_price(&self, id: &str) -> core::Result<f64>;
+    /// Volatility for an underlying at the given tenor (years) and
+    /// log-moneyness ln(K/F). The surface variant carries the model
+    /// (Flat = lognormal = Black76).
+    fn vol(&self, id: &str, tenor: f64, moneyness: f64) -> core::Result<f64>;
 }
 
 /// Price a financial instrument.
@@ -68,6 +72,10 @@ impl PricingContext for MarketData {
 
     fn settlement_price(&self, id: &str) -> core::Result<f64> {
         self.settlement_price(id)
+    }
+
+    fn vol(&self, id: &str, tenor: f64, moneyness: f64) -> core::Result<f64> {
+        Ok(self.vol_surface(id)?.vol(tenor, moneyness))
     }
 }
 
@@ -116,6 +124,9 @@ mod tests {
         }
         fn settlement_price(&self, id: &str) -> core::Result<f64> {
             Err(core::Error::MarketData(format!("no settlement price for '{}'", id)))
+        }
+        fn vol(&self, id: &str, _tenor: f64, _moneyness: f64) -> core::Result<f64> {
+            Err(core::Error::MarketData(format!("no vol surface for '{}'", id)))
         }
     }
 }
