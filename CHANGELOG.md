@@ -7,8 +7,31 @@ the minor version).
 
 ## [Unreleased]
 
+### Breaking
+
+- Renamed across the API and JSON formats: `spot` → `market_price`,
+  `spot_date` → `valuation_date` ("spot" means prompt physical delivery
+  in commodities; "spot date" means T+2 in FX). **JSON migration:** in
+  market data files, `"spots"` → `"market_prices"` and `"spot_date"` →
+  `"valuation_date"`. `settlement_price` is unchanged.
+
 ### Added
 
+- **European options on futures price with Black76** (Phase 1 of the
+  options effort): `math` module (`norm_pdf`/`norm_cdf` via libm),
+  `pricing::black76` (price + delta/gamma/vega/theta, validated against
+  reference values and finite differences), `VolSurface` (`Flat` variant;
+  the surface variant carries the model), `vol_surfaces` in market data
+  JSON, and `pricing::european` wired into the uniform
+  `price(instrument, context)` dispatch. American exercise is rejected
+  explicitly. Expired options return intrinsic against the underlying's
+  settlement price.
+- Option deal P&L is in dollar terms via the underlying future's
+  contract size.
+- Config checks validate option pricing inputs (underlying exists, vol
+  surface present); the instruments report shows model prices (labelled
+  `model`) for instruments without a market quote.
+- The Brent example includes a call option (`ICE-BRN-K26-C-75`).
 - `ARCHITECTURE.md` — design decisions, reasoning, and rejected
   alternatives, shipped with the crate (migrated from the development
   mono-repo).
