@@ -56,6 +56,11 @@ impl Settlement {
         let minute: i8 = parts[1].parse().map_err(|_| {
             core::Error::Instrument(format!("invalid minute in '{}'", self.time))
         })?;
+        if !(0..24).contains(&hour) || !(0..60).contains(&minute) {
+            return Err(core::Error::Instrument(
+                format!("settlement time '{}' out of range: hour must be 0-23, minute must be 0-59", self.time),
+            ));
+        }
         let tz = jiff::tz::TimeZone::get(&self.timezone).map_err(|e| {
             core::Error::Instrument(format!("invalid timezone '{}': {}", self.timezone, e))
         })?;
@@ -178,6 +183,20 @@ mod tests {
     fn settlement_at_date_invalid_time() {
         let s = Settlement::new("ICE", "SETTLE", "bad", "Europe/London", DateRule::Null);
         assert!(s.at_date(Date::new(2026, 3, 7)).is_err());
+    }
+
+    #[test]
+    fn settlement_at_date_out_of_range_hour() {
+        let s = Settlement::new("ICE", "SETTLE", "25:30", "Europe/London", DateRule::Null);
+        let err = s.at_date(Date::new(2026, 3, 7)).unwrap_err().to_string();
+        assert!(err.contains("out of range"), "expected range error, got: {err}");
+    }
+
+    #[test]
+    fn settlement_at_date_out_of_range_minute() {
+        let s = Settlement::new("ICE", "SETTLE", "19:75", "Europe/London", DateRule::Null);
+        let err = s.at_date(Date::new(2026, 3, 7)).unwrap_err().to_string();
+        assert!(err.contains("out of range"), "expected range error, got: {err}");
     }
 
     #[test]
