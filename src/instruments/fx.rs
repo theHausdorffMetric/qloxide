@@ -26,6 +26,7 @@ pub struct FxForward {
 }
 
 impl FxForward {
+    #[allow(clippy::too_many_arguments)] // all fields are pub; use a struct literal if preferred
     pub fn new(
         id: &str,
         credit_id: &str,

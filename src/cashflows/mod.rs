@@ -236,7 +236,7 @@ mod tests {
         // All intermediate dates should be weekdays
         for &d in &sched.dates[1..sched.dates.len() - 1] {
             let wd = d.weekday();
-            assert!(wd >= 1 && wd <= 5, "date {} is not a weekday", d);
+            assert!((1..=5).contains(&wd), "date {} is not a weekday", d);
         }
     }
 }

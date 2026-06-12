@@ -1,5 +1,3 @@
-#![allow(clippy::too_many_arguments)]
-
 pub use rust_decimal::Decimal;
 
 pub mod core;

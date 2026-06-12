@@ -27,6 +27,7 @@ pub struct EuropeanOption {
 }
 
 impl EuropeanOption {
+    #[allow(clippy::too_many_arguments)] // all fields are pub; use a struct literal if preferred
     pub fn new(
         id: &str,
         underlying: &str,
