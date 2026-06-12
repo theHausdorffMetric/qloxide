@@ -1,0 +1,32 @@
+# cargo-deny configuration — run `cargo deny check` (advisories, licenses,
+# bans, sources). Intended as a CI gate alongside test/clippy/fmt.
+
+[graph]
+# Audit the full surface, including the optional `cli` feature.
+all-features = true
+
+[advisories]
+# RUSTSEC advisory database. Defaults deny vulnerabilities and unsound code.
+yanked = "deny"
+
+[licenses]
+# qloxide is MIT-licensed and published on crates.io: every transitive
+# dependency must be distributable under a permissive license.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Unicode-3.0",
+    "Unlicense",
+]
+confidence-threshold = 0.8
+
+[bans]
+# Duplicate major versions bloat the build and widen the audit surface;
+# warn rather than deny because transitive churn is often unavoidable.
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+# Everything must come from crates.io — no git or unknown-registry deps.
+unknown-registry = "deny"
+unknown-git = "deny"
