@@ -52,7 +52,6 @@ pub fn compress(deals: &[Deal]) -> Vec<Deal> {
                 price: avg_price,
                 timestamp: deals.last().unwrap().timestamp,
                 counterparty: String::new(),
-                venue: String::new(),
             }
         })
         .collect();
@@ -122,7 +121,6 @@ mod tests {
             price: price.parse().unwrap(),
             timestamp: Timestamp::parse("2026-03-02T10:00:00Z").unwrap(),
             counterparty: "TEST".to_string(),
-            venue: "TEST".to_string(),
         }
     }
 

@@ -13,6 +13,10 @@ pub enum BuySell {
 }
 
 /// An executed trade — an immutable event recording that a transaction occurred.
+///
+/// Counterparty is whoever you face on the trade: clearing broker for
+/// exchange-traded instruments, the other side for OTC. Venue is
+/// instrument-level (on Settlement), not deal-level.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Deal {
     pub id: String,
@@ -22,7 +26,6 @@ pub struct Deal {
     pub price: Decimal,
     pub timestamp: Timestamp,
     pub counterparty: String,
-    pub venue: String,
 }
 
 impl Deal {
@@ -39,9 +42,9 @@ impl fmt::Display for Deal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{} {} {} x {} @ {} [{}] {} {}",
+            "{} {} {} x {} @ {} {} {}",
             self.id, self.direction, self.instrument_id,
-            self.quantity, self.price, self.venue,
+            self.quantity, self.price,
             self.counterparty, self.timestamp,
         )
     }
