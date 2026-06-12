@@ -22,8 +22,6 @@ pub struct EuropeanOption {
     pub put_or_call: PutOrCall,
     pub exercise_style: ExerciseStyle,
     pub option_settlement: OptionSettlement,
-    /// Payment date (may differ from expiry for cash-settled options).
-    pub pay_date: Date,
 }
 
 impl EuropeanOption {
@@ -38,7 +36,6 @@ impl EuropeanOption {
         strike: Decimal,
         put_or_call: PutOrCall,
         option_settlement: OptionSettlement,
-        pay_date: Date,
     ) -> EuropeanOption {
         EuropeanOption {
             id: id.to_string(),
@@ -51,8 +48,14 @@ impl EuropeanOption {
             put_or_call,
             exercise_style: ExerciseStyle::European,
             option_settlement,
-            pay_date,
         }
+    }
+
+    /// Payment date: expiry adjusted by the settlement payment lag.
+    /// Derived rather than stored, so it cannot disagree with the
+    /// settlement conventions in hand-edited JSON.
+    pub fn pay_date(&self) -> Date {
+        self.settlement.pay_date(self.expiry)
     }
 
     /// Intrinsic value at a given spot price.

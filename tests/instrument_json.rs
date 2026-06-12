@@ -75,8 +75,9 @@ fn option_serde_roundtrip() {
         Decimal::from(190),
         PutOrCall::Call,
         OptionSettlement::Cash,
-        Date::new(2025, 6, 22),
     );
+    // Pay date is derived from settlement (OTC = T+2): Fri Jun 20 -> Tue Jun 24
+    assert_eq!(option.pay_date(), Date::new(2025, 6, 24));
     let inst: Arc<dyn FinancialInstrument> = Arc::new(option);
 
     let json = serde_json::to_string_pretty(&inst).unwrap();
@@ -92,7 +93,7 @@ fn option_intrinsic_value() {
     let call = EuropeanOption::new(
         "C", "UND", "CR", usd(), Settlement::otc(),
         Date::new(2025, 6, 20), Decimal::from(100), PutOrCall::Call,
-        OptionSettlement::Cash, Date::new(2025, 6, 22),
+        OptionSettlement::Cash,
     );
     assert_eq!(call.intrinsic(Decimal::from(110)), Decimal::from(10));
     assert_eq!(call.intrinsic(Decimal::from(90)), Decimal::ZERO);
@@ -100,7 +101,7 @@ fn option_intrinsic_value() {
     let put = EuropeanOption::new(
         "P", "UND", "CR", usd(), Settlement::otc(),
         Date::new(2025, 6, 20), Decimal::from(100), PutOrCall::Put,
-        OptionSettlement::Cash, Date::new(2025, 6, 22),
+        OptionSettlement::Cash,
     );
     assert_eq!(put.intrinsic(Decimal::from(90)), Decimal::from(10));
     assert_eq!(put.intrinsic(Decimal::from(110)), Decimal::ZERO);
@@ -211,7 +212,7 @@ fn basket_serde_roundtrip() {
     let option = Arc::new(EuropeanOption::new(
         "AAPL-C-190", "AAPL", "OCC", usd(), Settlement::otc(),
         Date::new(2025, 6, 20), Decimal::from(190), PutOrCall::Call,
-        OptionSettlement::Cash, Date::new(2025, 6, 22),
+        OptionSettlement::Cash,
     ));
 
     let basket = Basket::new(
