@@ -15,9 +15,10 @@ use crate::market_data::MarketData;
 /// Implementations may be backed by `MarketData` directly or by a caching layer.
 pub trait PricingContext: Send + Sync {
     fn as_of(&self) -> Timestamp;
-    fn spot_date(&self) -> Date {
-        self.as_of().date()
-    }
+    /// The valuation date. No default on purpose: deriving it from
+    /// `as_of()` in UTC would roll an evening New York snapshot onto
+    /// the next business date. Implementors must choose explicitly.
+    fn spot_date(&self) -> Date;
     fn discount_curve(&self, currency: &str) -> core::Result<&DiscountCurve>;
     fn spot(&self, id: &str) -> core::Result<f64>;
     fn settlement_price(&self, id: &str) -> core::Result<f64>;
