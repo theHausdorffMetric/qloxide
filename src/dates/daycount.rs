@@ -13,8 +13,9 @@ pub enum DayCount {
     Thirty360,
     /// Actual/Actual (ISDA) — used by government bonds
     ActActIsda,
-    /// Actual/252 — used by BRL instruments (Brazilian business days)
-    Act252,
+    // BUS/252 (BRL) deliberately omitted: it counts *business* days and
+    // therefore needs a Calendar parameter. Add as `Bus252 { calendar }`
+    // when Brazilian instruments are needed.
 }
 
 impl DayCount {
@@ -35,10 +36,6 @@ impl DayCount {
             DayCount::ActActIsda => {
                 act_act_isda(from, to)
             }
-            DayCount::Act252 => {
-                let days = to - from;
-                days as f64 / 252.0
-            }
         }
     }
 
@@ -49,7 +46,6 @@ impl DayCount {
             DayCount::Act365Fixed => 365.0,
             DayCount::Thirty360 => 360.0,
             DayCount::ActActIsda => 365.25, // approximate
-            DayCount::Act252 => 252.0,
         }
     }
 }
