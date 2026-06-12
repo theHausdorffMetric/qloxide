@@ -34,5 +34,14 @@
     "price": "70.20",
     "timestamp": "2026-03-05T09:45:00Z",
     "counterparty": "Macquarie"
+  },
+  {
+    "id": "BRN-005",
+    "instrument_id": "ICE-BRN-K26-C-75",
+    "direction": "Buy",
+    "quantity": "10",
+    "price": "2.50",
+    "timestamp": "2026-03-06T11:05:00Z",
+    "counterparty": "Marex"
   }
 ]
