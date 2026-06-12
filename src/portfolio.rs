@@ -116,7 +116,7 @@ fn value_deal(deal: &Deal, portfolio: &Portfolio) -> core::Result<Valuation> {
     let pnl = deal.signed_quantity() * (mark - deal.price) * contract_size;
 
     let realized = inst.maturity()
-        .is_some_and(|m| md.spot_date() > m);
+        .is_some_and(|m| md.valuation_date() > m);
 
     Ok(Valuation { mark, pnl, realized })
 }
@@ -222,9 +222,9 @@ mod tests {
             Date::new(2026, 6, 30), Decimal::from(1000), "0.01".parse().unwrap(),
         );
 
-        let spot_date = Date::new(2026, 3, 7);
-        let mut md = MarketData::new(spot_date, spot_date.as_of_midnight());
-        md.add_spot("PRICED", 72.50); // no spot for UNPRICED
+        let valuation_date = Date::new(2026, 3, 7);
+        let mut md = MarketData::new(valuation_date, valuation_date.as_of_midnight());
+        md.add_market_price("PRICED", 72.50); // no market price for UNPRICED
 
         let mut instruments: HashMap<String, Arc<dyn FinancialInstrument>> = HashMap::new();
         instruments.insert("PRICED".to_string(), Arc::new(priced));
@@ -254,7 +254,7 @@ mod tests {
 
         let v2 = valued.iter().find(|v| v.deal.id == "D2").unwrap();
         let err = v2.valuation.as_ref().unwrap_err().to_string();
-        assert!(err.contains("no spot"), "expected missing-spot error, got: {err}");
+        assert!(err.contains("no market price"), "expected missing-market-price error, got: {err}");
 
         // Unpriced deals contribute nothing to totals
         let (realized, unrealized) = pnl_totals(&valued);

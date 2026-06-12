@@ -46,7 +46,7 @@ fn main() {
     }
     println!();
     println!("=== Market Data ===");
-    println!("Spot date:  {}", market.spot_date());
+    println!("Spot date:  {}", market.valuation_date());
     println!();
     println!("=== Pricing ===");
     println!("PV:         {:.4}", pv);

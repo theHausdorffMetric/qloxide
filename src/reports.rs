@@ -24,7 +24,7 @@ pub fn available() -> &'static [&'static str] {
     &["instruments", "deals", "positions", "pnl"]
 }
 
-/// Instrument listing with spot/settlement prices and status.
+/// Instrument listing with market/settlement prices and status.
 pub fn instruments(portfolio: &Portfolio) -> String {
     let mut out = String::new();
     let md = &portfolio.market_data;
@@ -44,7 +44,7 @@ pub fn instruments(portfolio: &Portfolio) -> String {
             .map(|m| m.to_string())
             .unwrap_or_else(|| "-".to_string());
 
-        let expired = maturity.is_some_and(|m| md.spot_date() > m);
+        let expired = maturity.is_some_and(|m| md.valuation_date() > m);
 
         let (price, status) = if expired {
             let p = md.settlement_price(id)
@@ -52,7 +52,7 @@ pub fn instruments(portfolio: &Portfolio) -> String {
                 .unwrap_or_else(|_| "N/A".to_string());
             (p, "settled")
         } else {
-            let p = md.spot(id)
+            let p = md.market_price(id)
                 .map(|s| format!("{:.2}", s))
                 .unwrap_or_else(|_| "N/A".to_string());
             (p, "active")

@@ -11,16 +11,16 @@ use crate::market_data::MarketData;
 
 /// Market data interface for pricing.
 ///
-/// Provides access to spot prices, discount curves, and (later) vol surfaces.
+/// Provides access to market prices, discount curves, and (later) vol surfaces.
 /// Implementations may be backed by `MarketData` directly or by a caching layer.
 pub trait PricingContext: Send + Sync {
     fn as_of(&self) -> Timestamp;
     /// The valuation date. No default on purpose: deriving it from
     /// `as_of()` in UTC would roll an evening New York snapshot onto
     /// the next business date. Implementors must choose explicitly.
-    fn spot_date(&self) -> Date;
+    fn valuation_date(&self) -> Date;
     fn discount_curve(&self, currency: &str) -> core::Result<&DiscountCurve>;
-    fn spot(&self, id: &str) -> core::Result<f64>;
+    fn market_price(&self, id: &str) -> core::Result<f64>;
     fn settlement_price(&self, id: &str) -> core::Result<f64>;
 }
 
@@ -53,16 +53,16 @@ impl PricingContext for MarketData {
         self.as_of()
     }
 
-    fn spot_date(&self) -> Date {
-        self.spot_date()
+    fn valuation_date(&self) -> Date {
+        self.valuation_date()
     }
 
     fn discount_curve(&self, currency: &str) -> core::Result<&DiscountCurve> {
         self.discount_curve(currency)
     }
 
-    fn spot(&self, id: &str) -> core::Result<f64> {
-        self.spot(id)
+    fn market_price(&self, id: &str) -> core::Result<f64> {
+        self.market_price(id)
     }
 
     fn settlement_price(&self, id: &str) -> core::Result<f64> {
@@ -87,7 +87,7 @@ mod tests {
         let equity = Equity::new("AAPL", "APPLE", usd, Settlement::otc());
 
         let ctx = crate::pricing::tests::EmptyContext {
-            spot_date: Date::new(2025, 6, 1),
+            valuation_date: Date::new(2025, 6, 1),
         };
 
         let result = price(&equity, &ctx);
@@ -97,21 +97,21 @@ mod tests {
 
     /// Minimal PricingContext for testing dispatch errors.
     struct EmptyContext {
-        spot_date: Date,
+        valuation_date: Date,
     }
 
     impl PricingContext for EmptyContext {
         fn as_of(&self) -> crate::dates::Timestamp {
-            self.spot_date.as_of_midnight()
+            self.valuation_date.as_of_midnight()
         }
-        fn spot_date(&self) -> Date {
-            self.spot_date
+        fn valuation_date(&self) -> Date {
+            self.valuation_date
         }
         fn discount_curve(&self, currency: &str) -> core::Result<&DiscountCurve> {
             Err(core::Error::MarketData(format!("no curve for '{}'", currency)))
         }
-        fn spot(&self, id: &str) -> core::Result<f64> {
-            Err(core::Error::MarketData(format!("no spot for '{}'", id)))
+        fn market_price(&self, id: &str) -> core::Result<f64> {
+            Err(core::Error::MarketData(format!("no market price for '{}'", id)))
         }
         fn settlement_price(&self, id: &str) -> core::Result<f64> {
             Err(core::Error::MarketData(format!("no settlement price for '{}'", id)))

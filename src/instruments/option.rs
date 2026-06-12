@@ -58,12 +58,12 @@ impl EuropeanOption {
         self.settlement.pay_date(self.expiry)
     }
 
-    /// Intrinsic value at a given spot price.
-    pub fn intrinsic(&self, spot: Decimal) -> Decimal {
+    /// Intrinsic value at a given underlying price.
+    pub fn intrinsic(&self, underlying: Decimal) -> Decimal {
         let zero = Decimal::ZERO;
         match self.put_or_call {
-            PutOrCall::Call => (spot - self.strike).max(zero),
-            PutOrCall::Put => (self.strike - spot).max(zero),
+            PutOrCall::Call => (underlying - self.strike).max(zero),
+            PutOrCall::Put => (self.strike - underlying).max(zero),
         }
     }
 }

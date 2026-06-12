@@ -10,12 +10,12 @@ use crate::pricing::PricingContext;
 pub fn price_future(future: &Future, ctx: &dyn PricingContext) -> core::Result<f64> {
     let expired = match future.settlement.at_date(future.expiry) {
         Ok(expiry_zoned) => ctx.as_of() > expiry_zoned.timestamp(),
-        Err(_) => ctx.spot_date() > future.expiry,
+        Err(_) => ctx.valuation_date() > future.expiry,
     };
     if expired {
         return ctx.settlement_price(&future.id);
     }
-    ctx.spot(&future.id)
+    ctx.market_price(&future.id)
 }
 
 #[cfg(test)]
@@ -33,17 +33,17 @@ mod tests {
 
     struct TestContext {
         as_of: Timestamp,
-        spot_date: Date,
-        spots: HashMap<String, f64>,
+        valuation_date: Date,
+        market_prices: HashMap<String, f64>,
         settlements: HashMap<String, f64>,
     }
 
     impl TestContext {
-        fn from_date(spot_date: Date) -> TestContext {
+        fn from_date(valuation_date: Date) -> TestContext {
             TestContext {
-                as_of: spot_date.as_of_midnight(),
-                spot_date,
-                spots: HashMap::new(),
+                as_of: valuation_date.as_of_midnight(),
+                valuation_date,
+                market_prices: HashMap::new(),
                 settlements: HashMap::new(),
             }
         }
@@ -53,17 +53,17 @@ mod tests {
         fn as_of(&self) -> Timestamp {
             self.as_of
         }
-        fn spot_date(&self) -> Date {
-            self.spot_date
+        fn valuation_date(&self) -> Date {
+            self.valuation_date
         }
         fn discount_curve(&self, currency: &str) -> core::Result<&DiscountCurve> {
             Err(core::Error::MarketData(format!("no curve for '{}'", currency)))
         }
-        fn spot(&self, id: &str) -> core::Result<f64> {
-            self.spots
+        fn market_price(&self, id: &str) -> core::Result<f64> {
+            self.market_prices
                 .get(id)
                 .copied()
-                .ok_or_else(|| core::Error::MarketData(format!("no spot for '{}'", id)))
+                .ok_or_else(|| core::Error::MarketData(format!("no market price for '{}'", id)))
         }
         fn settlement_price(&self, id: &str) -> core::Result<f64> {
             self.settlements
@@ -74,7 +74,7 @@ mod tests {
     }
 
     #[test]
-    fn future_prices_at_spot() {
+    fn future_prices_at_market() {
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let future = Future::new(
             "ICE-BRN-K26", "Brent", usd,
@@ -85,7 +85,7 @@ mod tests {
         );
 
         let mut ctx = TestContext::from_date(Date::new(2026, 3, 7));
-        ctx.spots.insert("ICE-BRN-K26".to_string(), 72.45);
+        ctx.market_prices.insert("ICE-BRN-K26".to_string(), 72.45);
 
         let px = price_future(&future, &ctx).unwrap();
         assert!((px - 72.45).abs() < 1e-12);
@@ -121,14 +121,14 @@ mod tests {
         );
 
         let mut ctx = TestContext::from_date(Date::new(2026, 3, 31));
-        ctx.spots.insert("ICE-BRN-K26".to_string(), 71.90);
+        ctx.market_prices.insert("ICE-BRN-K26".to_string(), 71.90);
 
         let px = price_future(&future, &ctx).unwrap();
         assert!((px - 71.90).abs() < 1e-12);
     }
 
     #[test]
-    fn missing_spot_errors() {
+    fn missing_market_price_errors() {
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let future = Future::new(
             "ICE-BRN-K26", "Brent", usd,
@@ -156,11 +156,11 @@ mod tests {
 
         let mut ctx = TestContext {
             as_of: Timestamp::parse("2026-03-31T14:00:00Z").unwrap(),
-            spot_date: Date::new(2026, 3, 31),
-            spots: HashMap::new(),
+            valuation_date: Date::new(2026, 3, 31),
+            market_prices: HashMap::new(),
             settlements: HashMap::new(),
         };
-        ctx.spots.insert("ICE-BRN-K26".to_string(), 72.00);
+        ctx.market_prices.insert("ICE-BRN-K26".to_string(), 72.00);
 
         let px = price_future(&future, &ctx).unwrap();
         assert!((px - 72.00).abs() < 1e-12);
@@ -180,8 +180,8 @@ mod tests {
 
         let mut ctx = TestContext {
             as_of: Timestamp::parse("2026-03-31T20:00:00Z").unwrap(),
-            spot_date: Date::new(2026, 3, 31),
-            spots: HashMap::new(),
+            valuation_date: Date::new(2026, 3, 31),
+            market_prices: HashMap::new(),
             settlements: HashMap::new(),
         };
         ctx.settlements.insert("ICE-BRN-K26".to_string(), 71.95);

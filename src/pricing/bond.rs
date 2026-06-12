@@ -8,11 +8,11 @@ use crate::pricing::PricingContext;
 /// function only discounts the ones that pay after the valuation date.
 pub fn price_bond(bond: &Bond, ctx: &dyn PricingContext) -> core::Result<f64> {
     let curve = ctx.discount_curve(&bond.currency.id)?;
-    let spot_date = ctx.spot_date();
+    let valuation_date = ctx.valuation_date();
 
     let mut pv = 0.0;
     for flow in bond.cash_flows() {
-        if flow.pay_date > spot_date {
+        if flow.pay_date > valuation_date {
             pv += decimal_to_f64(flow.amount)? * curve.df_to(flow.pay_date);
         }
     }
@@ -40,23 +40,23 @@ mod tests {
     use std::sync::Arc;
 
     struct TestContext {
-        spot_date: Date,
+        valuation_date: Date,
         curves: HashMap<String, DiscountCurve>,
     }
 
     impl PricingContext for TestContext {
         fn as_of(&self) -> crate::dates::Timestamp {
-            self.spot_date.as_of_midnight()
+            self.valuation_date.as_of_midnight()
         }
-        fn spot_date(&self) -> Date {
-            self.spot_date
+        fn valuation_date(&self) -> Date {
+            self.valuation_date
         }
         fn discount_curve(&self, currency: &str) -> crate::core::Result<&DiscountCurve> {
             self.curves
                 .get(currency)
                 .ok_or_else(|| crate::core::Error::MarketData(format!("no curve for '{}'", currency)))
         }
-        fn spot(&self, _id: &str) -> crate::core::Result<f64> {
+        fn market_price(&self, _id: &str) -> crate::core::Result<f64> {
             Err(crate::core::Error::MarketData("not implemented".to_string()))
         }
         fn settlement_price(&self, _id: &str) -> crate::core::Result<f64> {
@@ -96,7 +96,7 @@ mod tests {
             DiscountCurve::flat(base, dc, rate),
         );
         TestContext {
-            spot_date: base,
+            valuation_date: base,
             curves,
         }
     }

@@ -1,7 +1,7 @@
 {
-  "spot_date": "2026-03-10",
+  "valuation_date": "2026-03-10",
   "as_of": "2026-03-10T19:30:00Z",
-  "spots": {
+  "market_prices": {
     "ICE-BRN-K26": 72.45,
     "ICE-BRN-M26": 72.15,
     "ICE-BRN-N26": 71.90,

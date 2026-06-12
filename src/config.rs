@@ -149,16 +149,16 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
             ));
         }
         let expired = inst.maturity()
-            .is_some_and(|m| market_data.spot_date() > m);
+            .is_some_and(|m| market_data.valuation_date() > m);
         if expired {
             if market_data.settlement_price(id).is_err() {
                 warnings.push(format!(
                     "instrument '{}': expired but no settlement price", id,
                 ));
             }
-        } else if market_data.spot(id).is_err() {
+        } else if market_data.market_price(id).is_err() {
             warnings.push(format!(
-                "instrument '{}': no spot price", id,
+                "instrument '{}': no market price", id,
             ));
         }
     }
@@ -267,9 +267,9 @@ market_data = ["market.json"]
         fs::write(
             dir.join("market.json"),
             r#"{
-  "spot_date": "2026-03-07",
+  "valuation_date": "2026-03-07",
   "as_of": "2026-03-07T14:00:00Z",
-  "spots": {"ICE-BRN-K26": 72.45},
+  "market_prices": {"ICE-BRN-K26": 72.45},
   "discount_curves": {
     "USD": {
       "base_date": "2026-03-07",
@@ -392,21 +392,21 @@ market_data = ["market.json"]
         let dir = tempfile::tempdir().unwrap();
         write_test_files(dir.path());
 
-        // Market data with no spots or curves
+        // Market data with no market_prices or curves
         fs::write(
             dir.path().join("market.json"),
             r#"{
-  "spot_date": "2026-03-07",
+  "valuation_date": "2026-03-07",
   "as_of": "2026-03-07T14:00:00Z",
-  "spots": {},
+  "market_prices": {},
   "discount_curves": {}
 }"#,
         )
         .unwrap();
 
         let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
-        assert_eq!(portfolio.warnings.len(), 2); // no spot + no curve
-        assert!(portfolio.warnings.iter().any(|w| w.contains("no spot price")));
+        assert_eq!(portfolio.warnings.len(), 2); // no market price + no curve
+        assert!(portfolio.warnings.iter().any(|w| w.contains("no market price")));
         assert!(portfolio.warnings.iter().any(|w| w.contains("no discount curve")));
     }
 
