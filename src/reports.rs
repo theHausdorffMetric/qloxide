@@ -88,25 +88,25 @@ pub fn positions(portfolio: &Portfolio) -> String {
     let compressed = portfolio::compress(&portfolio.deals);
     let mut out = String::new();
 
-    let active: Vec<_> = compressed.iter().filter(|d| d.quantity > Decimal::ZERO).collect();
-    let flat: Vec<_> = compressed.iter().filter(|d| d.quantity == Decimal::ZERO).collect();
+    let active: Vec<_> = compressed.iter().filter(|p| p.quantity > Decimal::ZERO).collect();
+    let flat: Vec<_> = compressed.iter().filter(|p| p.quantity == Decimal::ZERO).collect();
 
     writeln!(out, "=== Positions ({} instruments) ===", compressed.len()).unwrap();
     writeln!(out, "{:<16} {:>5} {:>5}  {:>10}",
         "Instrument", "Side", "Qty", "Avg Price").unwrap();
     writeln!(out, "{:-<44}", "").unwrap();
 
-    for deal in &active {
+    for pos in &active {
         writeln!(out, "{:<16} {:>5} {:>5}  {:>10}",
-            deal.instrument_id,
-            format!("{:?}", deal.direction), deal.quantity,
-            deal.price.round_dp(2)).unwrap();
+            pos.instrument_id,
+            format!("{:?}", pos.direction), pos.quantity,
+            pos.avg_price.round_dp(2)).unwrap();
     }
 
     if !flat.is_empty() {
         writeln!(out).unwrap();
-        for deal in &flat {
-            writeln!(out, "{:<16}  flat", deal.instrument_id).unwrap();
+        for pos in &flat {
+            writeln!(out, "{:<16}  flat", pos.instrument_id).unwrap();
         }
     }
 

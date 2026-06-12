@@ -23,12 +23,30 @@ pub struct Valuation {
     pub realized: bool,
 }
 
-/// Compress deals into net positions per instrument (VWAP pricing).
+/// A net position per instrument, derived from deals.
 ///
-/// Returns one synthetic deal per instrument with net quantity and
-/// volume-weighted average price. Fully offset positions (net qty = 0)
-/// are included with a zero price.
-pub fn compress(deals: &[Deal]) -> Vec<Deal> {
+/// This is a derived view, not a trade event — unlike a `Deal` it has no
+/// id, timestamp, or counterparty.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Position {
+    pub instrument_id: String,
+    /// Direction of the net position. A fully offset position is `Buy`
+    /// with zero quantity.
+    pub direction: BuySell,
+    /// Net quantity, always non-negative (direction carries the sign).
+    pub quantity: Decimal,
+    /// Net entry price: |net cost / net quantity|. NOTE: this embeds the
+    /// realized P&L of closed lots (buy 10 @ 71.80, sell 4 @ 72.50 →
+    /// 71.33), it is NOT the FIFO cost basis of the remaining lots.
+    /// Zero for fully offset positions.
+    pub avg_price: Decimal,
+}
+
+/// Compress deals into net positions per instrument.
+///
+/// Fully offset positions (net qty = 0) are included with a zero price.
+/// Result is sorted by instrument id.
+pub fn compress(deals: &[Deal]) -> Vec<Position> {
     let mut groups: HashMap<String, (Decimal, Decimal)> = HashMap::new(); // (net_signed_qty, cost)
 
     for deal in deals {
@@ -38,7 +56,7 @@ pub fn compress(deals: &[Deal]) -> Vec<Deal> {
         entry.1 += signed_qty * deal.price; // signed cost
     }
 
-    let mut positions: Vec<Deal> = groups
+    let mut positions: Vec<Position> = groups
         .into_iter()
         .map(|(instrument_id, (net_qty, cost))| {
             let (direction, quantity) = if net_qty >= Decimal::ZERO {
@@ -53,14 +71,11 @@ pub fn compress(deals: &[Deal]) -> Vec<Deal> {
                 Decimal::ZERO
             };
 
-            Deal {
-                id: format!("NET-{}", instrument_id),
+            Position {
                 instrument_id,
                 direction,
                 quantity,
-                price: avg_price,
-                timestamp: deals.last().unwrap().timestamp,
-                counterparty: String::new(),
+                avg_price,
             }
         })
         .collect();
@@ -154,7 +169,7 @@ mod tests {
         assert_eq!(positions[0].quantity, Decimal::from(6));
         // VWAP: (10*71.80 - 4*72.50) / 6 = (718 - 290) / 6 = 71.333...
         let expected_vwap: Decimal = "71.3333333333333333333333333333".parse().unwrap();
-        assert_eq!(positions[0].price, expected_vwap);
+        assert_eq!(positions[0].avg_price, expected_vwap);
     }
 
     #[test]
