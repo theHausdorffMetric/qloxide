@@ -44,27 +44,29 @@ pub struct Greeks {
 
 impl Black76Params {
     fn validate(&self) -> core::Result<()> {
-        if !(self.f > 0.0) {
+        // is_finite() also rejects NaN, so NaN inputs error rather than
+        // propagating silently through the formulas.
+        if !self.f.is_finite() || self.f <= 0.0 {
             return Err(core::Error::Model(format!(
-                "futures price {} must be positive",
+                "futures price {} must be positive and finite",
                 self.f
             )));
         }
-        if !(self.k > 0.0) {
+        if !self.k.is_finite() || self.k <= 0.0 {
             return Err(core::Error::Model(format!(
-                "strike {} must be positive",
+                "strike {} must be positive and finite",
                 self.k
             )));
         }
-        if !(self.t >= 0.0) {
+        if !self.t.is_finite() || self.t < 0.0 {
             return Err(core::Error::Model(format!(
-                "time to expiry {} must be non-negative",
+                "time to expiry {} must be non-negative and finite",
                 self.t
             )));
         }
-        if !(self.sigma >= 0.0) {
+        if !self.sigma.is_finite() || self.sigma < 0.0 {
             return Err(core::Error::Model(format!(
-                "volatility {} must be non-negative",
+                "volatility {} must be non-negative and finite",
                 self.sigma
             )));
         }

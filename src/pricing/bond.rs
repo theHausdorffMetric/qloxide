@@ -1,6 +1,6 @@
 use crate::core;
 use crate::instruments::bond::Bond;
-use crate::pricing::PricingContext;
+use crate::pricing::{PricingContext, decimal_to_f64};
 
 /// Price a fixed-rate bond as the sum of discounted contractual cash flows.
 ///
@@ -17,12 +17,6 @@ pub fn price_bond(bond: &Bond, ctx: &dyn PricingContext) -> core::Result<f64> {
         }
     }
     Ok(pv)
-}
-
-fn decimal_to_f64(d: rust_decimal::Decimal) -> core::Result<f64> {
-    use rust_decimal::prelude::ToPrimitive;
-    d.to_f64()
-        .ok_or_else(|| core::Error::Pricer(format!("cannot convert Decimal '{}' to f64", d)))
 }
 
 #[cfg(test)]

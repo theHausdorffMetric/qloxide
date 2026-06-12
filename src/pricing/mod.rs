@@ -1,5 +1,6 @@
 pub mod black76;
 pub mod bond;
+pub mod european;
 pub mod future;
 
 use crate::core;
@@ -8,7 +9,15 @@ use crate::dates::{Date, Timestamp};
 use crate::instruments::FinancialInstrument;
 use crate::instruments::bond::Bond;
 use crate::instruments::future::Future as FutureInst;
+use crate::instruments::option::EuropeanOption;
 use crate::market_data::MarketData;
+
+/// Convert a Decimal to f64 for pricing math, erroring on overflow.
+pub(crate) fn decimal_to_f64(d: rust_decimal::Decimal) -> core::Result<f64> {
+    use rust_decimal::prelude::ToPrimitive;
+    d.to_f64()
+        .ok_or_else(|| core::Error::Pricer(format!("cannot convert Decimal '{}' to f64", d)))
+}
 
 /// Market data interface for pricing.
 ///
@@ -31,20 +40,23 @@ pub trait PricingContext: Send + Sync {
 
 /// Price a financial instrument.
 ///
-/// Dispatches to the appropriate pricing function based on the concrete
-/// instrument type. Model is required only for instruments with optionality.
+/// One uniform interface for all instrument types: the context provides
+/// everything (market prices, curves, vol surfaces); each pricer takes
+/// what it needs. Dispatches on the concrete instrument type.
 pub fn price(
     inst: &dyn FinancialInstrument,
     ctx: &dyn PricingContext,
 ) -> core::Result<f64> {
     let any = inst.as_any();
 
-    // Deterministic instruments — no model needed
     if let Some(b) = any.downcast_ref::<Bond>() {
         return bond::price_bond(b, ctx);
     }
     if let Some(f) = any.downcast_ref::<FutureInst>() {
         return future::price_future(f, ctx);
+    }
+    if let Some(o) = any.downcast_ref::<EuropeanOption>() {
+        return european::price_european(o, ctx);
     }
 
     Err(core::Error::Pricer(format!(
