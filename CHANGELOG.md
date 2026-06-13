@@ -5,7 +5,13 @@ All notable changes to qloxide are documented here. The format follows
 [Semantic Versioning](https://semver.org/) (pre-1.0: breaking changes bump
 the minor version).
 
-## [Unreleased]
+## [0.3.0] — 2026-06-13
+
+### License
+
+Relicensed from MIT to **GPL-3.0-or-later**. Versions up to and including
+0.2.0 remain available under MIT on crates.io; that grant is irrevocable for
+those versions.
 
 ### Breaking
 
@@ -14,38 +20,6 @@ the minor version).
   in commodities; "spot date" means T+2 in FX). **JSON migration:** in
   market data files, `"spots"` → `"market_prices"` and `"spot_date"` →
   `"valuation_date"`. `settlement_price` is unchanged.
-
-### Added
-
-- **European options on futures price with Black76** (Phase 1 of the
-  options effort): `math` module (`norm_pdf`/`norm_cdf` via libm),
-  `pricing::black76` (price + delta/gamma/vega/theta, validated against
-  reference values and finite differences), `VolSurface` (`Flat` variant;
-  the surface variant carries the model), `vol_surfaces` in market data
-  JSON, and `pricing::european` wired into the uniform
-  `price(instrument, context)` dispatch. American exercise is rejected
-  explicitly. Expired options return intrinsic against the underlying's
-  settlement price.
-- Option deal P&L is in dollar terms via the underlying future's
-  contract size.
-- Config checks validate option pricing inputs (underlying exists, vol
-  surface present); the instruments report shows model prices (labelled
-  `model`) for instruments without a market quote.
-- The Brent example includes a call option (`ICE-BRN-K26-C-75`).
-- `ARCHITECTURE.md` — design decisions, reasoning, and rejected
-  alternatives, shipped with the crate (migrated from the development
-  mono-repo).
-
-## [0.2.0] — 2026-06-12
-
-### License
-
-Relicensed from MIT to **GPL-3.0-or-later**. Versions up to 0.1.0 remain
-available under MIT on crates.io; that grant is irrevocable for those
-versions.
-
-### Breaking
-
 - `Bond.frequency` is now the `cashflows::Frequency` enum instead of a raw
   `u32`. **JSON migration:** `"frequency": 2` → `"frequency": "SemiAnnual"`
   (`1` → `"Annual"`, `4` → `"Quarterly"`, `12` → `"Monthly"`). The old
@@ -78,6 +52,24 @@ versions.
 
 ### Added
 
+- **European options on futures price with Black76** (Phase 1 of the
+  options effort): `math` module (`norm_pdf`/`norm_cdf` via libm),
+  `pricing::black76` (price + delta/gamma/vega/theta, validated against
+  reference values and finite differences), `VolSurface` (`Flat` variant;
+  the surface variant carries the model), `vol_surfaces` in market data
+  JSON, and `pricing::european` wired into the uniform
+  `price(instrument, context)` dispatch. American exercise is rejected
+  explicitly. Expired options return intrinsic against the underlying's
+  settlement price.
+- Option deal P&L is in dollar terms via the underlying future's
+  contract size.
+- Config checks validate option pricing inputs (underlying exists, vol
+  surface present); the instruments report shows model prices (labelled
+  `model`) for instruments without a market quote.
+- The Brent example includes a call option (`ICE-BRN-K26-C-75`).
+- `ARCHITECTURE.md` — design decisions, reasoning, and rejected
+  alternatives, shipped with the crate (migrated from the development
+  mono-repo).
 - `Bond::cash_flows()` — bonds decompose into contractual cash flows
   (coupons + principal) via `CashFlowSchedule` (backward generation, short
   first stub); `price_bond` discounts these flows.
@@ -116,6 +108,25 @@ versions.
 - Bonds whose tenor is not a whole number of coupon periods now have a
   short **first** stub (backward schedule generation) instead of a short
   final stub.
+
+## [0.2.0] — 2026-03-11
+
+Feature release, published under MIT.
+
+### Added
+
+- `Decimal` migration — cash flow amounts, trade prices, and quantities use
+  `rust_decimal::Decimal` for exact representation; added the trades layer
+  (`Deal`, `BuySell`) and the market data and pricing modules.
+- `DiscountCurve` and `PricingContext` prepared for multithreading.
+- `Settlement` wired for timestamp-level pricing, with a settlement payment
+  lag.
+- TOML/JSON config loader, the `qloxide` CLI binary, and portfolio reports
+  (instruments, deals, positions, pnl).
+
+### Changed
+
+- `CLAUDE.md` excluded from the published package.
 
 ## [0.1.0] — 2026-02-08
 
