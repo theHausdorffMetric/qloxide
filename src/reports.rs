@@ -21,9 +21,39 @@ pub fn run(name: &str, portfolio: &Portfolio) -> crate::core::Result<String> {
     }
 }
 
+/// Every known report: name paired with a one-line description.
+///
+/// Single source of truth for [`available`], [`describe`], and the CLI help.
+/// Keep each description in sync with the report function's doc comment.
+const REPORTS: &[(&str, &str)] = &[
+    (
+        "instruments",
+        "Instrument listing with market/settlement prices and status",
+    ),
+    ("deals", "Trade-by-trade deal listing"),
+    ("positions", "Compressed net positions per instrument"),
+    (
+        "pnl",
+        "P&L on raw deals, split into realized/unrealized with totals",
+    ),
+];
+
 /// List all known report names.
-pub fn available() -> &'static [&'static str] {
-    &["instruments", "deals", "positions", "pnl"]
+pub fn available() -> Vec<&'static str> {
+    REPORTS.iter().map(|(name, _)| *name).collect()
+}
+
+/// One-line description for a report name, or `None` if unknown.
+pub fn describe(name: &str) -> Option<&'static str> {
+    REPORTS
+        .iter()
+        .find(|(n, _)| *n == name)
+        .map(|(_, desc)| *desc)
+}
+
+/// `name -> description` pairs for every report. Drives CLI help.
+pub fn descriptions() -> &'static [(&'static str, &'static str)] {
+    REPORTS
 }
 
 /// Instrument listing with market/settlement prices and status.
