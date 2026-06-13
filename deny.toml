@@ -1,0 +1,37 @@
+# cargo-deny configuration — run `cargo deny check` (advisories, licenses,
+# bans, sources). Intended as a CI gate alongside test/clippy/fmt.
+
+[graph]
+# Audit the full surface, including the optional `cli` feature.
+all-features = true
+
+[advisories]
+# RUSTSEC advisory database. Defaults deny vulnerabilities and unsound code.
+yanked = "deny"
+
+[licenses]
+# qloxide is GPL-3.0-or-later; dependencies must be GPLv3-compatible.
+# Permissive-only allowlist (Apache-2.0 is one-way compatible into GPLv3).
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Unicode-3.0",
+    "Unlicense",
+]
+confidence-threshold = 0.8
+
+# The workspace crate itself is copyleft; dependencies stay permissive-only.
+exceptions = [
+    { name = "qloxide", allow = ["GPL-3.0-or-later"] },
+]
+
+[bans]
+# Duplicate major versions bloat the build and widen the audit surface;
+# warn rather than deny because transitive churn is often unavoidable.
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+# Everything must come from crates.io — no git or unknown-registry deps.
+unknown-registry = "deny"
+unknown-git = "deny"

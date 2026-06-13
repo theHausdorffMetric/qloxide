@@ -1,4 +1,6 @@
+pub mod black76;
 pub mod bond;
+pub mod european;
 pub mod future;
 
 use crate::core;
@@ -7,38 +9,51 @@ use crate::dates::{Date, Timestamp};
 use crate::instruments::FinancialInstrument;
 use crate::instruments::bond::Bond;
 use crate::instruments::future::Future as FutureInst;
+use crate::instruments::option::EuropeanOption;
 use crate::market_data::MarketData;
+
+/// Convert a Decimal to f64 for pricing math, erroring on overflow.
+pub(crate) fn decimal_to_f64(d: rust_decimal::Decimal) -> core::Result<f64> {
+    use rust_decimal::prelude::ToPrimitive;
+    d.to_f64()
+        .ok_or_else(|| core::Error::Pricer(format!("cannot convert Decimal '{}' to f64", d)))
+}
 
 /// Market data interface for pricing.
 ///
-/// Provides access to spot prices, discount curves, and (later) vol surfaces.
+/// Provides access to market prices, discount curves, and (later) vol surfaces.
 /// Implementations may be backed by `MarketData` directly or by a caching layer.
 pub trait PricingContext: Send + Sync {
     fn as_of(&self) -> Timestamp;
-    fn spot_date(&self) -> Date {
-        self.as_of().date()
-    }
+    /// The valuation date. No default on purpose: deriving it from
+    /// `as_of()` in UTC would roll an evening New York snapshot onto
+    /// the next business date. Implementors must choose explicitly.
+    fn valuation_date(&self) -> Date;
     fn discount_curve(&self, currency: &str) -> core::Result<&DiscountCurve>;
-    fn spot(&self, id: &str) -> core::Result<f64>;
+    fn market_price(&self, id: &str) -> core::Result<f64>;
     fn settlement_price(&self, id: &str) -> core::Result<f64>;
+    /// Volatility for an underlying at the given tenor (years) and
+    /// log-moneyness ln(K/F). The surface variant carries the model
+    /// (Flat = lognormal = Black76).
+    fn vol(&self, id: &str, tenor: f64, moneyness: f64) -> core::Result<f64>;
 }
 
 /// Price a financial instrument.
 ///
-/// Dispatches to the appropriate pricing function based on the concrete
-/// instrument type. Model is required only for instruments with optionality.
-pub fn price(
-    inst: &dyn FinancialInstrument,
-    ctx: &dyn PricingContext,
-) -> core::Result<f64> {
+/// One uniform interface for all instrument types: the context provides
+/// everything (market prices, curves, vol surfaces); each pricer takes
+/// what it needs. Dispatches on the concrete instrument type.
+pub fn price(inst: &dyn FinancialInstrument, ctx: &dyn PricingContext) -> core::Result<f64> {
     let any = inst.as_any();
 
-    // Deterministic instruments — no model needed
     if let Some(b) = any.downcast_ref::<Bond>() {
         return bond::price_bond(b, ctx);
     }
     if let Some(f) = any.downcast_ref::<FutureInst>() {
         return future::price_future(f, ctx);
+    }
+    if let Some(o) = any.downcast_ref::<EuropeanOption>() {
+        return european::price_european(o, ctx);
     }
 
     Err(core::Error::Pricer(format!(
@@ -52,28 +67,32 @@ impl PricingContext for MarketData {
         self.as_of()
     }
 
-    fn spot_date(&self) -> Date {
-        self.spot_date()
+    fn valuation_date(&self) -> Date {
+        self.valuation_date()
     }
 
     fn discount_curve(&self, currency: &str) -> core::Result<&DiscountCurve> {
         self.discount_curve(currency)
     }
 
-    fn spot(&self, id: &str) -> core::Result<f64> {
-        self.spot(id)
+    fn market_price(&self, id: &str) -> core::Result<f64> {
+        self.market_price(id)
     }
 
     fn settlement_price(&self, id: &str) -> core::Result<f64> {
         self.settlement_price(id)
+    }
+
+    fn vol(&self, id: &str, tenor: f64, moneyness: f64) -> core::Result<f64> {
+        Ok(self.vol_surface(id)?.vol(tenor, moneyness))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::instruments::equity::Equity;
     use crate::instruments::Settlement;
+    use crate::instruments::equity::Equity;
 
     #[test]
     fn unsupported_instrument_errors() {
@@ -86,7 +105,7 @@ mod tests {
         let equity = Equity::new("AAPL", "APPLE", usd, Settlement::otc());
 
         let ctx = crate::pricing::tests::EmptyContext {
-            spot_date: Date::new(2025, 6, 1),
+            valuation_date: Date::new(2025, 6, 1),
         };
 
         let result = price(&equity, &ctx);
@@ -96,24 +115,39 @@ mod tests {
 
     /// Minimal PricingContext for testing dispatch errors.
     struct EmptyContext {
-        spot_date: Date,
+        valuation_date: Date,
     }
 
     impl PricingContext for EmptyContext {
         fn as_of(&self) -> crate::dates::Timestamp {
-            self.spot_date.as_of_midnight()
+            self.valuation_date.as_of_midnight()
         }
-        fn spot_date(&self) -> Date {
-            self.spot_date
+        fn valuation_date(&self) -> Date {
+            self.valuation_date
         }
         fn discount_curve(&self, currency: &str) -> core::Result<&DiscountCurve> {
-            Err(core::Error::MarketData(format!("no curve for '{}'", currency)))
+            Err(core::Error::MarketData(format!(
+                "no curve for '{}'",
+                currency
+            )))
         }
-        fn spot(&self, id: &str) -> core::Result<f64> {
-            Err(core::Error::MarketData(format!("no spot for '{}'", id)))
+        fn market_price(&self, id: &str) -> core::Result<f64> {
+            Err(core::Error::MarketData(format!(
+                "no market price for '{}'",
+                id
+            )))
         }
         fn settlement_price(&self, id: &str) -> core::Result<f64> {
-            Err(core::Error::MarketData(format!("no settlement price for '{}'", id)))
+            Err(core::Error::MarketData(format!(
+                "no settlement price for '{}'",
+                id
+            )))
+        }
+        fn vol(&self, id: &str, _tenor: f64, _moneyness: f64) -> core::Result<f64> {
+            Err(core::Error::MarketData(format!(
+                "no vol surface for '{}'",
+                id
+            )))
         }
     }
 }

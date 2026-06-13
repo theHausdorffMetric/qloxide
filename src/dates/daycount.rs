@@ -1,3 +1,4 @@
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::dates::Date;
@@ -13,8 +14,9 @@ pub enum DayCount {
     Thirty360,
     /// Actual/Actual (ISDA) — used by government bonds
     ActActIsda,
-    /// Actual/252 — used by BRL instruments (Brazilian business days)
-    Act252,
+    // BUS/252 (BRL) deliberately omitted: it counts *business* days and
+    // therefore needs a Calendar parameter. Add as `Bus252 { calendar }`
+    // when Brazilian instruments are needed.
 }
 
 impl DayCount {
@@ -29,16 +31,24 @@ impl DayCount {
                 let days = to - from;
                 days as f64 / 365.0
             }
+            DayCount::Thirty360 => thirty360_day_count(from, to) as f64 / 360.0,
+            DayCount::ActActIsda => act_act_isda(from, to),
+        }
+    }
+
+    /// Accrual amount `base * year_fraction(from, to)` computed entirely in
+    /// `Decimal`, with the division performed last. Contractual amounts that
+    /// are exact in decimal (e.g. a 30/360 half-year coupon) stay exact,
+    /// with no f64 round-trip noise. Use this for cash flow generation;
+    /// use [`DayCount::year_fraction`] for pricing math.
+    pub fn accrue(&self, base: Decimal, from: Date, to: Date) -> Decimal {
+        match self {
+            DayCount::Act360 => base * Decimal::from(to - from) / Decimal::from(360),
+            DayCount::Act365Fixed => base * Decimal::from(to - from) / Decimal::from(365),
             DayCount::Thirty360 => {
-                thirty360_day_count(from, to) as f64 / 360.0
+                base * Decimal::from(thirty360_day_count(from, to)) / Decimal::from(360)
             }
-            DayCount::ActActIsda => {
-                act_act_isda(from, to)
-            }
-            DayCount::Act252 => {
-                let days = to - from;
-                days as f64 / 252.0
-            }
+            DayCount::ActActIsda => act_act_isda_accrue(base, from, to),
         }
     }
 
@@ -49,7 +59,6 @@ impl DayCount {
             DayCount::Act365Fixed => 365.0,
             DayCount::Thirty360 => 360.0,
             DayCount::ActActIsda => 365.25, // approximate
-            DayCount::Act252 => 252.0,
         }
     }
 }
@@ -96,6 +105,31 @@ fn act_act_isda(from: Date, to: Date) -> f64 {
     let frac_last = (to - start_of_y2) as f64 / year_length(y2) as f64;
 
     frac_first + full_years + frac_last
+}
+
+/// Act/Act ISDA accrual in Decimal: same structure as [`act_act_isda`],
+/// each yearly term divided last.
+fn act_act_isda_accrue(base: Decimal, from: Date, to: Date) -> Decimal {
+    if from == to {
+        return Decimal::ZERO;
+    }
+
+    let y1 = from.year();
+    let y2 = to.year();
+
+    if y1 == y2 {
+        return base * Decimal::from(to - from) / Decimal::from(year_length(y1));
+    }
+
+    let end_of_y1 = Date::new(y1 + 1, 1, 1);
+    let first = base * Decimal::from(end_of_y1 - from) / Decimal::from(year_length(y1));
+
+    let full_years = base * Decimal::from((y2 - y1 - 1).max(0));
+
+    let start_of_y2 = Date::new(y2, 1, 1);
+    let last = base * Decimal::from(to - start_of_y2) / Decimal::from(year_length(y2));
+
+    first + full_years + last
 }
 
 fn is_leap_year(year: i16) -> bool {
@@ -204,6 +238,46 @@ mod tests {
         let yf = DayCount::ActActIsda.year_fraction(from, to);
         let expected = 184.0 / 366.0 + 181.0 / 365.0;
         assert!((yf - expected).abs() < 1e-10);
+    }
+
+    #[test]
+    fn accrue_thirty360_half_year_is_exact() {
+        // 100 face * 5% * half year under 30/360 = exactly 2.5
+        let base: Decimal = "5".parse().unwrap(); // 100 * 0.05
+        let amount = DayCount::Thirty360.accrue(base, Date::new(2025, 1, 1), Date::new(2025, 7, 1));
+        assert_eq!(amount, "2.5".parse::<Decimal>().unwrap());
+    }
+
+    #[test]
+    fn accrue_two_month_stub_is_exact() {
+        // 100 * 6% * 60/360 = exactly 1 — would carry f64 noise if the
+        // fraction were computed before the multiplication
+        let base: Decimal = "6".parse().unwrap();
+        let amount = DayCount::Thirty360.accrue(base, Date::new(2025, 1, 1), Date::new(2025, 3, 1));
+        assert_eq!(amount, Decimal::from(1));
+    }
+
+    #[test]
+    fn accrue_matches_year_fraction() {
+        use rust_decimal::prelude::ToPrimitive;
+        let from = Date::new(2024, 7, 1);
+        let to = Date::new(2025, 7, 1);
+        for dc in [
+            DayCount::Act360,
+            DayCount::Act365Fixed,
+            DayCount::Thirty360,
+            DayCount::ActActIsda,
+        ] {
+            let via_f64 = dc.year_fraction(from, to);
+            let via_decimal = dc.accrue(Decimal::ONE, from, to).to_f64().unwrap();
+            assert!(
+                (via_f64 - via_decimal).abs() < 1e-12,
+                "{:?}: {} vs {}",
+                dc,
+                via_f64,
+                via_decimal
+            );
+        }
     }
 
     #[test]

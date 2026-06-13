@@ -6,8 +6,7 @@
     "quantity": "10",
     "price": "71.80",
     "timestamp": "2026-03-02T10:14:32Z",
-    "counterparty": "ICE_CLEAR",
-    "venue": "ICE"
+    "counterparty": "Marex"
   },
   {
     "id": "BRN-002",
@@ -16,8 +15,7 @@
     "quantity": "10",
     "price": "71.50",
     "timestamp": "2026-03-02T10:14:33Z",
-    "counterparty": "ICE_CLEAR",
-    "venue": "ICE"
+    "counterparty": "Marex"
   },
   {
     "id": "BRN-003",
@@ -26,8 +24,7 @@
     "quantity": "5",
     "price": "70.90",
     "timestamp": "2026-03-04T14:22:10Z",
-    "counterparty": "ICE_CLEAR",
-    "venue": "ICE"
+    "counterparty": "Marex"
   },
   {
     "id": "BRN-004",
@@ -36,7 +33,15 @@
     "quantity": "3",
     "price": "70.20",
     "timestamp": "2026-03-05T09:45:00Z",
-    "counterparty": "ICE_CLEAR",
-    "venue": "ICE"
+    "counterparty": "Macquarie"
+  },
+  {
+    "id": "BRN-005",
+    "instrument_id": "ICE-BRN-K26-C-75",
+    "direction": "Buy",
+    "quantity": "10",
+    "price": "2.50",
+    "timestamp": "2026-03-06T11:05:00Z",
+    "counterparty": "Marex"
   }
 ]

@@ -1,4 +1,4 @@
-instruments = ["instruments.json"]
+instruments = ["instruments.json", "options.json"]
 deals = ["deals.json"]
 market_data = ["market.json"]
-reports = ["instruments", "deals","pnl"]
+reports = ["instruments", "deals", "positions", "pnl"]

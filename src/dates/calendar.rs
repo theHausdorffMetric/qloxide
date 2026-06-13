@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::dates::Date;
 
 /// Holiday calendar for business day calculations.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Calendar {
     /// Every day is a business day (no holidays, no weekends).
     EveryDay,
@@ -117,9 +117,7 @@ impl Calendar {
                     .count() as i32;
                 sign * (weekdays - holiday_count)
             }
-            Calendar::Volatility { calendar, .. } => {
-                calendar.count_business_days(from, to) * sign.signum()
-            }
+            Calendar::Volatility { calendar, .. } => calendar.count_business_days(from, to),
         }
     }
 
@@ -128,10 +126,18 @@ impl Calendar {
         match self {
             Calendar::EveryDay => 1.0,
             Calendar::Weekday => {
-                if self.is_holiday(date) { 0.0 } else { 1.0 }
+                if self.is_holiday(date) {
+                    0.0
+                } else {
+                    1.0
+                }
             }
             Calendar::WeekdayAndHoliday { .. } => {
-                if self.is_holiday(date) { 0.0 } else { 1.0 }
+                if self.is_holiday(date) {
+                    0.0
+                } else {
+                    1.0
+                }
             }
             Calendar::Volatility {
                 calendar,
@@ -159,8 +165,7 @@ impl Calendar {
 
     /// Year fraction between two date-day-fraction points.
     pub fn year_fraction(&self, from: Date, from_frac: f64, to: Date, to_frac: f64) -> f64 {
-        let business_days =
-            self.count_business_days_fractional(from, from_frac, to, to_frac);
+        let business_days = self.count_business_days_fractional(from, from_frac, to, to_frac);
         business_days / self.standard_basis()
     }
 
@@ -322,6 +327,20 @@ mod tests {
         let monday = Date::new(2025, 6, 16);
         assert_eq!(vol_cal.day_weight(saturday), 0.1);
         assert_eq!(vol_cal.day_weight(monday), 1.0);
+    }
+
+    #[test]
+    fn volatility_count_business_days_matches_wrapped() {
+        let vol_cal = Calendar::Volatility {
+            name: "VolCal".to_string(),
+            calendar: Box::new(Calendar::Weekday),
+            holiday_weight: 0.1,
+        };
+        let monday = Date::new(2025, 6, 16);
+        let next_monday = Date::new(2025, 6, 23);
+        assert_eq!(vol_cal.count_business_days(monday, next_monday), 5);
+        // Reversed direction must be negative, same as the wrapped calendar
+        assert_eq!(vol_cal.count_business_days(next_monday, monday), -5);
     }
 
     #[test]

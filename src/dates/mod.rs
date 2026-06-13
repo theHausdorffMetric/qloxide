@@ -62,10 +62,18 @@ impl Date {
         days as f64 / 365.0
     }
 
+    /// Add calendar months, clamping the day to the target month's length
+    /// (e.g. Jan 31 + 1 month = Feb 28/29). Panics on overflow.
+    pub fn add_months(&self, months: i32) -> Date {
+        let span = jiff::Span::new().months(months);
+        Date(self.0.checked_add(span).expect("date overflow"))
+    }
+
     /// Convert to a UTC midnight Timestamp.
     pub fn as_of_midnight(&self) -> Timestamp {
         let dt = self.0.at(0, 0, 0, 0);
-        let zoned = dt.to_zoned(jiff::tz::TimeZone::UTC)
+        let zoned = dt
+            .to_zoned(jiff::tz::TimeZone::UTC)
             .expect("midnight UTC is always unambiguous");
         Timestamp(zoned.timestamp())
     }
@@ -135,6 +143,85 @@ impl<'de> Deserialize<'de> for Date {
         s.parse::<jiff::civil::Date>()
             .map(Date)
             .map_err(serde::de::Error::custom)
+    }
+}
+
+/// Minute-precision wall-clock time newtype wrapping `jiff::civil::Time`.
+///
+/// Used for settlement session times ("19:30"). Seconds are deliberately
+/// not representable: construction and parsing reject them.
+/// Serializes as `"HH:MM"`.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Time(jiff::civil::Time);
+
+impl Time {
+    /// Create from hour (0–23) and minute (0–59). Panics on invalid input.
+    pub fn new(hour: i8, minute: i8) -> Time {
+        Self::try_new(hour, minute).expect("invalid time")
+    }
+
+    /// Create from hour and minute. Returns error on invalid input.
+    pub fn try_new(hour: i8, minute: i8) -> core::Result<Time> {
+        jiff::civil::Time::new(hour, minute, 0, 0)
+            .map(Time)
+            .map_err(|e| core::Error::Date(e.to_string()))
+    }
+
+    /// The underlying jiff time.
+    pub fn inner(&self) -> jiff::civil::Time {
+        self.0
+    }
+
+    /// Hour component (0–23).
+    pub fn hour(&self) -> i8 {
+        self.0.hour()
+    }
+
+    /// Minute component (0–59).
+    pub fn minute(&self) -> i8 {
+        self.0.minute()
+    }
+}
+
+impl fmt::Display for Time {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:02}:{:02}", self.0.hour(), self.0.minute())
+    }
+}
+
+impl fmt::Debug for Time {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Time({self})")
+    }
+}
+
+impl FromStr for Time {
+    type Err = core::Error;
+
+    fn from_str(s: &str) -> core::Result<Time> {
+        let t = s
+            .parse::<jiff::civil::Time>()
+            .map_err(|e| core::Error::Date(format!("invalid time '{}': {}", s, e)))?;
+        if t.second() != 0 || t.subsec_nanosecond() != 0 {
+            return Err(core::Error::Date(format!(
+                "invalid time '{}': seconds not supported, expected HH:MM",
+                s
+            )));
+        }
+        Ok(Time(t))
+    }
+}
+
+impl Serialize for Time {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for Time {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        s.parse::<Time>().map_err(serde::de::Error::custom)
     }
 }
 
@@ -330,10 +417,56 @@ mod tests {
     }
 
     #[test]
+    fn add_months_clamps_to_end_of_month() {
+        // Jan 31 + 1 month = Feb 28 (non-leap) or Feb 29 (leap)
+        assert_eq!(Date::new(2025, 1, 31).add_months(1), Date::new(2025, 2, 28));
+        assert_eq!(Date::new(2024, 1, 31).add_months(1), Date::new(2024, 2, 29));
+        // Backwards across a year boundary
+        assert_eq!(
+            Date::new(2025, 1, 15).add_months(-3),
+            Date::new(2024, 10, 15)
+        );
+        // Plain forward
+        assert_eq!(
+            Date::new(2025, 6, 14).add_months(6),
+            Date::new(2025, 12, 14)
+        );
+    }
+
+    #[test]
     fn date_as_of_midnight() {
         let d = Date::new(2026, 3, 7);
         let ts = d.as_of_midnight();
         assert_eq!(ts, Timestamp::parse("2026-03-07T00:00:00Z").unwrap());
+    }
+
+    #[test]
+    fn time_construction_and_display() {
+        let t = Time::new(19, 30);
+        assert_eq!(t.hour(), 19);
+        assert_eq!(t.minute(), 30);
+        assert_eq!(t.to_string(), "19:30");
+        assert_eq!(Time::new(7, 5).to_string(), "07:05");
+    }
+
+    #[test]
+    fn time_invalid_rejected() {
+        assert!(Time::try_new(25, 30).is_err());
+        assert!(Time::try_new(19, 75).is_err());
+        assert!("25:30".parse::<Time>().is_err());
+        assert!("19:75".parse::<Time>().is_err());
+        assert!("bad".parse::<Time>().is_err());
+        // Seconds are not supported at minute precision
+        assert!("19:30:45".parse::<Time>().is_err());
+    }
+
+    #[test]
+    fn time_serde_roundtrip() {
+        let t = Time::new(19, 30);
+        let json = serde_json::to_string(&t).unwrap();
+        assert_eq!(json, "\"19:30\"");
+        let t2: Time = serde_json::from_str(&json).unwrap();
+        assert_eq!(t, t2);
     }
 
     #[test]

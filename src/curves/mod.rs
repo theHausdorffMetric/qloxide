@@ -13,8 +13,7 @@ use crate::dates::daycount::{Compounding, DayCount};
 /// This single type serves all purposes: risk-free discounting, credit curves,
 /// funding curves, borrow curves. The identity (whose curve, what purpose)
 /// comes from how it is stored in market data.
-#[derive(Clone, Debug, Serialize)]
-#[derive(Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(from = "DiscountCurveRaw")]
 pub struct DiscountCurve {
     /// Valuation date (anchor for year fractions).
@@ -92,7 +91,11 @@ impl DiscountCurve {
         }
     }
 
-    fn compute_pillar_rts(base_date: Date, day_count: DayCount, pillars: &[(Date, f64)]) -> Vec<(f64, f64)> {
+    fn compute_pillar_rts(
+        base_date: Date,
+        day_count: DayCount,
+        pillars: &[(Date, f64)],
+    ) -> Vec<(f64, f64)> {
         pillars
             .iter()
             .map(|&(d, r)| {
@@ -241,9 +244,9 @@ mod tests {
     #[test]
     fn interpolated_curve() {
         let pillars = vec![
-            (Date::new(2025, 7, 1), 0.04),  // 6M: 4%
-            (Date::new(2026, 1, 1), 0.05),  // 1Y: 5%
-            (Date::new(2027, 1, 1), 0.06),  // 2Y: 6%
+            (Date::new(2025, 7, 1), 0.04), // 6M: 4%
+            (Date::new(2026, 1, 1), 0.05), // 1Y: 5%
+            (Date::new(2027, 1, 1), 0.06), // 2Y: 6%
         ];
         let curve = DiscountCurve::new(base(), DayCount::Act365Fixed, pillars).unwrap();
 
@@ -287,10 +290,7 @@ mod tests {
 
     #[test]
     fn curve_serde_roundtrip() {
-        let pillars = vec![
-            (Date::new(2025, 7, 1), 0.04),
-            (Date::new(2026, 1, 1), 0.05),
-        ];
+        let pillars = vec![(Date::new(2025, 7, 1), 0.04), (Date::new(2026, 1, 1), 0.05)];
         let curve = DiscountCurve::new(base(), DayCount::Act365Fixed, pillars).unwrap();
         let json = serde_json::to_string(&curve).unwrap();
         let curve2: DiscountCurve = serde_json::from_str(&json).unwrap();

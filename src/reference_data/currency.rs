@@ -6,7 +6,7 @@ use crate::dates::rules::DateRule;
 /// Currency as reference data — a unit of account, not a tradeable instrument.
 ///
 /// Instruments are denominated in a currency. FX is a currency *pair* instrument.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Currency {
     /// ISO 4217 code (e.g., "USD", "EUR", "GBP").
     pub id: String,

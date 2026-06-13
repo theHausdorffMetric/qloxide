@@ -42,9 +42,7 @@ pub struct Portfolio {
 /// Each instrument/deal file may contain a single JSON object or an array.
 /// After loading, consistency checks run and warnings are collected.
 pub fn load(config_path: &Path) -> core::Result<Portfolio> {
-    let config_dir = config_path
-        .parent()
-        .unwrap_or_else(|| Path::new("."));
+    let config_dir = config_path.parent().unwrap_or_else(|| Path::new("."));
 
     let toml_str = std::fs::read_to_string(config_path).map_err(|e| {
         core::Error::Config(format!("cannot read {}: {}", config_path.display(), e))
@@ -62,9 +60,10 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
         for inst in loaded {
             let id = inst.id().to_string();
             if instruments.contains_key(&id) {
-                return Err(core::Error::Config(
-                    format!("duplicate instrument ID '{}'", id),
-                ));
+                return Err(core::Error::Config(format!(
+                    "duplicate instrument ID '{}'",
+                    id
+                )));
             }
             instruments.insert(id, inst);
         }
@@ -79,9 +78,10 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
         let loaded = deserialize_deals(&json, &path)?;
         for deal in loaded {
             if deal_ids.contains_key(&deal.id) {
-                return Err(core::Error::Config(
-                    format!("duplicate deal ID '{}'", deal.id),
-                ));
+                return Err(core::Error::Config(format!(
+                    "duplicate deal ID '{}'",
+                    deal.id
+                )));
             }
             deal_ids.insert(deal.id.clone(), true);
             deals.push(deal);
@@ -103,12 +103,33 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
             })?,
         }
     }
-    let market_data = market_data.ok_or_else(|| {
-        core::Error::Config("no market_data files specified".to_string())
-    })?;
+    let market_data = market_data
+        .ok_or_else(|| core::Error::Config("no market_data files specified".to_string()))?;
 
     // Consistency checks
     let mut warnings: Vec<String> = Vec::new();
+
+    // Currencies are embedded by value in each instrument's JSON; two
+    // instruments declaring the same currency id with different
+    // conventions is a silent-mismatch hazard.
+    let mut currencies: HashMap<String, (String, crate::reference_data::Currency)> = HashMap::new();
+    let mut sorted_ids: Vec<&String> = instruments.keys().collect();
+    sorted_ids.sort(); // deterministic "first seen" for stable warnings
+    for id in sorted_ids {
+        let ccy = instruments[id].currency();
+        match currencies.get(&ccy.id) {
+            None => {
+                currencies.insert(ccy.id.clone(), (id.clone(), ccy.clone()));
+            }
+            Some((first_inst, first_ccy)) if first_ccy != ccy => {
+                warnings.push(format!(
+                    "currency '{}' defined inconsistently: instrument '{}' disagrees with '{}'",
+                    ccy.id, id, first_inst,
+                ));
+            }
+            Some(_) => {}
+        }
+    }
 
     for deal in &deals {
         if !instruments.contains_key(&deal.instrument_id) {
@@ -123,21 +144,44 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
         let ccy = inst.currency().id.clone();
         if market_data.discount_curve(&ccy).is_err() {
             warnings.push(format!(
-                "instrument '{}': no discount curve for currency '{}'", id, ccy,
+                "instrument '{}': no discount curve for currency '{}'",
+                id, ccy,
             ));
         }
-        let expired = inst.maturity()
-            .is_some_and(|m| market_data.spot_date() > m);
+        let expired = inst
+            .maturity()
+            .is_some_and(|m| market_data.valuation_date() > m);
+
+        // Options price via the model, not a quoted market price: check
+        // their actual inputs (underlying instrument + vol surface) instead.
+        if let Some(opt) = inst
+            .as_any()
+            .downcast_ref::<crate::instruments::EuropeanOption>()
+        {
+            if !instruments.contains_key(&opt.underlying) {
+                warnings.push(format!(
+                    "option '{}': unknown underlying '{}'",
+                    id, opt.underlying,
+                ));
+            }
+            if !expired && !market_data.has_vol_surface(&opt.underlying) {
+                warnings.push(format!(
+                    "option '{}': no vol surface for underlying '{}'",
+                    id, opt.underlying,
+                ));
+            }
+            continue;
+        }
+
         if expired {
             if market_data.settlement_price(id).is_err() {
                 warnings.push(format!(
-                    "instrument '{}': expired but no settlement price", id,
+                    "instrument '{}': expired but no settlement price",
+                    id,
                 ));
             }
-        } else if market_data.spot(id).is_err() {
-            warnings.push(format!(
-                "instrument '{}': no spot price", id,
-            ));
+        } else if market_data.market_price(id).is_err() {
+            warnings.push(format!("instrument '{}': no market price", id,));
         }
     }
 
@@ -151,36 +195,44 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
 }
 
 fn read_json_file(path: &Path) -> core::Result<String> {
-    std::fs::read_to_string(path).map_err(|e| {
-        core::Error::Config(format!("cannot read {}: {}", path.display(), e))
-    })
+    std::fs::read_to_string(path)
+        .map_err(|e| core::Error::Config(format!("cannot read {}: {}", path.display(), e)))
 }
 
 /// Deserialize a JSON string as either a single instrument or an array.
+///
+/// Dispatches on the first non-whitespace byte rather than try-and-fall-back,
+/// so an error inside an array element is reported as that element's error
+/// instead of a misleading "expected a single object" failure.
 fn deserialize_instruments(
     json: &str,
     path: &Path,
 ) -> core::Result<Vec<Arc<dyn FinancialInstrument>>> {
-    // Try array first
-    if let Ok(arr) = serde_json::from_str::<Vec<Arc<dyn FinancialInstrument>>>(json) {
-        return Ok(arr);
+    if json.trim_start().starts_with('[') {
+        serde_json::from_str::<Vec<Arc<dyn FinancialInstrument>>>(json).map_err(|e| {
+            core::Error::Config(format!("invalid instrument JSON {}: {}", path.display(), e))
+        })
+    } else {
+        let single: Arc<dyn FinancialInstrument> = serde_json::from_str(json).map_err(|e| {
+            core::Error::Config(format!("invalid instrument JSON {}: {}", path.display(), e))
+        })?;
+        Ok(vec![single])
     }
-    // Try single object
-    let single: Arc<dyn FinancialInstrument> = serde_json::from_str(json).map_err(|e| {
-        core::Error::Config(format!("invalid instrument JSON {}: {}", path.display(), e))
-    })?;
-    Ok(vec![single])
 }
 
 /// Deserialize a JSON string as either a single deal or an array.
+/// Same first-byte dispatch as [`deserialize_instruments`].
 fn deserialize_deals(json: &str, path: &Path) -> core::Result<Vec<Deal>> {
-    if let Ok(arr) = serde_json::from_str::<Vec<Deal>>(json) {
-        return Ok(arr);
+    if json.trim_start().starts_with('[') {
+        serde_json::from_str::<Vec<Deal>>(json).map_err(|e| {
+            core::Error::Config(format!("invalid deal JSON {}: {}", path.display(), e))
+        })
+    } else {
+        let single: Deal = serde_json::from_str(json).map_err(|e| {
+            core::Error::Config(format!("invalid deal JSON {}: {}", path.display(), e))
+        })?;
+        Ok(vec![single])
     }
-    let single: Deal = serde_json::from_str(json).map_err(|e| {
-        core::Error::Config(format!("invalid deal JSON {}: {}", path.display(), e))
-    })?;
-    Ok(vec![single])
 }
 
 #[cfg(test)]
@@ -236,9 +288,9 @@ market_data = ["market.json"]
         fs::write(
             dir.join("market.json"),
             r#"{
-  "spot_date": "2026-03-07",
+  "valuation_date": "2026-03-07",
   "as_of": "2026-03-07T14:00:00Z",
-  "spots": {"ICE-BRN-K26": 72.45},
+  "market_prices": {"ICE-BRN-K26": 72.45},
   "discount_curves": {
     "USD": {
       "base_date": "2026-03-07",
@@ -361,22 +413,32 @@ market_data = ["market.json"]
         let dir = tempfile::tempdir().unwrap();
         write_test_files(dir.path());
 
-        // Market data with no spots or curves
+        // Market data with no market_prices or curves
         fs::write(
             dir.path().join("market.json"),
             r#"{
-  "spot_date": "2026-03-07",
+  "valuation_date": "2026-03-07",
   "as_of": "2026-03-07T14:00:00Z",
-  "spots": {},
+  "market_prices": {},
   "discount_curves": {}
 }"#,
         )
         .unwrap();
 
         let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
-        assert_eq!(portfolio.warnings.len(), 2); // no spot + no curve
-        assert!(portfolio.warnings.iter().any(|w| w.contains("no spot price")));
-        assert!(portfolio.warnings.iter().any(|w| w.contains("no discount curve")));
+        assert_eq!(portfolio.warnings.len(), 2); // no market price + no curve
+        assert!(
+            portfolio
+                .warnings
+                .iter()
+                .any(|w| w.contains("no market price"))
+        );
+        assert!(
+            portfolio
+                .warnings
+                .iter()
+                .any(|w| w.contains("no discount curve"))
+        );
     }
 
     #[test]
@@ -397,6 +459,147 @@ market_data = ["market.json"]
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("duplicate deal"), "{}", err);
+    }
+
+    #[test]
+    fn inconsistent_currency_definitions_warn() {
+        let dir = tempfile::tempdir().unwrap();
+        write_test_files(dir.path());
+
+        // Second instrument declares USD with a different day count
+        fs::write(
+            dir.path().join("instruments.json"),
+            r#"[
+  {
+    "type": "Future",
+    "id": "ICE-BRN-K26",
+    "underlying": "Brent",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2026-03-31",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  },
+  {
+    "type": "Future",
+    "id": "ICE-BRN-M26",
+    "underlying": "Brent",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act365Fixed"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2026-05-29",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  }
+]"#,
+        )
+        .unwrap();
+
+        let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
+        assert!(
+            portfolio
+                .warnings
+                .iter()
+                .any(|w| w.contains("defined inconsistently")),
+            "expected currency inconsistency warning, got: {:?}",
+            portfolio.warnings,
+        );
+    }
+
+    #[test]
+    fn option_warnings_check_underlying_and_vol_surface() {
+        let dir = tempfile::tempdir().unwrap();
+        write_test_files(dir.path());
+
+        // Option referencing a missing underlying; no vol surface in market data
+        fs::write(
+            dir.path().join("instruments.json"),
+            r#"[
+  {
+    "type": "Future",
+    "id": "ICE-BRN-K26",
+    "underlying": "Brent",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2026-03-31",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  },
+  {
+    "type": "EuropeanOption",
+    "id": "OPT-NO-VOL",
+    "underlying": "ICE-BRN-K26",
+    "credit_id": "ICE",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2026-03-27",
+    "strike": "75",
+    "put_or_call": "Call",
+    "exercise_style": "European",
+    "option_settlement": "Cash"
+  },
+  {
+    "type": "EuropeanOption",
+    "id": "OPT-NO-UNDERLYING",
+    "underlying": "MISSING",
+    "credit_id": "ICE",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "expiry": "2026-03-27",
+    "strike": "75",
+    "put_or_call": "Call",
+    "exercise_style": "European",
+    "option_settlement": "Cash"
+  }
+]"#,
+        )
+        .unwrap();
+
+        let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
+        assert!(
+            portfolio
+                .warnings
+                .iter()
+                .any(|w| w.contains("OPT-NO-VOL") && w.contains("no vol surface")),
+            "expected vol surface warning, got: {:?}",
+            portfolio.warnings,
+        );
+        assert!(
+            portfolio
+                .warnings
+                .iter()
+                .any(|w| w.contains("OPT-NO-UNDERLYING") && w.contains("unknown underlying")),
+            "expected unknown underlying warning, got: {:?}",
+            portfolio.warnings,
+        );
+        // Options must NOT trigger the generic "no market price" warning
+        assert!(
+            !portfolio
+                .warnings
+                .iter()
+                .any(|w| w.contains("OPT-") && w.contains("no market price")),
+            "options should not warn about market prices: {:?}",
+            portfolio.warnings,
+        );
+    }
+
+    #[test]
+    fn malformed_array_element_reports_element_error() {
+        let dir = tempfile::tempdir().unwrap();
+        write_test_files(dir.path());
+
+        // Array whose single element is missing required fields
+        fs::write(
+            dir.path().join("instruments.json"),
+            r#"[{"type": "Future", "id": "BROKEN"}]"#,
+        )
+        .unwrap();
+
+        let result = load(&dir.path().join("pricing.toml"));
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        // The error must describe the element problem (missing field),
+        // not a misleading "expected a single object" failure.
+        assert!(err.contains("missing field"), "unhelpful error: {}", err);
     }
 
     #[test]
