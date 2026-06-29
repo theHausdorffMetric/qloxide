@@ -7,7 +7,9 @@ A Rust library for financial instrument modeling, trade management, and pricing.
 ## Architecture
 
 Design decisions, reasoning, and rejected alternatives are documented in
-[ARCHITECTURE.md](ARCHITECTURE.md). The short version: strict layered
+[ARCHITECTURE.md](ARCHITECTURE.md); further planning, review, and reference
+notes (including the upstream [QuantMath](https://github.com/MarcusRainbow/QuantMath.git)
+it reimplements) live in [`docs/`](docs/). The short version: strict layered
 hierarchy — each layer depends only on layers below it:
 
 | Layer | Contents | Status |

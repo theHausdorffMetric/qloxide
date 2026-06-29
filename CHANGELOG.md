@@ -5,6 +5,17 @@ All notable changes to qloxide are documented here. The format follows
 [Semantic Versioning](https://semver.org/) (pre-1.0: breaking changes bump
 the minor version).
 
+## [Unreleased]
+
+### Docs
+
+- Imported design, planning, and review notes under `docs/` (options plan,
+  code review, build plan/status, upstream-QuantMath reference notes, and the
+  `opt_src/` reference pricing implementations), carried over from the retired
+  `ql` scaffold mono-repo. Added a `docs/` index and surfaced the upstream
+  [QuantMath](https://github.com/MarcusRainbow/QuantMath.git) repo link in
+  `README.md` and `ARCHITECTURE.md`.
+
 ## [0.3.0] — 2026-06-13
 
 ### License

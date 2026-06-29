@@ -23,6 +23,10 @@ A Rust library for financial instrument modeling, trade management, and pricing.
 
 ### 1.3 Why not use QuantMath directly?
 
+> **QuantMath** (Marcus Rainbow, MIT): <https://github.com/MarcusRainbow/QuantMath.git>
+> — the reference qloxide reimplements from scratch (pinned ref `b51ffac`). See
+> [`docs/quantmath-upstream.md`](docs/quantmath-upstream.md) for notes on it.
+
 QuantMath is a pricing-only library. It makes simplifications appropriate for equity derivatives but problematic for energy/commodities and trade management:
 
 - `TimeOfDay { Open, EDSP, Close }` — too thin for energy markets where ICE Brent settles at 19:30 London, CME Brent on a different schedule, and Naphtha has distinct Singapore vs London closes
