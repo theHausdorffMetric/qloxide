@@ -145,6 +145,19 @@ impl MarketData {
         Ok(())
     }
 
+    /// Check the contained market data is well-formed (currently: every
+    /// vol surface passes [`VolSurface::validate`]). The config loader
+    /// calls this after loading/merging, so pricing can rely on total
+    /// surface lookups.
+    pub fn validate(&self) -> core::Result<()> {
+        for (id, surface) in &self.vol_surfaces {
+            surface
+                .validate()
+                .map_err(|e| core::Error::MarketData(format!("'{id}': {e}")))?;
+        }
+        Ok(())
+    }
+
     /// Look up a discount curve by currency ID.
     pub fn discount_curve(&self, currency: &str) -> core::Result<&DiscountCurve> {
         self.discount_curves

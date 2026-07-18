@@ -105,6 +105,9 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
     }
     let market_data = market_data
         .ok_or_else(|| core::Error::Config("no market_data files specified".to_string()))?;
+    market_data
+        .validate()
+        .map_err(|e| core::Error::Config(format!("market data: {e}")))?;
 
     // Consistency checks
     let mut warnings: Vec<String> = Vec::new();

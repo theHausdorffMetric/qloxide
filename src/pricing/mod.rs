@@ -2,6 +2,7 @@ pub mod black76;
 pub mod bond;
 pub mod european;
 pub mod future;
+pub mod implied;
 
 use crate::core;
 use crate::curves::DiscountCurve;
