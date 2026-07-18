@@ -40,20 +40,9 @@ report +names:
 bond:
     cargo run --quiet --example bond_pricing
 
-# Brent Sep26 iron condor vs real ICE settles (data via qlox-ice): all reports
-condor:
-    cargo run --quiet -- --config examples/brent-condor/book.toml
-
-# Condor P&L against one historical series day (e.g. `just condor-day 2026-07-14`)
-condor-day date:
-    cargo run --quiet -- --config examples/brent-condor/series/day-{{date}}.toml
-
-# Condor P&L across every committed series day
-condor-series:
-    for f in examples/brent-condor/series/day-*.toml; do \
-        echo "== $(basename $f .toml)"; \
-        cargo run --quiet -- --config $f --report pnl | tail -3; \
-    done
+# Brent Sep26 iron condor vs real ICE settles (data via qlox-ice) has its
+# own justfile with the example: examples/brent-condor/justfile
+# (`cd examples/brent-condor && just book` / `just day <date>` / `just series`)
 
 # ── scenario playground ──────────────────────────────────────────────
 # A throwaway copy of the Brent portfolio in {{play}}; mutate its market

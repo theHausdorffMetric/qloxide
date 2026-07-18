@@ -1,0 +1,26 @@
+# Brent Sep26 iron condor — recipes for this example book.
+# Run from this directory (`just` finds the nearest justfile), or from the
+# repo root via `just -f examples/brent-condor/justfile <recipe>`.
+
+qloxide := "../.."
+
+# List available recipes
+default:
+    @just --list --unsorted
+
+# All reports against the 2026-07-16 book
+book:
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml -- --config book.toml
+
+# P&L against one historical series day (e.g. `just day 2026-07-14`)
+day date:
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml -- \
+        --config series/day-{{date}}.toml
+
+# P&L across every committed series day
+series:
+    for f in series/day-*.toml; do \
+        echo "== $(basename $f .toml)"; \
+        cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml -- \
+            --config $f --report pnl | tail -3; \
+    done

@@ -6,9 +6,10 @@
 # from ICE cleared settlements, with vols re-implied from settlement
 # premiums — every listed leg marks exactly at its ICE settle.
 #
-# Price here:  just condor                  (all reports, this file)
-#              just condor-day 2026-07-16   (P&L vs one series day)
-#              just condor-series           (P&L across all series days)
+# Price from this directory (see the justfile here):
+#   just book             (all reports, this file)
+#   just day 2026-07-16   (P&L vs one series day)
+#   just series           (P&L across all series days)
 instruments = ["instruments.json"]
 deals = ["deals.json"]
 market_data = ["market.json"]
