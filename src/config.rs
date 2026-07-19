@@ -1,12 +1,13 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use serde::Deserialize;
 
 use crate::core;
-use crate::instruments::FinancialInstrument;
-use crate::market_data::MarketData;
+use crate::dates::Date;
+use crate::instruments::{Clearing, FinancialInstrument};
+use crate::market_data::{MarketData, MarketStore};
 use crate::trades::Deal;
 
 /// TOML configuration pointing to JSON data files.
@@ -26,8 +27,39 @@ pub struct PricingConfig {
     pub deals: Vec<PathBuf>,
     #[serde(default)]
     pub market_data: Vec<PathBuf>,
+    /// Optional series manifest (see [`MarketStore`]). When set, the loader
+    /// checks settle-completeness for every cleared, dealt instrument over
+    /// [its earliest deal date, the evaluation date].
+    #[serde(default)]
+    pub market_series: Option<PathBuf>,
+    /// Date-scoped waivers: completeness findings inside a waiver window
+    /// downgrade from integrity errors to warnings.
+    #[serde(default)]
+    pub waivers: Vec<Waiver>,
     #[serde(default)]
     pub reports: Vec<String>,
+}
+
+/// A date-scoped waiver for known series holes (e.g. an upstream data gap).
+/// Committed in the book's config — part of its definition, not a CLI flag.
+///
+/// ```toml
+/// [[waivers]]
+/// from = "2020-01-01"
+/// through = "2020-09-30"
+/// reason = "icedat oil-futures history gap"
+/// ```
+#[derive(Debug, Clone, Deserialize)]
+pub struct Waiver {
+    pub from: Date,
+    pub through: Date,
+    pub reason: String,
+}
+
+impl Waiver {
+    fn covers(&self, date: Date) -> bool {
+        self.from <= date && date <= self.through
+    }
 }
 
 /// Assembled data ready for pricing, returned by [`load`].
@@ -38,7 +70,12 @@ pub struct Portfolio {
     /// `None` when the config lists no market_data files — static reports
     /// still run; valuation errors.
     pub market_data: Option<MarketData>,
+    /// The historical series behind this book, when configured.
+    pub market_series: Option<MarketStore>,
     pub warnings: Vec<String>,
+    /// Unwaived completeness failures. Valuation reports refuse while any
+    /// are present; static listings still render (diagnosability).
+    pub integrity_errors: Vec<String>,
     pub reports: Vec<String>,
 }
 
@@ -112,6 +149,13 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
         md.validate()
             .map_err(|e| core::Error::Config(format!("market data: {e}")))?;
     }
+
+    // Load the series manifest, if configured (day files stay unopened —
+    // completeness runs off the manifest's coverage lists).
+    let market_series = match &config.market_series {
+        Some(rel) => Some(MarketStore::load(&config_dir.join(rel))?),
+        None => None,
+    };
 
     // Consistency checks
     let mut warnings: Vec<String> = Vec::new();
@@ -211,13 +255,132 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
         }
     }
 
+    // Series settle-completeness: for every cleared, dealt instrument,
+    // each trading day in [earliest deal date, eval] must carry a settle.
+    // Unwaived findings are integrity errors — pnl refuses on them.
+    let mut integrity_errors: Vec<String> = Vec::new();
+    if let Some(store) = &market_series {
+        let eval = market_data
+            .as_ref()
+            .map(|md| md.valuation_date())
+            .or_else(|| store.last_day());
+        if let Some(eval) = eval {
+            check_series_completeness(
+                store,
+                &instruments,
+                &deals,
+                eval,
+                &config.waivers,
+                &mut warnings,
+                &mut integrity_errors,
+            );
+        }
+    }
+
     Ok(Portfolio {
         instruments,
         deals,
         market_data,
+        market_series,
         warnings,
+        integrity_errors,
         reports: config.reports,
     })
+}
+
+/// Kinds of per-day completeness findings.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Gap {
+    /// Trading day in the series, but no settle recorded for the instrument.
+    MissingSettle,
+    /// Calendar day the series does not account for at all.
+    Uncovered,
+}
+
+/// Walk [inception, eval] per cleared dealt instrument, collapse findings
+/// into contiguous runs (same kind, same waived-status), and emit each run
+/// as one warning (waived) or one integrity error (not).
+#[allow(clippy::too_many_arguments)]
+fn check_series_completeness(
+    store: &MarketStore,
+    instruments: &HashMap<String, Arc<dyn FinancialInstrument>>,
+    deals: &[Deal],
+    eval: Date,
+    waivers: &[Waiver],
+    warnings: &mut Vec<String>,
+    errors: &mut Vec<String>,
+) {
+    // Earliest deal date per cleared instrument (bilateral marks to model —
+    // exempt; undealt instruments have no M2M history to demand).
+    let mut inception: BTreeMap<&str, Date> = BTreeMap::new();
+    for deal in deals {
+        let Some(inst) = instruments.get(&deal.instrument_id) else {
+            continue;
+        };
+        if !matches!(inst.clearing(), Some(Clearing::Ice | Clearing::Cme)) {
+            continue;
+        }
+        let d = deal.timestamp.date();
+        inception
+            .entry(deal.instrument_id.as_str())
+            .and_modify(|e| {
+                if d < *e {
+                    *e = d;
+                }
+            })
+            .or_insert(d);
+    }
+
+    for (id, first) in inception {
+        // (kind, waived, from, to) runs of problematic days
+        let mut runs: Vec<(Gap, bool, Date, Date)> = Vec::new();
+        let mut date = first;
+        while date <= eval {
+            let gap = if store.is_trading_day(date) {
+                (!store.has_settle(date, id)).then_some(Gap::MissingSettle)
+            } else if store.is_known(date) {
+                None // explicitly non-trading
+            } else {
+                Some(Gap::Uncovered)
+            };
+            if let Some(kind) = gap {
+                let waived = waivers.iter().any(|w| w.covers(date));
+                match runs.last_mut() {
+                    Some((k, wv, _, to)) if *k == kind && *wv == waived && *to + 1 == date => {
+                        *to = date;
+                    }
+                    _ => runs.push((kind, waived, date, date)),
+                }
+            }
+            date = date + 1;
+        }
+
+        for (kind, waived, from, to) in runs {
+            let span = if from == to {
+                from.to_string()
+            } else {
+                format!("{from}..{to}")
+            };
+            let what = match kind {
+                Gap::MissingSettle => {
+                    format!("cleared instrument '{id}': no settlement in series on {span}")
+                }
+                Gap::Uncovered => {
+                    format!("cleared instrument '{id}': series does not cover {span}")
+                }
+            };
+            if waived {
+                let reason = waivers
+                    .iter()
+                    .find(|w| w.covers(from))
+                    .map(|w| w.reason.as_str())
+                    .unwrap_or("waived");
+                warnings.push(format!("waived ({reason}): {what}"));
+            } else {
+                errors.push(what);
+            }
+        }
+    }
 }
 
 fn read_json_file(path: &Path) -> core::Result<String> {
@@ -369,6 +532,135 @@ market_data = ["market.json"]
             .unwrap_err()
             .to_string();
         assert!(err.contains("requires market_data"), "{err}");
+    }
+
+    /// Series manifest for the standard fixture: deal 2026-03-02 (Mon),
+    /// eval 2026-03-07 (Sat, the market.json valuation date). `covered`
+    /// controls whether 03-04 records the instrument's settle.
+    fn write_series_manifest(dir: &Path, covered: bool) {
+        fs::create_dir_all(dir.join("series")).unwrap();
+        let day = |settles: &str| format!("{{ \"file\": \"x.json\", \"settles\": [{settles}] }}");
+        let full = day("\"ICE-BRN-K26\"");
+        let d4 = if covered { full.clone() } else { day("") };
+        fs::write(
+            dir.join("series/manifest.json"),
+            format!(
+                r#"{{ "days": {{
+                    "2026-03-02": {full}, "2026-03-03": {full},
+                    "2026-03-04": {d4},   "2026-03-05": {full},
+                    "2026-03-06": {full} }},
+                    "skipped": ["2026-03-07"] }}"#
+            ),
+        )
+        .unwrap();
+    }
+
+    fn config_with_series(extra: &str) -> String {
+        format!(
+            "instruments = [\"instruments.json\"]\ndeals = [\"deals.json\"]\n\
+             market_data = [\"market.json\"]\nmarket_series = \"series/manifest.json\"\n{extra}"
+        )
+    }
+
+    #[test]
+    fn series_completeness_clean() {
+        let dir = tempfile::tempdir().unwrap();
+        write_test_files(dir.path());
+        write_series_manifest(dir.path(), true);
+        fs::write(dir.path().join("pricing.toml"), config_with_series("")).unwrap();
+
+        let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
+        assert!(
+            portfolio.integrity_errors.is_empty(),
+            "{:?}",
+            portfolio.integrity_errors
+        );
+        assert!(portfolio.warnings.is_empty(), "{:?}", portfolio.warnings);
+        assert!(portfolio.market_series.is_some());
+    }
+
+    #[test]
+    fn series_missing_settle_is_integrity_error() {
+        let dir = tempfile::tempdir().unwrap();
+        write_test_files(dir.path());
+        write_series_manifest(dir.path(), false);
+        fs::write(dir.path().join("pricing.toml"), config_with_series("")).unwrap();
+
+        let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
+        assert_eq!(portfolio.integrity_errors.len(), 1);
+        assert!(
+            portfolio.integrity_errors[0].contains("no settlement in series on 2026-03-04"),
+            "{:?}",
+            portfolio.integrity_errors
+        );
+
+        // Valuation refuses; static listings still render.
+        let err = crate::reports::run("pnl", &portfolio)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("refused"), "{err}");
+        assert!(crate::reports::run("instruments", &portfolio).is_ok());
+    }
+
+    #[test]
+    fn series_waiver_downgrades_to_warning() {
+        let dir = tempfile::tempdir().unwrap();
+        write_test_files(dir.path());
+        write_series_manifest(dir.path(), false);
+        fs::write(
+            dir.path().join("pricing.toml"),
+            config_with_series(
+                "[[waivers]]\nfrom = \"2026-03-04\"\nthrough = \"2026-03-04\"\nreason = \"test gap\"\n",
+            ),
+        )
+        .unwrap();
+
+        let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
+        assert!(
+            portfolio.integrity_errors.is_empty(),
+            "{:?}",
+            portfolio.integrity_errors
+        );
+        assert!(
+            portfolio
+                .warnings
+                .iter()
+                .any(|w| w.contains("waived (test gap)")),
+            "{:?}",
+            portfolio.warnings
+        );
+        assert!(crate::reports::run("pnl", &portfolio).is_ok());
+    }
+
+    #[test]
+    fn series_uncovered_days_collapse_to_one_run() {
+        let dir = tempfile::tempdir().unwrap();
+        write_test_files(dir.path());
+        // Manifest starts 03-04: 03-02..03-03 are unaccounted for.
+        fs::create_dir_all(dir.path().join("series")).unwrap();
+        fs::write(
+            dir.path().join("series/manifest.json"),
+            r#"{ "days": {
+                "2026-03-04": { "file": "x.json", "settles": ["ICE-BRN-K26"] },
+                "2026-03-05": { "file": "x.json", "settles": ["ICE-BRN-K26"] },
+                "2026-03-06": { "file": "x.json", "settles": ["ICE-BRN-K26"] } },
+                "skipped": ["2026-03-07"] }"#,
+        )
+        .unwrap();
+        fs::write(dir.path().join("pricing.toml"), config_with_series("")).unwrap();
+
+        let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
+        assert_eq!(
+            portfolio.integrity_errors.len(),
+            1,
+            "{:?}",
+            portfolio.integrity_errors
+        );
+        assert!(
+            portfolio.integrity_errors[0].contains("does not cover 2026-03-02..2026-03-03"),
+            "{:?}",
+            portfolio.integrity_errors
+        );
     }
 
     #[test]

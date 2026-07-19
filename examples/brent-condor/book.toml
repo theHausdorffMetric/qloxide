@@ -13,4 +13,8 @@
 instruments = ["instruments.json"]
 deals = ["deals.json"]
 market_data = ["market.json"]
+# Historical series (one market file per trading day + manifest): the
+# loader checks settle-completeness for every cleared, dealt instrument
+# over [deal inception, valuation date] against the manifest's coverage.
+market_series = "series/manifest.json"
 reports = ["instruments", "deals", "positions", "pnl"]

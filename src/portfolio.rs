@@ -323,6 +323,8 @@ mod tests {
             instruments,
             deals: deals.clone(),
             market_data: Some(md),
+            market_series: None,
+            integrity_errors: vec![],
             warnings: vec![],
             reports: vec![],
         };
@@ -409,6 +411,8 @@ mod tests {
             instruments,
             deals: deals.clone(),
             market_data: Some(md),
+            market_series: None,
+            integrity_errors: vec![],
             warnings: vec![],
             reports: vec![],
         };

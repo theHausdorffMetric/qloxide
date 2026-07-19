@@ -208,6 +208,15 @@ pub fn pnl(portfolio: &Portfolio) -> crate::core::Result<String> {
             "report 'pnl' requires market_data in the config".to_string(),
         ));
     }
+    // Integrity errors block valuation — an official P&L over a book whose
+    // settle history is known-incomplete would be silently wrong.
+    if !portfolio.integrity_errors.is_empty() {
+        return Err(crate::core::Error::Config(format!(
+            "report 'pnl' refused: {} integrity error(s), first: {}",
+            portfolio.integrity_errors.len(),
+            portfolio.integrity_errors[0],
+        )));
+    }
     let valued = portfolio::valuate(&portfolio.deals, portfolio);
     Ok(format_pnl(&valued, portfolio.deals.len()))
 }

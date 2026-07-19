@@ -46,10 +46,15 @@ fn report_long_help() -> String {
 /// Trailing `--help` section documenting the TOML config schema.
 fn config_help() -> String {
     "CONFIG (TOML):\n  \
-     instruments  = [\"path.json\", ...]   # instrument definitions\n  \
-     deals        = [\"path.json\", ...]   # trades\n  \
-     market_data  = [\"path.json\", ...]   # quotes, curves, valuation date\n  \
-     reports      = [\"pnl\", ...]         # default reports when --report is omitted\n\n  \
+     instruments   = [\"path.json\", ...]   # instrument definitions\n  \
+     deals         = [\"path.json\", ...]   # trades\n  \
+     market_data   = [\"path.json\", ...]   # quotes, curves, valuation date (optional: static reports run without it)\n  \
+     market_series = \"series/manifest.json\" # optional historical series; enables settle-completeness checks\n  \
+     reports       = [\"pnl\", ...]         # default reports when --report is omitted\n\n  \
+     [[waivers]]                          # optional: downgrade known series holes to warnings\n  \
+     from = \"2020-01-01\"\n  \
+     through = \"2020-09-30\"\n  \
+     reason = \"upstream data gap\"\n\n  \
      Paths are resolved relative to the config file's directory."
         .to_string()
 }
@@ -64,6 +69,11 @@ fn main() {
 
     for w in &portfolio.warnings {
         eprintln!("warning: {w}");
+    }
+    // Integrity errors don't abort: static reports still render for
+    // diagnosis; valuation reports refuse on their own.
+    for e in &portfolio.integrity_errors {
+        eprintln!("integrity error: {e}");
     }
 
     let report_names = if cli.reports.is_empty() {

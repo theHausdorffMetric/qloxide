@@ -1,3 +1,4 @@
+pub mod store;
 pub mod vol;
 
 use std::collections::HashMap;
@@ -8,6 +9,7 @@ use crate::core;
 use crate::curves::DiscountCurve;
 use crate::dates::{Date, Timestamp};
 
+pub use store::MarketStore;
 pub use vol::VolSurface;
 
 /// Container for market data: market prices, discount curves, vol surfaces,
@@ -94,6 +96,15 @@ impl MarketData {
     /// its frozen final settle at expiry.
     pub fn add_settlement_price(&mut self, id: &str, price: f64) {
         self.settlement_prices.insert(id.to_string(), price);
+    }
+
+    /// All instrument IDs carrying an official settlement price, sorted —
+    /// the per-day coverage a series manifest records for completeness
+    /// checks without opening every file.
+    pub fn settlement_ids(&self) -> Vec<&str> {
+        let mut ids: Vec<&str> = self.settlement_prices.keys().map(String::as_str).collect();
+        ids.sort_unstable();
+        ids
     }
 
     /// Look up an official settlement price by instrument ID.

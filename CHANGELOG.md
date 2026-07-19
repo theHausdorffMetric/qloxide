@@ -50,6 +50,22 @@ the minor version).
   `EuropeanOption`). Config validation warns on a cleared instrument
   without a settlement price. P&L figures print with two decimals.
 
+- **`market_data::MarketStore`** — manifest-driven historical series
+  (date → snapshot): loads a generator-written `manifest.json` (per-day
+  files, settle-coverage lists, skipped non-trading days, provenance
+  stamps), answers calendar/coverage queries in O(manifest), and lazily
+  loads + validates individual day snapshots.
+- **Series settle-completeness at load**: new optional `market_series`
+  config key (manifest path) and `[[waivers]]` (date-scoped, with reason).
+  For every cleared, dealt instrument the loader walks
+  [earliest deal date, evaluation date]: trading days without a settle and
+  calendar days the series doesn't account for become **integrity errors**
+  (collapsed into contiguous runs); findings inside a waiver window
+  downgrade to warnings. `Portfolio` gains `market_series` and
+  `integrity_errors`; pnl refuses while integrity errors are present,
+  static listings still render. `MarketData::settlement_ids()` added for
+  generators writing coverage.
+
 ### Docs
 
 - Imported design, planning, and review notes under `docs/` (options plan,
