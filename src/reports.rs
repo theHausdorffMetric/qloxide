@@ -362,10 +362,17 @@ pub fn risk(portfolio: &Portfolio) -> crate::core::Result<String> {
 
     let mut totals = [0.0f64; 4]; // delta, gamma, vega, theta
     let mut skipped: Vec<String> = Vec::new();
+    let mut frozen: Vec<String> = Vec::new();
     for pos in positions.iter().filter(|p| p.quantity > Decimal::ZERO) {
         let Some(inst) = portfolio.instruments.get(&pos.instrument_id) else {
             continue;
         };
+        // An expired position is frozen at its final settle: no market
+        // risk, no greeks — and it must not net against live exposure.
+        if inst.maturity().is_some_and(|m| md.valuation_date() > m) {
+            frozen.push(pos.instrument_id.clone());
+            continue;
+        }
         let sign = match pos.direction {
             crate::trades::BuySell::Buy => 1.0,
             crate::trades::BuySell::Sell => -1.0,
@@ -423,6 +430,9 @@ pub fn risk(portfolio: &Portfolio) -> crate::core::Result<String> {
     for s in &skipped {
         writeln!(out, "no greeks: {s}").unwrap();
     }
+    for f in &frozen {
+        writeln!(out, "frozen (expired, no market risk): {f}").unwrap();
+    }
 
     // — Model value of the book (what scenario runs diff) —
     let mut model_value = 0.0f64;
@@ -431,6 +441,12 @@ pub fn risk(portfolio: &Portfolio) -> crate::core::Result<String> {
         let Some(inst) = portfolio.instruments.get(&pos.instrument_id) else {
             continue;
         };
+        // Frozen positions carry value but no market risk; excluding them
+        // keeps scenario diffs of this number pure (scenarios strip
+        // settles, so a frozen leg could not reprice anyway).
+        if inst.maturity().is_some_and(|m| md.valuation_date() > m) {
+            continue;
+        }
         let sign = match pos.direction {
             crate::trades::BuySell::Buy => 1.0,
             crate::trades::BuySell::Sell => -1.0,
@@ -446,7 +462,11 @@ pub fn risk(portfolio: &Portfolio) -> crate::core::Result<String> {
             Err(e) => unpriced.push(format!("{}: {e}", pos.instrument_id)),
         }
     }
-    writeln!(out, "\nModel value of book: {model_value:.2}").unwrap();
+    writeln!(
+        out,
+        "\nModel value of book (live positions): {model_value:.2}"
+    )
+    .unwrap();
     for u in &unpriced {
         writeln!(out, "unpriced (excluded): {u}").unwrap();
     }
@@ -858,7 +878,10 @@ mod risk_tests {
         let row = out.lines().find(|l| l.starts_with("OPT")).unwrap();
         assert!(row.contains("Buy"), "{row}");
         assert!(out.contains("Portfolio"), "{out}");
-        assert!(out.contains("Model value of book:"), "{out}");
+        assert!(
+            out.contains("Model value of book (live positions):"),
+            "{out}"
+        );
         // Calibration row for OPT with ~zero residual, unflagged.
         let calib = out
             .lines()

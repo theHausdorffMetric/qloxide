@@ -1,0 +1,20 @@
+[
+  {
+    "id": "TS-N26",
+    "instrument_id": "ICE-BRN-N26",
+    "direction": "Buy",
+    "quantity": "10",
+    "price": "64.55",
+    "timestamp": "2026-02-02T16:58:00Z",
+    "counterparty": "Marex"
+  },
+  {
+    "id": "TS-Z26",
+    "instrument_id": "ICE-BRN-Z26",
+    "direction": "Sell",
+    "quantity": "10",
+    "price": "63.26",
+    "timestamp": "2026-02-02T16:58:00Z",
+    "counterparty": "Marex"
+  }
+]

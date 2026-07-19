@@ -1,0 +1,31 @@
+{
+  "valuation_date": "2026-05-14",
+  "as_of": "2026-05-14T00:00:00Z",
+  "source": "ICE",
+  "generator": "qloxide-ice 0.0.0",
+  "market_prices": {
+    "ICE-BRN-N26": 105.72,
+    "ICE-BRN-Z26": 89.1
+  },
+  "settlement_prices": {
+    "ICE-BRN-Z26": 89.1,
+    "ICE-BRN-N26": 105.72
+  },
+  "discount_curves": {
+    "USD": {
+      "base_date": "2026-05-14",
+      "day_count": "Act360",
+      "pillars": [
+        [
+          "2026-05-15",
+          0.04
+        ],
+        [
+          "2126-04-20",
+          0.04
+        ]
+      ]
+    }
+  },
+  "vol_surfaces": {}
+}

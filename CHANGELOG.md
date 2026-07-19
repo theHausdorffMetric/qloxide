@@ -50,6 +50,15 @@ the minor version).
   `EuropeanOption`). Config validation warns on a cleared instrument
   without a settlement price. P&L figures print with two decimals.
 
+- New example `examples/brent-timespread/`: long Jul/Dec Brent time
+  spread struck 2026-02-02 at that day's settles (+1.29 backwardation).
+  The Jul leg expires 2026-05-29 mid-history — `pnl-series` shows the
+  P&L recomposing to realized at the frozen final settle and the book
+  degrading into an outright Dec short; the risk report shows the frozen
+  leg excluded from greeks (this example caught that fix: expired
+  positions carry no market risk and must not net against live exposure;
+  model value now covers live positions only, keeping scenario diffs
+  pure).
 - **`risk` report** — the model world in one place: position-scaled
   Black-76 greeks with portfolio totals (futures delta 1; expired/unknown
   types listed as skipped), the **calibration diagnostic** (model vs settle

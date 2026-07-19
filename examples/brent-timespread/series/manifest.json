@@ -1,0 +1,884 @@
+{
+  "days": {
+    "2026-02-02": {
+      "file": "market-2026-02-02.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-02-03": {
+      "file": "market-2026-02-03.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-02-04": {
+      "file": "market-2026-02-04.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-02-05": {
+      "file": "market-2026-02-05.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-02-06": {
+      "file": "market-2026-02-06.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-02-09": {
+      "file": "market-2026-02-09.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-02-10": {
+      "file": "market-2026-02-10.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-02-11": {
+      "file": "market-2026-02-11.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-02-12": {
+      "file": "market-2026-02-12.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-02-13": {
+      "file": "market-2026-02-13.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-02-16": {
+      "file": "market-2026-02-16.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-02-17": {
+      "file": "market-2026-02-17.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-02-18": {
+      "file": "market-2026-02-18.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-02-19": {
+      "file": "market-2026-02-19.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-02-20": {
+      "file": "market-2026-02-20.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-02-23": {
+      "file": "market-2026-02-23.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-02-24": {
+      "file": "market-2026-02-24.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-02-25": {
+      "file": "market-2026-02-25.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-02-26": {
+      "file": "market-2026-02-26.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-02-27": {
+      "file": "market-2026-02-27.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-02": {
+      "file": "market-2026-03-02.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-03": {
+      "file": "market-2026-03-03.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-04": {
+      "file": "market-2026-03-04.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-05": {
+      "file": "market-2026-03-05.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-06": {
+      "file": "market-2026-03-06.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-09": {
+      "file": "market-2026-03-09.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-10": {
+      "file": "market-2026-03-10.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-11": {
+      "file": "market-2026-03-11.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-12": {
+      "file": "market-2026-03-12.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-13": {
+      "file": "market-2026-03-13.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-16": {
+      "file": "market-2026-03-16.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-17": {
+      "file": "market-2026-03-17.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-18": {
+      "file": "market-2026-03-18.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-19": {
+      "file": "market-2026-03-19.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-20": {
+      "file": "market-2026-03-20.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-23": {
+      "file": "market-2026-03-23.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-24": {
+      "file": "market-2026-03-24.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-25": {
+      "file": "market-2026-03-25.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-26": {
+      "file": "market-2026-03-26.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-27": {
+      "file": "market-2026-03-27.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-30": {
+      "file": "market-2026-03-30.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-03-31": {
+      "file": "market-2026-03-31.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-01": {
+      "file": "market-2026-04-01.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-02": {
+      "file": "market-2026-04-02.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-06": {
+      "file": "market-2026-04-06.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-07": {
+      "file": "market-2026-04-07.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-08": {
+      "file": "market-2026-04-08.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-09": {
+      "file": "market-2026-04-09.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-10": {
+      "file": "market-2026-04-10.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-13": {
+      "file": "market-2026-04-13.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-14": {
+      "file": "market-2026-04-14.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-15": {
+      "file": "market-2026-04-15.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-16": {
+      "file": "market-2026-04-16.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-17": {
+      "file": "market-2026-04-17.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-20": {
+      "file": "market-2026-04-20.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-21": {
+      "file": "market-2026-04-21.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-22": {
+      "file": "market-2026-04-22.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-23": {
+      "file": "market-2026-04-23.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-24": {
+      "file": "market-2026-04-24.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-27": {
+      "file": "market-2026-04-27.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-28": {
+      "file": "market-2026-04-28.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-29": {
+      "file": "market-2026-04-29.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-04-30": {
+      "file": "market-2026-04-30.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-01": {
+      "file": "market-2026-05-01.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-04": {
+      "file": "market-2026-05-04.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-05": {
+      "file": "market-2026-05-05.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-06": {
+      "file": "market-2026-05-06.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-07": {
+      "file": "market-2026-05-07.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-08": {
+      "file": "market-2026-05-08.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-11": {
+      "file": "market-2026-05-11.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-12": {
+      "file": "market-2026-05-12.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-13": {
+      "file": "market-2026-05-13.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-14": {
+      "file": "market-2026-05-14.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-15": {
+      "file": "market-2026-05-15.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-18": {
+      "file": "market-2026-05-18.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-19": {
+      "file": "market-2026-05-19.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-20": {
+      "file": "market-2026-05-20.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-21": {
+      "file": "market-2026-05-21.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-22": {
+      "file": "market-2026-05-22.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-25": {
+      "file": "market-2026-05-25.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-26": {
+      "file": "market-2026-05-26.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-27": {
+      "file": "market-2026-05-27.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-28": {
+      "file": "market-2026-05-28.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-05-29": {
+      "file": "market-2026-05-29.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-01": {
+      "file": "market-2026-06-01.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-02": {
+      "file": "market-2026-06-02.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-03": {
+      "file": "market-2026-06-03.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-04": {
+      "file": "market-2026-06-04.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-05": {
+      "file": "market-2026-06-05.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-08": {
+      "file": "market-2026-06-08.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-09": {
+      "file": "market-2026-06-09.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-10": {
+      "file": "market-2026-06-10.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-11": {
+      "file": "market-2026-06-11.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-12": {
+      "file": "market-2026-06-12.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-15": {
+      "file": "market-2026-06-15.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-16": {
+      "file": "market-2026-06-16.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-17": {
+      "file": "market-2026-06-17.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-18": {
+      "file": "market-2026-06-18.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-19": {
+      "file": "market-2026-06-19.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-22": {
+      "file": "market-2026-06-22.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-23": {
+      "file": "market-2026-06-23.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-24": {
+      "file": "market-2026-06-24.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-25": {
+      "file": "market-2026-06-25.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-26": {
+      "file": "market-2026-06-26.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-29": {
+      "file": "market-2026-06-29.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-06-30": {
+      "file": "market-2026-06-30.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-07-01": {
+      "file": "market-2026-07-01.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-07-02": {
+      "file": "market-2026-07-02.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-07-03": {
+      "file": "market-2026-07-03.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-07-06": {
+      "file": "market-2026-07-06.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-07-07": {
+      "file": "market-2026-07-07.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-07-08": {
+      "file": "market-2026-07-08.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-07-09": {
+      "file": "market-2026-07-09.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-07-10": {
+      "file": "market-2026-07-10.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-07-13": {
+      "file": "market-2026-07-13.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-07-14": {
+      "file": "market-2026-07-14.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-07-15": {
+      "file": "market-2026-07-15.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    },
+    "2026-07-16": {
+      "file": "market-2026-07-16.json",
+      "settles": [
+        "ICE-BRN-N26",
+        "ICE-BRN-Z26"
+      ]
+    }
+  },
+  "from": "2026-02-02",
+  "generator": "qloxide-ice 0.0.0",
+  "rate": 0.04,
+  "skipped": [
+    "2026-02-07",
+    "2026-02-08",
+    "2026-02-14",
+    "2026-02-15",
+    "2026-02-21",
+    "2026-02-22",
+    "2026-02-28",
+    "2026-03-01",
+    "2026-03-07",
+    "2026-03-08",
+    "2026-03-14",
+    "2026-03-15",
+    "2026-03-21",
+    "2026-03-22",
+    "2026-03-28",
+    "2026-03-29",
+    "2026-04-03",
+    "2026-04-04",
+    "2026-04-05",
+    "2026-04-11",
+    "2026-04-12",
+    "2026-04-18",
+    "2026-04-19",
+    "2026-04-25",
+    "2026-04-26",
+    "2026-05-02",
+    "2026-05-03",
+    "2026-05-09",
+    "2026-05-10",
+    "2026-05-16",
+    "2026-05-17",
+    "2026-05-23",
+    "2026-05-24",
+    "2026-05-30",
+    "2026-05-31",
+    "2026-06-06",
+    "2026-06-07",
+    "2026-06-13",
+    "2026-06-14",
+    "2026-06-20",
+    "2026-06-21",
+    "2026-06-27",
+    "2026-06-28",
+    "2026-07-04",
+    "2026-07-05",
+    "2026-07-11",
+    "2026-07-12"
+  ],
+  "source": "ICE",
+  "through": "2026-07-16"
+}
