@@ -228,7 +228,9 @@ pub fn pnl(portfolio: &Portfolio) -> crate::core::Result<String> {
         )));
     }
     let valued = portfolio::valuate(&portfolio.deals, portfolio);
-    Ok(format_pnl(&valued, portfolio.deals.len()))
+    // Unwrap is safe: checked above.
+    let md = portfolio.market_data.as_ref().unwrap();
+    Ok(format_pnl(&valued, portfolio.deals.len(), md))
 }
 
 /// Daily portfolio P&L trajectory over the market series.
@@ -267,11 +269,19 @@ pub fn pnl_series(portfolio: &Portfolio) -> crate::core::Result<String> {
         .ok_or_else(|| crate::core::Error::Config("market series is empty".to_string()))?;
 
     let days: Vec<_> = store.days().filter(|d| *d >= start && *d <= eval).collect();
+    let span = match (days.first(), days.last()) {
+        (Some(first), Some(last)) => format!(", {first} → {last}"),
+        _ => String::new(),
+    };
     writeln!(
         out,
-        "=== P&L series ({} trading days, {} deals) ===",
+        "=== P&L series ({} trading days, {} deals{span}{}) ===",
         days.len(),
-        portfolio.deals.len()
+        portfolio.deals.len(),
+        store
+            .source()
+            .map(|s| format!(" [{s}]"))
+            .unwrap_or_default(),
     )
     .unwrap();
     writeln!(
@@ -344,7 +354,14 @@ pub fn risk(portfolio: &Portfolio) -> crate::core::Result<String> {
 
     let mut out = String::new();
     let positions = portfolio::compress(&portfolio.deals);
-    writeln!(out, "=== Risk ({} positions) ===", positions.len()).unwrap();
+    writeln!(
+        out,
+        "=== Risk ({} positions) — as of {}{} ===",
+        positions.len(),
+        md.valuation_date(),
+        md.source().map(|s| format!(" [{s}]")).unwrap_or_default(),
+    )
+    .unwrap();
 
     // — Position greeks —
     writeln!(
@@ -550,10 +567,21 @@ pub fn risk(portfolio: &Portfolio) -> crate::core::Result<String> {
     Ok(out)
 }
 
-fn format_pnl(valued: &[ValuedDeal], deal_count: usize) -> String {
+fn format_pnl(
+    valued: &[ValuedDeal],
+    deal_count: usize,
+    md: &crate::market_data::MarketData,
+) -> String {
     let mut out = String::new();
 
-    writeln!(out, "=== P&L ({} deals) ===", deal_count).unwrap();
+    writeln!(
+        out,
+        "=== P&L ({} deals) — inception-to-date, marks as of {}{} ===",
+        deal_count,
+        md.valuation_date(),
+        md.source().map(|s| format!(" [{s}]")).unwrap_or_default(),
+    )
+    .unwrap();
     writeln!(
         out,
         "{:<10} {:<16} {:>5} {:>5}  {:>8}  {:>8}  {:<6}  {:>10}",
@@ -873,7 +901,7 @@ mod risk_tests {
         };
 
         let out = super::risk(&portfolio).unwrap();
-        assert!(out.contains("=== Risk (1 positions) ==="), "{out}");
+        assert!(out.contains("=== Risk (1 positions)"), "{out}");
         // A long call: positive position delta, vega present.
         let row = out.lines().find(|l| l.starts_with("OPT")).unwrap();
         assert!(row.contains("Buy"), "{row}");
