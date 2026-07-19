@@ -14,6 +14,7 @@ pub fn run(name: &str, portfolio: &Portfolio) -> crate::core::Result<String> {
         "positions" => Ok(positions(portfolio)),
         "pnl" => pnl(portfolio),
         "pnl-series" => pnl_series(portfolio),
+        "risk" => risk(portfolio),
         _ => Err(crate::core::Error::Config(format!(
             "unknown report '{}'. available: {}",
             name,
@@ -40,6 +41,10 @@ const REPORTS: &[(&str, &str)] = &[
     (
         "pnl-series",
         "Daily portfolio P&L trajectory over the market series (composition-aware)",
+    ),
+    (
+        "risk",
+        "Position greeks, calibration residuals, model marks + model book value",
     ),
 ];
 
@@ -320,6 +325,211 @@ pub fn pnl_series(portfolio: &Portfolio) -> crate::core::Result<String> {
     Ok(out)
 }
 
+/// Risk report — the model world. Position greeks (Black-76), the
+/// calibration diagnostic (model vs settle on cleared options — the old
+/// acceptance test as a monitored check), model marks for anything
+/// without an official settle, and the model value of the book (the
+/// number scenario runs diff).
+///
+/// Conventions: greeks are position-scaled (× signed qty × contract
+/// size). Delta/Gamma per 1.0 move of the forward, Vega per 1.00 vol
+/// (100 vol points), Theta per year. Futures have delta 1 by definition.
+pub fn risk(portfolio: &Portfolio) -> crate::core::Result<String> {
+    use crate::instruments::{Clearing, EuropeanOption, Future};
+    use crate::pricing::european::greeks_european;
+
+    let md = portfolio.market_data.as_ref().ok_or_else(|| {
+        crate::core::Error::Config("report 'risk' requires market_data in the config".to_string())
+    })?;
+
+    let mut out = String::new();
+    let positions = portfolio::compress(&portfolio.deals);
+    writeln!(out, "=== Risk ({} positions) ===", positions.len()).unwrap();
+
+    // — Position greeks —
+    writeln!(
+        out,
+        "Greeks, position-scaled (Δ,Γ per 1.0 forward move; vega per 1.00 vol; theta per year):"
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "{:<16} {:>5} {:>5}  {:>12}  {:>12}  {:>12}  {:>12}",
+        "Instrument", "Side", "Qty", "Delta", "Gamma", "Vega", "Theta"
+    )
+    .unwrap();
+    writeln!(out, "{:-<88}", "").unwrap();
+
+    let mut totals = [0.0f64; 4]; // delta, gamma, vega, theta
+    let mut skipped: Vec<String> = Vec::new();
+    for pos in positions.iter().filter(|p| p.quantity > Decimal::ZERO) {
+        let Some(inst) = portfolio.instruments.get(&pos.instrument_id) else {
+            continue;
+        };
+        let sign = match pos.direction {
+            crate::trades::BuySell::Buy => 1.0,
+            crate::trades::BuySell::Sell => -1.0,
+        };
+        let qty = crate::pricing::decimal_to_f64(pos.quantity).unwrap_or(0.0);
+        let size = crate::pricing::decimal_to_f64(portfolio::contract_size(
+            inst.as_ref(),
+            &portfolio.instruments,
+        ))
+        .unwrap_or(1.0);
+        let scale = sign * qty * size;
+
+        let any = inst.as_any();
+        let greeks = if let Some(opt) = any.downcast_ref::<EuropeanOption>() {
+            match greeks_european(opt, md) {
+                Ok(g) => Some((g.delta, g.gamma, g.vega, g.theta)),
+                Err(e) => {
+                    skipped.push(format!("{}: {e}", pos.instrument_id));
+                    None
+                }
+            }
+        } else if any.downcast_ref::<Future>().is_some() {
+            Some((1.0, 0.0, 0.0, 0.0))
+        } else {
+            skipped.push(format!("{}: no greeks for this type", pos.instrument_id));
+            None
+        };
+
+        if let Some((d, g, v, t)) = greeks {
+            let scaled = [d * scale, g * scale, v * scale, t * scale];
+            for (acc, s) in totals.iter_mut().zip(scaled) {
+                *acc += s;
+            }
+            writeln!(
+                out,
+                "{:<16} {:>5} {:>5}  {:>12.2}  {:>12.2}  {:>12.2}  {:>12.2}",
+                pos.instrument_id,
+                format!("{:?}", pos.direction),
+                pos.quantity,
+                scaled[0],
+                scaled[1],
+                scaled[2],
+                scaled[3],
+            )
+            .unwrap();
+        }
+    }
+    writeln!(out, "{:-<88}", "").unwrap();
+    writeln!(
+        out,
+        "{:<28}  {:>12.2}  {:>12.2}  {:>12.2}  {:>12.2}",
+        "Portfolio", totals[0], totals[1], totals[2], totals[3],
+    )
+    .unwrap();
+    for s in &skipped {
+        writeln!(out, "no greeks: {s}").unwrap();
+    }
+
+    // — Model value of the book (what scenario runs diff) —
+    let mut model_value = 0.0f64;
+    let mut unpriced: Vec<String> = Vec::new();
+    for pos in positions.iter().filter(|p| p.quantity > Decimal::ZERO) {
+        let Some(inst) = portfolio.instruments.get(&pos.instrument_id) else {
+            continue;
+        };
+        let sign = match pos.direction {
+            crate::trades::BuySell::Buy => 1.0,
+            crate::trades::BuySell::Sell => -1.0,
+        };
+        let qty = crate::pricing::decimal_to_f64(pos.quantity).unwrap_or(0.0);
+        let size = crate::pricing::decimal_to_f64(portfolio::contract_size(
+            inst.as_ref(),
+            &portfolio.instruments,
+        ))
+        .unwrap_or(1.0);
+        match crate::pricing::price(inst.as_ref(), md) {
+            Ok(p) => model_value += sign * qty * size * p,
+            Err(e) => unpriced.push(format!("{}: {e}", pos.instrument_id)),
+        }
+    }
+    writeln!(out, "\nModel value of book: {model_value:.2}").unwrap();
+    for u in &unpriced {
+        writeln!(out, "unpriced (excluded): {u}").unwrap();
+    }
+
+    // — Calibration: model vs settle on cleared, live options —
+    writeln!(
+        out,
+        "\nCalibration — model vs settle (cleared options; '!' if |residual| > 0.01):"
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "{:<16}  {:>10}  {:>10}  {:>10}",
+        "Instrument", "Settle", "Model", "Residual"
+    )
+    .unwrap();
+    writeln!(out, "{:-<52}", "").unwrap();
+    let mut ids: Vec<&String> = portfolio.instruments.keys().collect();
+    ids.sort();
+    let mut any_calib = false;
+    for id in &ids {
+        let inst = &portfolio.instruments[*id];
+        if inst.as_any().downcast_ref::<EuropeanOption>().is_none() {
+            continue;
+        }
+        if !matches!(inst.clearing(), Some(Clearing::Ice | Clearing::Cme)) {
+            continue;
+        }
+        let expired = inst.maturity().is_some_and(|m| md.valuation_date() > m);
+        if expired {
+            continue;
+        }
+        let (Ok(settle), Ok(model)) = (
+            md.settlement_price(id),
+            crate::pricing::price(inst.as_ref(), md),
+        ) else {
+            continue;
+        };
+        any_calib = true;
+        let residual = model - settle;
+        writeln!(
+            out,
+            "{:<16}  {:>10.4}  {:>10.4}  {:>10.4}{}",
+            id,
+            settle,
+            model,
+            residual,
+            if residual.abs() > 0.01 { "  !" } else { "" },
+        )
+        .unwrap();
+    }
+    if !any_calib {
+        writeln!(out, "(none — no cleared live options with settle + model)").unwrap();
+    }
+
+    // — Model marks for anything without an official settle —
+    let mut any_model_mark = false;
+    let mut model_out = String::new();
+    for id in &ids {
+        let inst = &portfolio.instruments[*id];
+        let cleared = matches!(inst.clearing(), Some(Clearing::Ice | Clearing::Cme));
+        if cleared && md.settlement_price(id).is_ok() {
+            continue;
+        }
+        let Ok(model) = crate::pricing::price(inst.as_ref(), md) else {
+            continue;
+        };
+        any_model_mark = true;
+        let why = if cleared {
+            "no settle"
+        } else {
+            "bilateral/unlisted"
+        };
+        writeln!(model_out, "{:<16}  {:>10.4}  ({why})", id, model).unwrap();
+    }
+    if any_model_mark {
+        writeln!(out, "\nModel marks (no official settle):").unwrap();
+        out.push_str(&model_out);
+    }
+
+    Ok(out)
+}
+
 fn format_pnl(valued: &[ValuedDeal], deal_count: usize) -> String {
     let mut out = String::new();
 
@@ -548,5 +758,113 @@ mod tests {
         };
         let err = super::pnl_series(&portfolio).unwrap_err().to_string();
         assert!(err.contains("requires market_series"), "{err}");
+    }
+}
+
+#[cfg(test)]
+mod risk_tests {
+    use std::collections::HashMap;
+    use std::sync::Arc;
+
+    use crate::config::Portfolio;
+    use crate::curves::DiscountCurve;
+    use crate::dates::daycount::DayCount;
+    use crate::dates::rules::DateRule;
+    use crate::dates::{Date, Timestamp};
+    use crate::instruments::{
+        Clearing, EuropeanOption, FinancialInstrument, Future, OptionSettlement, PutOrCall,
+        Settlement,
+    };
+    use crate::market_data::{MarketData, VolSurface};
+    use crate::reference_data::Currency;
+    use crate::trades::{BuySell, Deal};
+    use rust_decimal::Decimal;
+
+    /// Greeks + calibration + model value render for a one-option book;
+    /// the calibration residual is zero when the settle equals the model
+    /// price (a perfectly calibrated surface).
+    #[test]
+    fn risk_report_greeks_calibration_and_model_value() {
+        let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
+        let settle = Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null);
+        let future = Future::new(
+            "FUT",
+            "Brent",
+            usd.clone(),
+            settle.clone(),
+            Clearing::Ice,
+            Date::new(2026, 6, 30),
+            Decimal::from(1000),
+            "0.01".parse().unwrap(),
+        );
+        let option = EuropeanOption::new(
+            "OPT",
+            "FUT",
+            "ICE",
+            usd,
+            settle,
+            Clearing::Ice,
+            Date::new(2026, 6, 25),
+            Decimal::from(75),
+            PutOrCall::Call,
+            OptionSettlement::Cash,
+        );
+
+        let valuation_date = Date::new(2026, 3, 10);
+        let mut md = MarketData::new(valuation_date, valuation_date.as_of_midnight());
+        md.add_market_price("FUT", 72.45);
+        md.add_settlement_price("FUT", 72.45);
+        md.add_discount_curve(
+            "USD",
+            DiscountCurve::flat(valuation_date, DayCount::Act360, 0.04),
+        );
+        md.add_vol_surface("FUT", VolSurface::Flat { vol: 0.30 });
+
+        let mut instruments: HashMap<String, Arc<dyn FinancialInstrument>> = HashMap::new();
+        instruments.insert("FUT".to_string(), Arc::new(future));
+        // Calibrate the settle to the model price so the residual is 0.
+        let model = crate::pricing::price(
+            instruments
+                .get("FUT")
+                .map(|_| &option as &dyn FinancialInstrument)
+                .unwrap(),
+            &md,
+        );
+        instruments.insert("OPT".to_string(), Arc::new(option));
+        md.add_settlement_price("OPT", model.unwrap());
+
+        let deals = vec![Deal {
+            id: "D1".to_string(),
+            instrument_id: "OPT".to_string(),
+            direction: BuySell::Buy,
+            quantity: Decimal::from(10),
+            price: "2.50".parse().unwrap(),
+            timestamp: Timestamp::parse("2026-03-02T10:00:00Z").unwrap(),
+            counterparty: "TEST".to_string(),
+        }];
+        let portfolio = Portfolio {
+            instruments,
+            deals,
+            market_data: Some(md),
+            market_series: None,
+            warnings: vec![],
+            integrity_errors: vec![],
+            reports: vec![],
+        };
+
+        let out = super::risk(&portfolio).unwrap();
+        assert!(out.contains("=== Risk (1 positions) ==="), "{out}");
+        // A long call: positive position delta, vega present.
+        let row = out.lines().find(|l| l.starts_with("OPT")).unwrap();
+        assert!(row.contains("Buy"), "{row}");
+        assert!(out.contains("Portfolio"), "{out}");
+        assert!(out.contains("Model value of book:"), "{out}");
+        // Calibration row for OPT with ~zero residual, unflagged.
+        let calib = out
+            .lines()
+            .skip_while(|l| !l.contains("Calibration"))
+            .find(|l| l.starts_with("OPT"))
+            .unwrap_or_else(|| panic!("no calibration row:\n{out}"));
+        assert!(!calib.contains('!'), "{calib}");
     }
 }

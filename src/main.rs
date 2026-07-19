@@ -18,6 +18,11 @@ struct Cli {
     #[arg(long)]
     config: PathBuf,
 
+    /// Replace the config's market_data with this single market file
+    /// (scenario runs: price the book against a bumped market).
+    #[arg(long)]
+    market: Option<PathBuf>,
+
     /// Reports to run (overrides config).
     #[arg(long = "report", value_parser = report_value_parser(), long_help = report_long_help())]
     reports: Vec<String>,
@@ -62,10 +67,11 @@ fn config_help() -> String {
 fn main() {
     let cli = Cli::parse();
 
-    let portfolio = config::load(&cli.config).unwrap_or_else(|e| {
-        eprintln!("error: {e}");
-        process::exit(1);
-    });
+    let portfolio =
+        config::load_with_market(&cli.config, cli.market.as_deref()).unwrap_or_else(|e| {
+            eprintln!("error: {e}");
+            process::exit(1);
+        });
 
     for w in &portfolio.warnings {
         eprintln!("warning: {w}");

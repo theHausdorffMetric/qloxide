@@ -24,6 +24,25 @@ series:
     cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml -- \
         --config book.toml --report pnl-series
 
+# Model-world risk: position greeks, calibration residuals (model vs
+# settle), model book value
+risk:
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml -- \
+        --config book.toml --report risk
+
+# Model book value under each committed scenario (settles stripped, so
+# only the model responds; scenario P&L = value minus base)
+scenarios:
+    @echo "== base"
+    @cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml -- \
+        --config book.toml --report risk 2>/dev/null | grep 'Model value'
+    @for f in scenarios/*.json; do \
+        echo "== $(basename $f .json)"; \
+        cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml -- \
+            --config book.toml --market $f --report risk 2>/dev/null \
+            | grep 'Model value'; \
+    done
+
 # What-if across every committed series day (the pre-3.5e loop): today's
 # full book valued against each historical market
 series-whatif:

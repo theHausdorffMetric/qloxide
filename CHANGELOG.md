@@ -50,6 +50,18 @@ the minor version).
   `EuropeanOption`). Config validation warns on a cleared instrument
   without a settlement price. P&L figures print with two decimals.
 
+- **`risk` report** — the model world in one place: position-scaled
+  Black-76 greeks with portfolio totals (futures delta 1; expired/unknown
+  types listed as skipped), the **calibration diagnostic** (model vs settle
+  per cleared live option, `!`-flagged beyond a cent — the old acceptance
+  test as a monitored check), model marks for anything without an official
+  settle, and the **model value of the book** (the number scenario runs
+  diff, since official settle-primary marks by design do not respond to
+  bumped inputs).
+- **`--market <file>` CLI override** (`config::load_with_market`): replace
+  the config's `market_data` with one explicit file — the scenario entry
+  point for pricing a book against a bumped market without editing the
+  config.
 - **`pnl-series` report** — daily portfolio P&L trajectory over the market
   series, *composition-aware*: each trading day in [earliest deal date,
   evaluation date] values the book as it existed that day (a deal

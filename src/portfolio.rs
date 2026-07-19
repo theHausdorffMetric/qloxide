@@ -200,7 +200,7 @@ fn official_mark(
 /// Contract size for dollar-terms P&L: futures carry their own; options
 /// inherit the underlying future's (a 10-lot option on 1000-bbl contracts
 /// moving $0.50/bbl is $5,000). Everything else defaults to 1.
-fn contract_size(
+pub(crate) fn contract_size(
     inst: &dyn FinancialInstrument,
     instruments: &HashMap<String, Arc<dyn FinancialInstrument>>,
 ) -> Decimal {

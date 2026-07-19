@@ -84,6 +84,17 @@ pub struct Portfolio {
 /// Each instrument/deal file may contain a single JSON object or an array.
 /// After loading, consistency checks run and warnings are collected.
 pub fn load(config_path: &Path) -> core::Result<Portfolio> {
+    load_with_market(config_path, None)
+}
+
+/// [`load`], with the config's `market_data` files replaced by a single
+/// explicit market file (resolved as given, relative to the caller's cwd).
+/// The scenario entry point: price the same book against a bumped market
+/// without editing the config.
+pub fn load_with_market(
+    config_path: &Path,
+    market_override: Option<&Path>,
+) -> core::Result<Portfolio> {
     let config_dir = config_path.parent().unwrap_or_else(|| Path::new("."));
 
     let toml_str = std::fs::read_to_string(config_path).map_err(|e| {
@@ -130,11 +141,20 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
         }
     }
 
-    // Load market data (merge multiple files)
+    // Load market data (merge multiple files); an override replaces the
+    // config's list entirely and resolves relative to the cwd, not the
+    // config file.
+    let market_paths: Vec<PathBuf> = match market_override {
+        Some(p) => vec![p.to_path_buf()],
+        None => config
+            .market_data
+            .iter()
+            .map(|rel| config_dir.join(rel))
+            .collect(),
+    };
     let mut market_data: Option<MarketData> = None;
-    for rel_path in &config.market_data {
-        let path = config_dir.join(rel_path);
-        let md_json = read_json_file(&path)?;
+    for path in &market_paths {
+        let md_json = read_json_file(path)?;
         let md: MarketData = serde_json::from_str(&md_json).map_err(|e| {
             core::Error::Config(format!("invalid market data {}: {}", path.display(), e))
         })?;
