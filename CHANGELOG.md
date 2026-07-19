@@ -16,6 +16,18 @@ the minor version).
   every instrument states its nature explicitly. Existing `instruments.json`
   files must add the field; constructors take one more argument.
 
+### Breaking (report taxonomy)
+
+- The **instruments report is now a pure specification listing** (ID, type,
+  underlying, currency, clearing, put/call, strike, expiry) — no prices, no
+  status column. Valuation lives in `pnl` alone; the old universe-mark-sheet
+  behavior is retired (a `risk` report will carry model diagnostics later).
+- **`market_data` is optional in the config**: static reports (instruments,
+  deals, positions) run without it. `Portfolio::market_data` is now
+  `Option<MarketData>`; `reports::pnl` returns `Result<String>` and errors
+  without market data; market-dependent load-time checks are skipped when
+  absent.
+
 ### Added
 
 - `MarketData` file-level provenance stamps: optional `source` (e.g. `"ICE"`;

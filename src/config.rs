@@ -12,6 +12,8 @@ use crate::trades::Deal;
 /// TOML configuration pointing to JSON data files.
 ///
 /// Paths are resolved relative to the directory containing the config file.
+/// `market_data` is optional: the static reports (instruments, deals,
+/// positions) run without it; valuation reports (pnl) require it.
 ///
 /// ```toml
 /// instruments = ["instruments/futures.json", "instruments/bonds.json"]
@@ -22,6 +24,7 @@ use crate::trades::Deal;
 pub struct PricingConfig {
     pub instruments: Vec<PathBuf>,
     pub deals: Vec<PathBuf>,
+    #[serde(default)]
     pub market_data: Vec<PathBuf>,
     #[serde(default)]
     pub reports: Vec<String>,
@@ -32,7 +35,9 @@ pub struct PricingConfig {
 pub struct Portfolio {
     pub instruments: HashMap<String, Arc<dyn FinancialInstrument>>,
     pub deals: Vec<Deal>,
-    pub market_data: MarketData,
+    /// `None` when the config lists no market_data files — static reports
+    /// still run; valuation errors.
+    pub market_data: Option<MarketData>,
     pub warnings: Vec<String>,
     pub reports: Vec<String>,
 }
@@ -103,11 +108,10 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
             })?,
         }
     }
-    let market_data = market_data
-        .ok_or_else(|| core::Error::Config("no market_data files specified".to_string()))?;
-    market_data
-        .validate()
-        .map_err(|e| core::Error::Config(format!("market data: {e}")))?;
+    if let Some(md) = &market_data {
+        md.validate()
+            .map_err(|e| core::Error::Config(format!("market data: {e}")))?;
+    }
 
     // Consistency checks
     let mut warnings: Vec<String> = Vec::new();
@@ -143,63 +147,67 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
         }
     }
 
-    for (id, inst) in &instruments {
-        let ccy = inst.currency().id.clone();
-        if market_data.discount_curve(&ccy).is_err() {
-            warnings.push(format!(
-                "instrument '{}': no discount curve for currency '{}'",
-                id, ccy,
-            ));
-        }
-        let expired = inst
-            .maturity()
-            .is_some_and(|m| market_data.valuation_date() > m);
-
-        // Settle-primary marking: a cleared instrument's official mark is
-        // its settlement price — flag its absence regardless of expiry.
-        let cleared = matches!(
-            inst.clearing(),
-            Some(crate::instruments::Clearing::Ice | crate::instruments::Clearing::Cme)
-        );
-        if cleared && market_data.settlement_price(id).is_err() {
-            warnings.push(format!(
-                "instrument '{}': cleared but no settlement price (official mark)",
-                id,
-            ));
-        }
-
-        // Options price via the model, not a quoted market price: check
-        // their actual inputs (underlying instrument + vol surface) instead.
-        if let Some(opt) = inst
-            .as_any()
-            .downcast_ref::<crate::instruments::EuropeanOption>()
-        {
-            if !instruments.contains_key(&opt.underlying) {
+    // Market-dependent checks only apply when market data is loaded; a
+    // static (listing-only) run has nothing to check marks against.
+    if let Some(market_data) = &market_data {
+        for (id, inst) in &instruments {
+            let ccy = inst.currency().id.clone();
+            if market_data.discount_curve(&ccy).is_err() {
                 warnings.push(format!(
-                    "option '{}': unknown underlying '{}'",
-                    id, opt.underlying,
+                    "instrument '{}': no discount curve for currency '{}'",
+                    id, ccy,
                 ));
             }
-            if !expired && !market_data.has_vol_surface(&opt.underlying) {
-                warnings.push(format!(
-                    "option '{}': no vol surface for underlying '{}'",
-                    id, opt.underlying,
-                ));
-            }
-            continue;
-        }
+            let expired = inst
+                .maturity()
+                .is_some_and(|m| market_data.valuation_date() > m);
 
-        if expired {
-            if !cleared && market_data.settlement_price(id).is_err() {
+            // Settle-primary marking: a cleared instrument's official mark is
+            // its settlement price — flag its absence regardless of expiry.
+            let cleared = matches!(
+                inst.clearing(),
+                Some(crate::instruments::Clearing::Ice | crate::instruments::Clearing::Cme)
+            );
+            if cleared && market_data.settlement_price(id).is_err() {
                 warnings.push(format!(
-                    "instrument '{}': expired but no settlement price",
+                    "instrument '{}': cleared but no settlement price (official mark)",
                     id,
                 ));
             }
-        } else if market_data.market_price(id).is_err() {
-            // The quote also feeds the model path (options read the
-            // underlying's market price as the forward).
-            warnings.push(format!("instrument '{}': no market price", id,));
+
+            // Options price via the model, not a quoted market price: check
+            // their actual inputs (underlying instrument + vol surface) instead.
+            if let Some(opt) = inst
+                .as_any()
+                .downcast_ref::<crate::instruments::EuropeanOption>()
+            {
+                if !instruments.contains_key(&opt.underlying) {
+                    warnings.push(format!(
+                        "option '{}': unknown underlying '{}'",
+                        id, opt.underlying,
+                    ));
+                }
+                if !expired && !market_data.has_vol_surface(&opt.underlying) {
+                    warnings.push(format!(
+                        "option '{}': no vol surface for underlying '{}'",
+                        id, opt.underlying,
+                    ));
+                }
+                continue;
+            }
+
+            if expired {
+                if !cleared && market_data.settlement_price(id).is_err() {
+                    warnings.push(format!(
+                        "instrument '{}': expired but no settlement price",
+                        id,
+                    ));
+                }
+            } else if market_data.market_price(id).is_err() {
+                // The quote also feeds the model path (options read the
+                // underlying's market price as the forward).
+                warnings.push(format!("instrument '{}': no market price", id,));
+            }
         }
     }
 
@@ -334,6 +342,33 @@ market_data = ["market.json"]
         assert_eq!(portfolio.deals.len(), 1);
         assert_eq!(portfolio.deals[0].instrument_id, "ICE-BRN-K26");
         assert!(portfolio.warnings.is_empty());
+    }
+
+    #[test]
+    fn loads_without_market_data() {
+        let dir = tempfile::tempdir().unwrap();
+        write_test_files(dir.path());
+
+        // No market_data key: static reports run, valuation refuses.
+        fs::write(
+            dir.path().join("pricing.toml"),
+            "instruments = [\"instruments.json\"]\ndeals = [\"deals.json\"]\n",
+        )
+        .unwrap();
+
+        let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
+        assert!(portfolio.market_data.is_none());
+        // Market-dependent checks are skipped — no spurious warnings.
+        assert!(portfolio.warnings.is_empty(), "{:?}", portfolio.warnings);
+
+        let listing = crate::reports::run("instruments", &portfolio).unwrap();
+        assert!(listing.contains("ICE-BRN-K26"), "{listing}");
+        assert!(listing.contains("Future"), "{listing}");
+
+        let err = crate::reports::run("pnl", &portfolio)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("requires market_data"), "{err}");
     }
 
     #[test]

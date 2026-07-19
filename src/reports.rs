@@ -12,7 +12,7 @@ pub fn run(name: &str, portfolio: &Portfolio) -> crate::core::Result<String> {
         "instruments" => Ok(instruments(portfolio)),
         "deals" => Ok(deals(portfolio)),
         "positions" => Ok(positions(portfolio)),
-        "pnl" => Ok(pnl(portfolio)),
+        "pnl" => pnl(portfolio),
         _ => Err(crate::core::Error::Config(format!(
             "unknown report '{}'. available: {}",
             name,
@@ -28,7 +28,7 @@ pub fn run(name: &str, portfolio: &Portfolio) -> crate::core::Result<String> {
 const REPORTS: &[(&str, &str)] = &[
     (
         "instruments",
-        "Instrument listing with market/settlement prices and status",
+        "Instrument specification listing (static reference data)",
     ),
     ("deals", "Trade-by-trade deal listing"),
     ("positions", "Compressed net positions per instrument"),
@@ -56,51 +56,69 @@ pub fn descriptions() -> &'static [(&'static str, &'static str)] {
     REPORTS
 }
 
-/// Instrument listing with market/settlement prices and status.
+/// Instrument specification listing — pure reference data, no valuation
+/// (marks live in `pnl`; needs no market data at all).
 pub fn instruments(portfolio: &Portfolio) -> String {
+    use crate::instruments::{EuropeanOption, Future, PutOrCall};
+
     let mut out = String::new();
-    let md = &portfolio.market_data;
 
     writeln!(out, "=== Instruments ({}) ===", portfolio.instruments.len()).unwrap();
     writeln!(
         out,
-        "{:<16} {:>10}  {:>10}  Status",
-        "ID", "Expiry", "Price"
+        "{:<16} {:<14} {:<16} {:<4} {:<9} {:<3} {:>8}  {:>10}",
+        "ID", "Type", "Underlying", "Ccy", "Clearing", "P/C", "Strike", "Expiry"
     )
     .unwrap();
-    writeln!(out, "{:-<56}", "").unwrap();
+    writeln!(out, "{:-<88}", "").unwrap();
 
     let mut ids: Vec<&String> = portfolio.instruments.keys().collect();
     ids.sort();
 
     for id in &ids {
         let inst = &portfolio.instruments[*id];
+        let any = inst.as_any();
 
-        let maturity = inst.maturity();
-        let expiry = maturity
+        let underlying = any
+            .downcast_ref::<Future>()
+            .map(|f| f.underlying.as_str())
+            .or_else(|| {
+                any.downcast_ref::<EuropeanOption>()
+                    .map(|o| o.underlying.as_str())
+            })
+            .unwrap_or("-");
+        let (side, strike) = match any.downcast_ref::<EuropeanOption>() {
+            Some(o) => (
+                match o.put_or_call {
+                    PutOrCall::Call => "C",
+                    PutOrCall::Put => "P",
+                },
+                o.strike.to_string(),
+            ),
+            None => ("-", "-".to_string()),
+        };
+        let clearing = inst
+            .clearing()
+            .map(|c| c.to_string())
+            .unwrap_or_else(|| "-".to_string());
+        let expiry = inst
+            .maturity()
             .map(|m| m.to_string())
             .unwrap_or_else(|| "-".to_string());
 
-        let expired = maturity.is_some_and(|m| md.valuation_date() > m);
-
-        let (price, status) = if expired {
-            let p = md
-                .settlement_price(id)
-                .map(|s| format!("{:.2}", s))
-                .unwrap_or_else(|_| "N/A".to_string());
-            (p, "settled")
-        } else {
-            match md.market_price(id) {
-                Ok(p) => (format!("{:.2}", p), "active"),
-                // No quote — fall back to the model price (options)
-                Err(_) => match crate::pricing::price(inst.as_ref(), md) {
-                    Ok(p) => (format!("{:.2}", p), "model"),
-                    Err(_) => ("N/A".to_string(), "active"),
-                },
-            }
-        };
-
-        writeln!(out, "{:<16} {:>10}  {:>10}  {}", id, expiry, price, status).unwrap();
+        writeln!(
+            out,
+            "{:<16} {:<14} {:<16} {:<4} {:<9} {:<3} {:>8}  {:>10}",
+            id,
+            inst.instrument_type(),
+            underlying,
+            inst.currency().id,
+            clearing,
+            side,
+            strike,
+            expiry
+        )
+        .unwrap();
     }
 
     out
@@ -182,9 +200,16 @@ pub fn positions(portfolio: &Portfolio) -> String {
 }
 
 /// P&L report on raw deals with realized/unrealized split.
-pub fn pnl(portfolio: &Portfolio) -> String {
+///
+/// The one report that values the book — it requires market data.
+pub fn pnl(portfolio: &Portfolio) -> crate::core::Result<String> {
+    if portfolio.market_data.is_none() {
+        return Err(crate::core::Error::Config(
+            "report 'pnl' requires market_data in the config".to_string(),
+        ));
+    }
     let valued = portfolio::valuate(&portfolio.deals, portfolio);
-    format_pnl(&valued, portfolio.deals.len())
+    Ok(format_pnl(&valued, portfolio.deals.len()))
 }
 
 fn format_pnl(valued: &[ValuedDeal], deal_count: usize) -> String {

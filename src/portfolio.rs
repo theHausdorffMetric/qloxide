@@ -120,7 +120,9 @@ pub fn valuate(deals: &[Deal], portfolio: &Portfolio) -> Vec<ValuedDeal> {
 }
 
 fn value_deal(deal: &Deal, portfolio: &Portfolio) -> core::Result<Valuation> {
-    let md = &portfolio.market_data;
+    let md = portfolio.market_data.as_ref().ok_or_else(|| {
+        core::Error::Pricer("no market data loaded (valuation requires market_data)".to_string())
+    })?;
     let inst = portfolio
         .instruments
         .get(&deal.instrument_id)
@@ -320,7 +322,7 @@ mod tests {
         let portfolio = Portfolio {
             instruments,
             deals: deals.clone(),
-            market_data: md,
+            market_data: Some(md),
             warnings: vec![],
             reports: vec![],
         };
@@ -406,7 +408,7 @@ mod tests {
         let portfolio = Portfolio {
             instruments,
             deals: deals.clone(),
-            market_data: md,
+            market_data: Some(md),
             warnings: vec![],
             reports: vec![],
         };
