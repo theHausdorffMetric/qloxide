@@ -167,7 +167,7 @@ mod tests {
         assert_eq!(s2.vol(1.0, 0.0), 0.30);
     }
 
-    /// Single-tenor smile: the qlox-ice shape (one option expiry per
+    /// Single-tenor smile: the qloxide-ice shape (one option expiry per
     /// underlying future).
     fn smile() -> VolSurface {
         VolSurface::Grid {

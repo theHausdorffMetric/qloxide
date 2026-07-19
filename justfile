@@ -40,7 +40,7 @@ report +names:
 bond:
     cargo run --quiet --example bond_pricing
 
-# Brent Sep26 iron condor vs real ICE settles (data via qlox-ice) has its
+# Brent Sep26 iron condor vs real ICE settles (data via qloxide-ice) has its
 # own justfile with the example: examples/brent-condor/justfile
 # (`cd examples/brent-condor && just book` / `just day <date>` / `just series`)
 
