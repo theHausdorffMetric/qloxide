@@ -28,6 +28,15 @@ the minor version).
   marking.
 - `pricing::decimal_to_f64` is now public, so market-data drivers can match
   instrument Decimals against f64 quotes under the pricers' own conversion.
+- **Settle-primary official marks** (deal valuation): `portfolio::valuate`
+  now marks cleared instruments directly from their settlement price —
+  missing settle = per-deal error, never a silent model fallback; bilateral
+  instruments (and types without a clearing dimension) mark to model. New
+  `portfolio::MarkSource` (`Settle`/`Model`) on `Valuation`, surfaced as a
+  **Source column** in the pnl report. `FinancialInstrument` gains a
+  `clearing()` accessor (`None` default; overridden by `Future` and
+  `EuropeanOption`). Config validation warns on a cleared instrument
+  without a settlement price. P&L figures print with two decimals.
 
 ### Docs
 

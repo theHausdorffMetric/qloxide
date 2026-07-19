@@ -193,11 +193,11 @@ fn format_pnl(valued: &[ValuedDeal], deal_count: usize) -> String {
     writeln!(out, "=== P&L ({} deals) ===", deal_count).unwrap();
     writeln!(
         out,
-        "{:<10} {:<16} {:>5} {:>5}  {:>8}  {:>8}  {:>10}",
-        "Deal", "Instrument", "Side", "Qty", "Trade", "Mark", "P&L"
+        "{:<10} {:<16} {:>5} {:>5}  {:>8}  {:>8}  {:<6}  {:>10}",
+        "Deal", "Instrument", "Side", "Qty", "Trade", "Mark", "Source", "P&L"
     )
     .unwrap();
-    writeln!(out, "{:-<82}", "").unwrap();
+    writeln!(out, "{:-<90}", "").unwrap();
 
     let mut unpriced = 0;
     for v in valued {
@@ -210,14 +210,15 @@ fn format_pnl(valued: &[ValuedDeal], deal_count: usize) -> String {
                 };
                 writeln!(
                     out,
-                    "{:<10} {:<16} {:>5} {:>5}  {:>8}  {:>8}  {:>10}  {}",
+                    "{:<10} {:<16} {:>5} {:>5}  {:>8}  {:>8}  {:<6}  {:>10}  {}",
                     v.deal.id,
                     v.deal.instrument_id,
                     format!("{:?}", v.deal.direction),
                     v.deal.quantity,
                     v.deal.price,
                     val.mark.round_dp(4),
-                    val.pnl.round_dp(2),
+                    val.source.to_string(),
+                    format!("{:.2}", val.pnl.round_dp(2)),
                     label
                 )
                 .unwrap();
@@ -240,14 +241,26 @@ fn format_pnl(valued: &[ValuedDeal], deal_count: usize) -> String {
     }
 
     let (realized, unrealized) = pnl_totals(valued);
-    writeln!(out, "{:-<82}", "").unwrap();
-    writeln!(out, "{:>62} {:>10}", "Realized:", realized.round_dp(2)).unwrap();
-    writeln!(out, "{:>62} {:>10}", "Unrealized:", unrealized.round_dp(2)).unwrap();
+    writeln!(out, "{:-<90}", "").unwrap();
     writeln!(
         out,
-        "{:>62} {:>10}",
+        "{:>70} {:>10}",
+        "Realized:",
+        format!("{:.2}", realized.round_dp(2))
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "{:>70} {:>10}",
+        "Unrealized:",
+        format!("{:.2}", unrealized.round_dp(2))
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "{:>70} {:>10}",
         "Total:",
-        (realized + unrealized).round_dp(2)
+        format!("{:.2}", (realized + unrealized).round_dp(2))
     )
     .unwrap();
     if unpriced > 0 {

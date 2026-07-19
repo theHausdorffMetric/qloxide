@@ -155,6 +155,19 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
             .maturity()
             .is_some_and(|m| market_data.valuation_date() > m);
 
+        // Settle-primary marking: a cleared instrument's official mark is
+        // its settlement price — flag its absence regardless of expiry.
+        let cleared = matches!(
+            inst.clearing(),
+            Some(crate::instruments::Clearing::Ice | crate::instruments::Clearing::Cme)
+        );
+        if cleared && market_data.settlement_price(id).is_err() {
+            warnings.push(format!(
+                "instrument '{}': cleared but no settlement price (official mark)",
+                id,
+            ));
+        }
+
         // Options price via the model, not a quoted market price: check
         // their actual inputs (underlying instrument + vol surface) instead.
         if let Some(opt) = inst
@@ -177,13 +190,15 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
         }
 
         if expired {
-            if market_data.settlement_price(id).is_err() {
+            if !cleared && market_data.settlement_price(id).is_err() {
                 warnings.push(format!(
                     "instrument '{}': expired but no settlement price",
                     id,
                 ));
             }
         } else if market_data.market_price(id).is_err() {
+            // The quote also feeds the model path (options read the
+            // underlying's market price as the forward).
             warnings.push(format!("instrument '{}': no market price", id,));
         }
     }
@@ -295,6 +310,7 @@ market_data = ["market.json"]
   "valuation_date": "2026-03-07",
   "as_of": "2026-03-07T14:00:00Z",
   "market_prices": {"ICE-BRN-K26": 72.45},
+  "settlement_prices": {"ICE-BRN-K26": 72.45},
   "discount_curves": {
     "USD": {
       "base_date": "2026-03-07",
@@ -432,7 +448,14 @@ market_data = ["market.json"]
         .unwrap();
 
         let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
-        assert_eq!(portfolio.warnings.len(), 2); // no market price + no curve
+        // no settle (cleared) + no market price + no curve
+        assert_eq!(portfolio.warnings.len(), 3);
+        assert!(
+            portfolio
+                .warnings
+                .iter()
+                .any(|w| w.contains("cleared but no settlement price"))
+        );
         assert!(
             portfolio
                 .warnings

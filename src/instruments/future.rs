@@ -65,6 +65,10 @@ impl FinancialInstrument for Future {
         Some(self.expiry)
     }
 
+    fn clearing(&self) -> Option<Clearing> {
+        Some(self.clearing)
+    }
+
     fn instrument_type(&self) -> &str {
         "Future"
     }

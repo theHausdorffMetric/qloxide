@@ -23,6 +23,27 @@ pub struct Valuation {
     pub mark: Decimal,
     pub pnl: Decimal,
     pub realized: bool,
+    /// Where the mark came from — the pnl report's Source column.
+    pub source: MarkSource,
+}
+
+/// Provenance of an official mark. The epistemic grade of a valuation:
+/// a settle is observed, a model price is computed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MarkSource {
+    /// Official settlement price — audit-grade, no model in the path.
+    Settle,
+    /// Model price (bilateral instruments, or types without settles).
+    Model,
+}
+
+impl std::fmt::Display for MarkSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            MarkSource::Settle => "settle",
+            MarkSource::Model => "model",
+        })
+    }
 }
 
 /// A net position per instrument, derived from deals.
@@ -107,7 +128,7 @@ fn value_deal(deal: &Deal, portfolio: &Portfolio) -> core::Result<Valuation> {
             core::Error::Pricer(format!("unknown instrument '{}'", deal.instrument_id))
         })?;
 
-    let mark_f64 = pricing::price(inst.as_ref(), md)?;
+    let (mark_f64, source) = official_mark(inst.as_ref(), md)?;
     let mark = Decimal::try_from(mark_f64).map_err(|e| {
         core::Error::Pricer(format!(
             "cannot convert mark {} to decimal: {}",
@@ -124,7 +145,34 @@ fn value_deal(deal: &Deal, portfolio: &Portfolio) -> core::Result<Valuation> {
         mark,
         pnl,
         realized,
+        source,
     })
+}
+
+/// Official-valuation mark policy (hard-coded until the first divergence —
+/// second venue, proxy marks, or per-book overrides):
+///
+/// - **cleared** → the own-venue settlement price; a missing settle is an
+///   *error*, never a silent model fallback (a data failure must be loud);
+/// - **bilateral**, and instrument types with no clearing dimension → the
+///   model (which for expired instruments resolves to settles/intrinsic).
+fn official_mark(
+    inst: &dyn FinancialInstrument,
+    md: &crate::market_data::MarketData,
+) -> core::Result<(f64, MarkSource)> {
+    use crate::instruments::Clearing;
+    match inst.clearing() {
+        Some(Clearing::Ice | Clearing::Cme) => md
+            .settlement_price(inst.id())
+            .map(|p| (p, MarkSource::Settle))
+            .map_err(|_| {
+                core::Error::Pricer(format!(
+                    "cleared instrument '{}': no settlement price at valuation date",
+                    inst.id(),
+                ))
+            }),
+        _ => pricing::price(inst, md).map(|p| (p, MarkSource::Model)),
+    }
 }
 
 /// Contract size for dollar-terms P&L: futures carry their own; options
@@ -258,7 +306,8 @@ mod tests {
 
         let valuation_date = Date::new(2026, 3, 7);
         let mut md = MarketData::new(valuation_date, valuation_date.as_of_midnight());
-        md.add_market_price("PRICED", 72.50); // no market price for UNPRICED
+        // Settle-primary: cleared instruments mark from official settles.
+        md.add_settlement_price("PRICED", 72.50); // no settle for UNPRICED
 
         let mut instruments: HashMap<String, Arc<dyn FinancialInstrument>> = HashMap::new();
         instruments.insert("PRICED".to_string(), Arc::new(priced));
@@ -283,14 +332,17 @@ mod tests {
         let v1 = valued.iter().find(|v| v.deal.id == "D1").unwrap();
         let val = v1.valuation.as_ref().unwrap();
         assert_eq!(val.mark, "72.50".parse::<Decimal>().unwrap());
+        assert_eq!(val.source, MarkSource::Settle);
         // 10 * (72.50 - 71.80) * 1000 = 7000
         assert_eq!(val.pnl, Decimal::from(7000));
 
+        // A cleared instrument with no settle errors — never a silent
+        // model fallback.
         let v2 = valued.iter().find(|v| v.deal.id == "D2").unwrap();
         let err = v2.valuation.as_ref().unwrap_err().to_string();
         assert!(
-            err.contains("no market price"),
-            "expected missing-market-price error, got: {err}"
+            err.contains("no settlement price"),
+            "expected missing-settlement error, got: {err}"
         );
 
         // Unpriced deals contribute nothing to totals
@@ -322,13 +374,15 @@ mod tests {
             Decimal::from(1000),
             "0.01".parse().unwrap(),
         );
+        // Bilateral → the official mark is the model price (the policy's
+        // model branch), which also exercises contract-size inheritance.
         let option = crate::instruments::EuropeanOption::new(
             "OPT",
             "FUT",
             "ICE",
             usd,
             settle,
-            Clearing::Ice,
+            Clearing::Bilateral,
             Date::new(2026, 6, 25),
             Decimal::from(75),
             PutOrCall::Call,
@@ -359,6 +413,7 @@ mod tests {
 
         let valued = valuate(&deals, &portfolio);
         let val = valued[0].valuation.as_ref().unwrap();
+        assert_eq!(val.source, MarkSource::Model);
         // P&L is in dollar terms: signed_qty * (mark - trade) * 1000 (the
         // underlying future's contract size, not the default of 1)
         let expected = Decimal::from(10)

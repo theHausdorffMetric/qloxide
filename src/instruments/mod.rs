@@ -174,6 +174,14 @@ pub trait FinancialInstrument: Send + Sync + std::fmt::Debug {
     /// Maturity or expiry date, if applicable.
     fn maturity(&self) -> Option<Date>;
 
+    /// Central clearing, for instrument types that carry the fact
+    /// (exchange-tradeable derivatives). `None` for types without a
+    /// clearing dimension (equities, bonds, …). Drives the official
+    /// marking policy: cleared → settlement price, bilateral → model.
+    fn clearing(&self) -> Option<Clearing> {
+        None
+    }
+
     /// Human-readable instrument type name.
     fn instrument_type(&self) -> &str;
 
