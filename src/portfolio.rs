@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::Decimal;
 use crate::config::Portfolio;
@@ -107,28 +108,47 @@ pub fn compress(deals: &[Deal]) -> Vec<Position> {
     positions
 }
 
-/// Mark a set of deals against market data, producing one valued deal
-/// per input deal. Deals that cannot be priced carry the error.
+/// Mark a set of deals against the portfolio's market data, producing one
+/// valued deal per input deal. Deals that cannot be priced carry the error.
 pub fn valuate(deals: &[Deal], portfolio: &Portfolio) -> Vec<ValuedDeal> {
+    match portfolio.market_data.as_ref() {
+        Some(md) => valuate_at(deals, &portfolio.instruments, md),
+        None => deals
+            .iter()
+            .map(|deal| ValuedDeal {
+                deal: deal.clone(),
+                valuation: Err(core::Error::Pricer(
+                    "no market data loaded (valuation requires market_data)".to_string(),
+                )),
+            })
+            .collect(),
+    }
+}
+
+/// Mark a set of deals against an explicit market snapshot — the series
+/// entry point: one call per trading day with that day's `MarketData`.
+pub fn valuate_at(
+    deals: &[Deal],
+    instruments: &HashMap<String, Arc<dyn FinancialInstrument>>,
+    md: &crate::market_data::MarketData,
+) -> Vec<ValuedDeal> {
     deals
         .iter()
         .map(|deal| ValuedDeal {
             deal: deal.clone(),
-            valuation: value_deal(deal, portfolio),
+            valuation: value_deal(deal, instruments, md),
         })
         .collect()
 }
 
-fn value_deal(deal: &Deal, portfolio: &Portfolio) -> core::Result<Valuation> {
-    let md = portfolio.market_data.as_ref().ok_or_else(|| {
-        core::Error::Pricer("no market data loaded (valuation requires market_data)".to_string())
+fn value_deal(
+    deal: &Deal,
+    instruments: &HashMap<String, Arc<dyn FinancialInstrument>>,
+    md: &crate::market_data::MarketData,
+) -> core::Result<Valuation> {
+    let inst = instruments.get(&deal.instrument_id).ok_or_else(|| {
+        core::Error::Pricer(format!("unknown instrument '{}'", deal.instrument_id))
     })?;
-    let inst = portfolio
-        .instruments
-        .get(&deal.instrument_id)
-        .ok_or_else(|| {
-            core::Error::Pricer(format!("unknown instrument '{}'", deal.instrument_id))
-        })?;
 
     let (mark_f64, source) = official_mark(inst.as_ref(), md)?;
     let mark = Decimal::try_from(mark_f64).map_err(|e| {
@@ -139,7 +159,7 @@ fn value_deal(deal: &Deal, portfolio: &Portfolio) -> core::Result<Valuation> {
     })?;
 
     let pnl =
-        deal.signed_quantity() * (mark - deal.price) * contract_size(inst.as_ref(), portfolio);
+        deal.signed_quantity() * (mark - deal.price) * contract_size(inst.as_ref(), instruments);
 
     let realized = inst.maturity().is_some_and(|m| md.valuation_date() > m);
 
@@ -180,13 +200,16 @@ fn official_mark(
 /// Contract size for dollar-terms P&L: futures carry their own; options
 /// inherit the underlying future's (a 10-lot option on 1000-bbl contracts
 /// moving $0.50/bbl is $5,000). Everything else defaults to 1.
-fn contract_size(inst: &dyn FinancialInstrument, portfolio: &Portfolio) -> Decimal {
+fn contract_size(
+    inst: &dyn FinancialInstrument,
+    instruments: &HashMap<String, Arc<dyn FinancialInstrument>>,
+) -> Decimal {
     let any = inst.as_any();
     any.downcast_ref::<Future>()
         .map(|f| f.contract_size)
         .or_else(|| {
             any.downcast_ref::<EuropeanOption>()
-                .and_then(|o| portfolio.instruments.get(&o.underlying))
+                .and_then(|o| instruments.get(&o.underlying))
                 .and_then(|u| u.as_any().downcast_ref::<Future>())
                 .map(|f| f.contract_size)
         })

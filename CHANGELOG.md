@@ -50,6 +50,17 @@ the minor version).
   `EuropeanOption`). Config validation warns on a cleared instrument
   without a settlement price. P&L figures print with two decimals.
 
+- **`pnl-series` report** — daily portfolio P&L trajectory over the market
+  series, *composition-aware*: each trading day in [earliest deal date,
+  evaluation date] values the book as it existed that day (a deal
+  contributes from its inception date), with realized/unrealized/total and
+  the daily change (variation-margin view — day changes telescope to the
+  final total). Expiry cash-settlement lands as realized P&L at the frozen
+  final settle. Requires `market_series`; refuses on integrity errors.
+  Valuing today's *full* book against a historical day file remains
+  available as an explicit what-if, and is now documented as such.
+  New `portfolio::valuate_at(deals, instruments, market_data)` values
+  deals against an explicit snapshot (the per-day entry point).
 - **`market_data::MarketStore`** — manifest-driven historical series
   (date → snapshot): loads a generator-written `manifest.json` (per-day
   files, settle-coverage lists, skipped non-trading days, provenance

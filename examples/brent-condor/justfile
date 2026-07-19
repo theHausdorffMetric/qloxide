@@ -12,13 +12,21 @@ default:
 book:
     cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml -- --config book.toml
 
-# P&L against one historical series day (e.g. `just day 2026-07-14`)
+# What-if: the full current book against one historical series day
+# (includes deals struck later — not P&L history; that's `just series`)
 day date:
     cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml -- \
         --config series/day-{{date}}.toml
 
-# P&L across every committed series day
+# True P&L history over the committed series, in one invocation:
+# composition-aware (deals count from inception), with daily changes
 series:
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml -- \
+        --config book.toml --report pnl-series
+
+# What-if across every committed series day (the pre-3.5e loop): today's
+# full book valued against each historical market
+series-whatif:
     for f in series/day-*.toml; do \
         echo "== $(basename $f .toml)"; \
         cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml -- \

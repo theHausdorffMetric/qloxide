@@ -13,6 +13,7 @@ pub fn run(name: &str, portfolio: &Portfolio) -> crate::core::Result<String> {
         "deals" => Ok(deals(portfolio)),
         "positions" => Ok(positions(portfolio)),
         "pnl" => pnl(portfolio),
+        "pnl-series" => pnl_series(portfolio),
         _ => Err(crate::core::Error::Config(format!(
             "unknown report '{}'. available: {}",
             name,
@@ -35,6 +36,10 @@ const REPORTS: &[(&str, &str)] = &[
     (
         "pnl",
         "P&L on raw deals, split into realized/unrealized with totals",
+    ),
+    (
+        "pnl-series",
+        "Daily portfolio P&L trajectory over the market series (composition-aware)",
     ),
 ];
 
@@ -221,6 +226,100 @@ pub fn pnl(portfolio: &Portfolio) -> crate::core::Result<String> {
     Ok(format_pnl(&valued, portfolio.deals.len()))
 }
 
+/// Daily portfolio P&L trajectory over the market series.
+///
+/// For each trading day in [earliest deal date, evaluation date], values
+/// the book *as composed on that day* — a deal contributes only from its
+/// inception date — and reports realized/unrealized/total plus the daily
+/// change (the variation-margin view; day changes telescope to the final
+/// total). This is the true P&L history; valuing today's full book
+/// against a historical day (`--config series/day-<date>.toml`) is a
+/// what-if, not history.
+pub fn pnl_series(portfolio: &Portfolio) -> crate::core::Result<String> {
+    let store = portfolio.market_series.as_ref().ok_or_else(|| {
+        crate::core::Error::Config(
+            "report 'pnl-series' requires market_series in the config".to_string(),
+        )
+    })?;
+    if !portfolio.integrity_errors.is_empty() {
+        return Err(crate::core::Error::Config(format!(
+            "report 'pnl-series' refused: {} integrity error(s), first: {}",
+            portfolio.integrity_errors.len(),
+            portfolio.integrity_errors[0],
+        )));
+    }
+
+    let mut out = String::new();
+    let Some(start) = portfolio.deals.iter().map(|d| d.timestamp.date()).min() else {
+        writeln!(out, "=== P&L series (no deals) ===").unwrap();
+        return Ok(out);
+    };
+    let eval = portfolio
+        .market_data
+        .as_ref()
+        .map(|md| md.valuation_date())
+        .or_else(|| store.last_day())
+        .ok_or_else(|| crate::core::Error::Config("market series is empty".to_string()))?;
+
+    let days: Vec<_> = store.days().filter(|d| *d >= start && *d <= eval).collect();
+    writeln!(
+        out,
+        "=== P&L series ({} trading days, {} deals) ===",
+        days.len(),
+        portfolio.deals.len()
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "{:<10} {:>5}  {:>11}  {:>11}  {:>11}  {:>11}",
+        "Date", "Deals", "Realized", "Unrealized", "Total", "Day change"
+    )
+    .unwrap();
+    writeln!(out, "{:-<66}", "").unwrap();
+
+    let mut prev = Decimal::ZERO;
+    let mut unpriced_days: Vec<(crate::dates::Date, usize)> = Vec::new();
+    for date in days {
+        let md = store.day(date)?;
+        // The book as it existed on this day: deals struck by then.
+        let active: Vec<_> = portfolio
+            .deals
+            .iter()
+            .filter(|d| d.timestamp.date() <= date)
+            .cloned()
+            .collect();
+        let valued = portfolio::valuate_at(&active, &portfolio.instruments, &md);
+        let unpriced = valued.iter().filter(|v| v.valuation.is_err()).count();
+        if unpriced > 0 {
+            unpriced_days.push((date, unpriced));
+        }
+        let (realized, unrealized) = pnl_totals(&valued);
+        let total = realized + unrealized;
+        writeln!(
+            out,
+            "{:<10} {:>5}  {:>11}  {:>11}  {:>11}  {:>11}",
+            date.to_string(),
+            active.len(),
+            format!("{:.2}", realized.round_dp(2)),
+            format!("{:.2}", unrealized.round_dp(2)),
+            format!("{:.2}", total.round_dp(2)),
+            format!("{:.2}", (total - prev).round_dp(2)),
+        )
+        .unwrap();
+        prev = total;
+    }
+    for (date, n) in unpriced_days {
+        writeln!(
+            out,
+            "WARNING: {date}: {n} deal(s) unpriced and excluded from that day's totals"
+        )
+        .unwrap();
+    }
+
+    out.push('\n');
+    Ok(out)
+}
+
 fn format_pnl(valued: &[ValuedDeal], deal_count: usize) -> String {
     let mut out = String::new();
 
@@ -306,4 +405,148 @@ fn format_pnl(valued: &[ValuedDeal], deal_count: usize) -> String {
     }
 
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use std::sync::Arc;
+
+    use crate::config::Portfolio;
+    use crate::dates::rules::DateRule;
+    use crate::dates::{Date, Timestamp};
+    use crate::instruments::{Clearing, FinancialInstrument, Future, Settlement};
+    use crate::market_data::MarketStore;
+    use crate::reference_data::Currency;
+    use crate::trades::{BuySell, Deal};
+    use rust_decimal::Decimal;
+
+    fn day_json(date: &str, settle: f64) -> String {
+        format!(
+            r#"{{ "valuation_date": "{date}", "as_of": "{date}T00:00:00Z",
+                 "market_prices": {{}}, "settlement_prices": {{ "FUT": {settle} }},
+                 "discount_curves": {{}} }}"#
+        )
+    }
+
+    fn deal(id: &str, price: &str, ts: &str) -> Deal {
+        Deal {
+            id: id.to_string(),
+            instrument_id: "FUT".to_string(),
+            direction: BuySell::Buy,
+            quantity: Decimal::ONE,
+            price: price.parse().unwrap(),
+            timestamp: Timestamp::parse(ts).unwrap(),
+            counterparty: "TEST".to_string(),
+        }
+    }
+
+    /// Trajectory over a 4-day series: a second deal enters on day 2
+    /// (composition-aware), day changes telescope to the final total, and
+    /// the future's 03-04 expiry flips the P&L to realized on 03-05 at the
+    /// frozen final settle (expiry cash-settlement).
+    #[test]
+    fn pnl_series_trajectory_composition_and_expiry() {
+        let dir = tempfile::tempdir().unwrap();
+        for (date, settle) in [
+            ("2026-03-02", 101.0),
+            ("2026-03-03", 102.0),
+            ("2026-03-04", 105.0),
+            ("2026-03-05", 105.0), // frozen final settle post-expiry
+        ] {
+            std::fs::write(
+                dir.path().join(format!("market-{date}.json")),
+                day_json(date, settle),
+            )
+            .unwrap();
+        }
+        let day =
+            |d: &str| format!(r#""{d}": {{ "file": "market-{d}.json", "settles": ["FUT"] }}"#);
+        std::fs::write(
+            dir.path().join("manifest.json"),
+            format!(
+                r#"{{ "days": {{ {}, {}, {}, {} }} }}"#,
+                day("2026-03-02"),
+                day("2026-03-03"),
+                day("2026-03-04"),
+                day("2026-03-05"),
+            ),
+        )
+        .unwrap();
+
+        let usd = Arc::new(Currency::new(
+            "USD",
+            DateRule::Null,
+            crate::dates::daycount::DayCount::Act360,
+        ));
+        let fut = Future::new(
+            "FUT",
+            "Brent",
+            usd,
+            Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
+            Clearing::Ice,
+            Date::new(2026, 3, 4),
+            Decimal::ONE,
+            "0.01".parse().unwrap(),
+        );
+        let mut instruments: HashMap<String, Arc<dyn FinancialInstrument>> = HashMap::new();
+        instruments.insert("FUT".to_string(), Arc::new(fut));
+
+        let portfolio = Portfolio {
+            instruments,
+            deals: vec![
+                deal("D1", "100", "2026-03-02T10:00:00Z"),
+                deal("D2", "102", "2026-03-03T10:00:00Z"),
+            ],
+            market_data: None,
+            market_series: Some(MarketStore::load(&dir.path().join("manifest.json")).unwrap()),
+            warnings: vec![],
+            integrity_errors: vec![],
+            reports: vec![],
+        };
+
+        let out = super::pnl_series(&portfolio).unwrap();
+        let row = |date: &str| -> Vec<String> {
+            out.lines()
+                .find(|l| l.starts_with(date))
+                .unwrap_or_else(|| panic!("no row for {date} in:\n{out}"))
+                .split_whitespace()
+                .map(str::to_string)
+                .collect()
+        };
+        // date, deals, realized, unrealized, total, day change
+        assert_eq!(
+            row("2026-03-02"),
+            ["2026-03-02", "1", "0.00", "1.00", "1.00", "1.00"]
+        );
+        assert_eq!(
+            row("2026-03-03"),
+            ["2026-03-03", "2", "0.00", "2.00", "2.00", "1.00"]
+        );
+        assert_eq!(
+            row("2026-03-04"),
+            ["2026-03-04", "2", "0.00", "8.00", "8.00", "6.00"]
+        );
+        // Post-expiry: cash-settled at the frozen final settle — realized.
+        assert_eq!(
+            row("2026-03-05"),
+            ["2026-03-05", "2", "8.00", "0.00", "8.00", "0.00"]
+        );
+        assert!(!out.contains("WARNING"), "{out}");
+    }
+
+    #[test]
+    fn pnl_series_requires_series() {
+        let portfolio = Portfolio {
+            instruments: HashMap::new(),
+            deals: vec![],
+            market_data: None,
+            market_series: None,
+            warnings: vec![],
+            integrity_errors: vec![],
+            reports: vec![],
+        };
+        let err = super::pnl_series(&portfolio).unwrap_err().to_string();
+        assert!(err.contains("requires market_series"), "{err}");
+    }
 }
