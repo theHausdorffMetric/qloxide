@@ -19,6 +19,15 @@ pub use vol::VolSurface;
 pub struct MarketData {
     valuation_date: Date,
     as_of: Timestamp,
+    /// File-level provenance: origin of the data (e.g. `"ICE"` for exchange
+    /// settlements; scenario overlays self-declare `"scenario:…"` so
+    /// synthetic data can never impersonate real marks). One file = one
+    /// source; a mixed-source file is a merge that happened too early.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    source: Option<String>,
+    /// File-level lineage: what produced this file (e.g. `"qloxide-ice 0.1.0"`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    generator: Option<String>,
     market_prices: HashMap<String, f64>,
     #[serde(default)]
     settlement_prices: HashMap<String, f64>,
@@ -32,6 +41,8 @@ impl MarketData {
         MarketData {
             valuation_date,
             as_of,
+            source: None,
+            generator: None,
             market_prices: HashMap::new(),
             settlement_prices: HashMap::new(),
             discount_curves: HashMap::new(),
@@ -47,6 +58,24 @@ impl MarketData {
         self.as_of
     }
 
+    /// Provenance stamp: where this data originated, if declared.
+    pub fn source(&self) -> Option<&str> {
+        self.source.as_deref()
+    }
+
+    pub fn set_source(&mut self, source: &str) {
+        self.source = Some(source.to_string());
+    }
+
+    /// Lineage stamp: what produced this data, if declared.
+    pub fn generator(&self) -> Option<&str> {
+        self.generator.as_deref()
+    }
+
+    pub fn set_generator(&mut self, generator: &str) {
+        self.generator = Some(generator.to_string());
+    }
+
     /// Add a market price for an instrument.
     pub fn add_market_price(&mut self, id: &str, price: f64) {
         self.market_prices.insert(id.to_string(), price);
@@ -60,12 +89,14 @@ impl MarketData {
             .ok_or_else(|| core::Error::MarketData(format!("no market price for '{}'", id)))
     }
 
-    /// Add a final settlement price for an expired instrument.
+    /// Add an official settlement price: the settle published for the
+    /// instrument at the valuation date, or — for an expired instrument —
+    /// its frozen final settle at expiry.
     pub fn add_settlement_price(&mut self, id: &str, price: f64) {
         self.settlement_prices.insert(id.to_string(), price);
     }
 
-    /// Look up a final settlement price by instrument ID.
+    /// Look up an official settlement price by instrument ID.
     pub fn settlement_price(&self, id: &str) -> core::Result<f64> {
         self.settlement_prices
             .get(id)
@@ -98,13 +129,21 @@ impl MarketData {
     /// Merge another `MarketData` into this one.
     ///
     /// `valuation_date` and `as_of` must match. Spots and discount curves are merged;
-    /// duplicate keys are an error.
+    /// duplicate keys are an error. Provenance stamps: this side's are kept,
+    /// filled from `other` only if absent here. (Scenario-overlay merges will
+    /// revisit this — the overlay's `scenario:…` source should then win.)
     pub fn merge(&mut self, other: MarketData) -> core::Result<()> {
         if self.valuation_date != other.valuation_date || self.as_of != other.as_of {
             return Err(core::Error::MarketData(format!(
                 "valuation_date/as_of mismatch: {}/{} vs {}/{}",
                 self.valuation_date, self.as_of, other.valuation_date, other.as_of,
             )));
+        }
+        if self.source.is_none() {
+            self.source = other.source;
+        }
+        if self.generator.is_none() {
+            self.generator = other.generator;
         }
         for (id, price) in other.market_prices {
             if self.market_prices.contains_key(&id) {

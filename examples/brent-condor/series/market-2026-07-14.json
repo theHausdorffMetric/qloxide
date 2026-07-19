@@ -1,10 +1,18 @@
 {
   "valuation_date": "2026-07-14",
   "as_of": "2026-07-14T00:00:00Z",
+  "source": "ICE",
+  "generator": "qloxide-ice 0.0.0",
   "market_prices": {
     "ICE-BRN-U26": 84.73
   },
-  "settlement_prices": {},
+  "settlement_prices": {
+    "ICE-BRN-U26-P-78": 1.37,
+    "ICE-BRN-U26-C-88": 3.08,
+    "ICE-BRN-U26-C-93": 1.86,
+    "ICE-BRN-U26": 84.73,
+    "ICE-BRN-U26-P-83": 3.33
+  },
   "discount_curves": {
     "USD": {
       "base_date": "2026-07-14",

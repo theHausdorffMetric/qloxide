@@ -264,6 +264,7 @@ market_data = ["market.json"]
   "underlying": "Brent",
   "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
   "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+  "clearing": "ICE",
   "expiry": "2026-03-31",
   "contract_size": "1000",
   "tick_size": "0.01"
@@ -334,6 +335,7 @@ market_data = ["market.json"]
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "clearing": "ICE",
     "expiry": "2026-03-31",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -344,6 +346,7 @@ market_data = ["market.json"]
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "clearing": "ICE",
     "expiry": "2026-05-29",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -479,6 +482,7 @@ market_data = ["market.json"]
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "clearing": "ICE",
     "expiry": "2026-03-31",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -489,6 +493,7 @@ market_data = ["market.json"]
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act365Fixed"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "clearing": "ICE",
     "expiry": "2026-05-29",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -523,6 +528,7 @@ market_data = ["market.json"]
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "clearing": "ICE",
     "expiry": "2026-03-31",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -534,6 +540,7 @@ market_data = ["market.json"]
     "credit_id": "ICE",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "clearing": "ICE",
     "expiry": "2026-03-27",
     "strike": "75",
     "put_or_call": "Call",
@@ -547,6 +554,7 @@ market_data = ["market.json"]
     "credit_id": "ICE",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "clearing": "ICE",
     "expiry": "2026-03-27",
     "strike": "75",
     "put_or_call": "Call",

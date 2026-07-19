@@ -115,6 +115,25 @@ impl Settlement {
     }
 }
 
+/// Central clearing of a derivative: the CCP whose daily settlement
+/// publication provides official marks, or `Bilateral` for an uncleared
+/// contract (no official settle exists — such instruments mark to model).
+///
+/// This is an *intrinsic fact* of the contract — margining, calendars and
+/// final-settlement mechanics follow from it. It is distinct from
+/// [`Settlement`], which records the *conventions* of the settlement fixing
+/// (venue session/time/lag), and from marking *policy* (which prices a book
+/// chooses to mark against), which is a config-level concern.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Clearing {
+    #[serde(rename = "ICE")]
+    Ice,
+    #[serde(rename = "CME")]
+    Cme,
+    #[serde(rename = "bilateral")]
+    Bilateral,
+}
+
 /// Put or call.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PutOrCall {

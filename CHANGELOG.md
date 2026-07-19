@@ -7,6 +7,28 @@ the minor version).
 
 ## [Unreleased]
 
+### Breaking
+
+- `Future` and `EuropeanOption` gain a required `clearing` field
+  (`"ICE" | "CME" | "bilateral"`, new `instruments::Clearing` enum) — the
+  intrinsic fact of where a derivative clears, distinct from the `Settlement`
+  fixing conventions and from marking policy. Required with no default:
+  every instrument states its nature explicitly. Existing `instruments.json`
+  files must add the field; constructors take one more argument.
+
+### Added
+
+- `MarketData` file-level provenance stamps: optional `source` (e.g. `"ICE"`;
+  scenario overlays self-declare `"scenario:…"`) and `generator` fields with
+  accessors/setters; `merge` keeps this side's stamps, filling from the other
+  only if absent.
+- `settlement_prices` semantics generalized: the official settle at the
+  valuation date for any listed instrument (options included), not only the
+  frozen final settle of expired ones — groundwork for settle-primary
+  marking.
+- `pricing::decimal_to_f64` is now public, so market-data drivers can match
+  instrument Decimals against f64 quotes under the pricers' own conversion.
+
 ### Docs
 
 - Imported design, planning, and review notes under `docs/` (options plan,

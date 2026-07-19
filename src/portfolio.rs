@@ -228,7 +228,7 @@ mod tests {
         use crate::dates::Date;
         use crate::dates::daycount::DayCount;
         use crate::dates::rules::DateRule;
-        use crate::instruments::{FinancialInstrument, Settlement};
+        use crate::instruments::{Clearing, FinancialInstrument, Settlement};
         use crate::market_data::MarketData;
         use crate::reference_data::Currency;
         use std::sync::Arc;
@@ -240,6 +240,7 @@ mod tests {
             "Brent",
             usd.clone(),
             settle.clone(),
+            Clearing::Ice,
             Date::new(2026, 6, 30),
             Decimal::from(1000),
             "0.01".parse().unwrap(),
@@ -249,6 +250,7 @@ mod tests {
             "Brent",
             usd,
             settle,
+            Clearing::Ice,
             Date::new(2026, 6, 30),
             Decimal::from(1000),
             "0.01".parse().unwrap(),
@@ -303,7 +305,7 @@ mod tests {
         use crate::dates::Date;
         use crate::dates::daycount::DayCount;
         use crate::dates::rules::DateRule;
-        use crate::instruments::{OptionSettlement, PutOrCall, Settlement};
+        use crate::instruments::{Clearing, OptionSettlement, PutOrCall, Settlement};
         use crate::market_data::{MarketData, VolSurface};
         use crate::reference_data::Currency;
         use std::sync::Arc;
@@ -315,6 +317,7 @@ mod tests {
             "Brent",
             usd.clone(),
             settle.clone(),
+            Clearing::Ice,
             Date::new(2026, 6, 30),
             Decimal::from(1000),
             "0.01".parse().unwrap(),
@@ -325,6 +328,7 @@ mod tests {
             "ICE",
             usd,
             settle,
+            Clearing::Ice,
             Date::new(2026, 6, 25),
             Decimal::from(75),
             PutOrCall::Call,

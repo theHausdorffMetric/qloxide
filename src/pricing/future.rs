@@ -25,7 +25,7 @@ mod tests {
     use crate::dates::daycount::DayCount;
     use crate::dates::rules::DateRule;
     use crate::dates::{Date, Timestamp};
-    use crate::instruments::Settlement;
+    use crate::instruments::{Clearing, Settlement};
     use crate::reference_data::Currency;
     use rust_decimal::Decimal;
     use std::collections::HashMap;
@@ -90,6 +90,7 @@ mod tests {
             "Brent",
             usd,
             Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
+            Clearing::Ice,
             Date::new(2026, 3, 31),
             Decimal::from(1000),
             "0.01".parse().unwrap(),
@@ -110,6 +111,7 @@ mod tests {
             "Brent",
             usd,
             Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
+            Clearing::Ice,
             Date::new(2026, 3, 31),
             Decimal::from(1000),
             "0.01".parse().unwrap(),
@@ -130,6 +132,7 @@ mod tests {
             "Brent",
             usd,
             Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
+            Clearing::Ice,
             Date::new(2026, 3, 31),
             Decimal::from(1000),
             "0.01".parse().unwrap(),
@@ -150,6 +153,7 @@ mod tests {
             "Brent",
             usd,
             Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
+            Clearing::Ice,
             Date::new(2026, 3, 31),
             Decimal::from(1000),
             "0.01".parse().unwrap(),
@@ -168,6 +172,7 @@ mod tests {
             "Brent",
             usd,
             Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
+            Clearing::Ice,
             Date::new(2026, 3, 31),
             Decimal::from(1000),
             "0.01".parse().unwrap(),
@@ -194,6 +199,7 @@ mod tests {
             "Brent",
             usd,
             Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
+            Clearing::Ice,
             Date::new(2026, 3, 31),
             Decimal::from(1000),
             "0.01".parse().unwrap(),

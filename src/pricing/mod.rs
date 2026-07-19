@@ -14,7 +14,9 @@ use crate::instruments::option::EuropeanOption;
 use crate::market_data::MarketData;
 
 /// Convert a Decimal to f64 for pricing math, erroring on overflow.
-pub(crate) fn decimal_to_f64(d: rust_decimal::Decimal) -> core::Result<f64> {
+/// Public so market-data drivers can match instrument Decimals (strikes,
+/// sizes) against f64 market quotes under the same conversion the pricers use.
+pub fn decimal_to_f64(d: rust_decimal::Decimal) -> core::Result<f64> {
     use rust_decimal::prelude::ToPrimitive;
     d.to_f64()
         .ok_or_else(|| core::Error::Pricer(format!("cannot convert Decimal '{}' to f64", d)))
