@@ -30,6 +30,11 @@ the minor version).
 
 ### Added
 
+- `MarketStore::day` cross-checks settle coverage: the loaded file's
+  `settlement_prices` keys must match the manifest day's `settles` list
+  exactly, so a drifted manifest can no longer pass the O(manifest)
+  completeness gate while the day file disagrees. The error names the
+  settles missing from the file and the ones the manifest omits.
 - `MarketData` file-level provenance stamps: optional `source` (e.g. `"ICE"`;
   scenario overlays self-declare `"scenario:…"`) and `generator` fields with
   accessors/setters; `merge` keeps this side's stamps, filling from the other

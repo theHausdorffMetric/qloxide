@@ -179,7 +179,9 @@ impl MarketStore {
     }
 
     /// Load one day's snapshot: reads the file, validates it, and checks
-    /// its valuation date matches the manifest's calendar.
+    /// it against the manifest — the valuation date must match the
+    /// calendar, and the file's settle coverage must match the day's
+    /// `settles` list exactly.
     pub fn day(&self, date: Date) -> core::Result<MarketData> {
         let entry = self.days.get(&date).ok_or_else(|| {
             core::Error::MarketData(format!("no market snapshot for {date} in the series"))
@@ -196,6 +198,34 @@ impl MarketStore {
                 "{}: valuation_date {} does not match manifest day {date}",
                 entry.file.display(),
                 md.valuation_date(),
+            )));
+        }
+        // Completeness checks answer from the manifest's coverage lists
+        // without opening day files; verify that claim here, at first
+        // contact, so a drifted manifest cannot pass an integrity gate
+        // the file then betrays.
+        let in_file: BTreeSet<&str> = md.settlement_ids().into_iter().collect();
+        let claimed: BTreeSet<&str> = entry.settles.iter().map(String::as_str).collect();
+        if claimed != in_file {
+            let mut parts = Vec::new();
+            let missing: Vec<&str> = claimed.difference(&in_file).copied().collect();
+            if !missing.is_empty() {
+                parts.push(format!(
+                    "manifest claims settles the file lacks: {}",
+                    missing.join(", ")
+                ));
+            }
+            let extra: Vec<&str> = in_file.difference(&claimed).copied().collect();
+            if !extra.is_empty() {
+                parts.push(format!(
+                    "file has settles the manifest omits: {}",
+                    extra.join(", ")
+                ));
+            }
+            return Err(core::Error::MarketData(format!(
+                "{}: settle coverage disagrees with manifest day {date}: {}",
+                entry.file.display(),
+                parts.join("; "),
             )));
         }
         Ok(md)
@@ -268,6 +298,54 @@ mod tests {
         let store = MarketStore::load(&write_manifest(dir.path(), MANIFEST)).unwrap();
         let err = store.day(Date::new(2026, 7, 10)).unwrap_err().to_string();
         assert!(err.contains("does not match manifest day"), "{err}");
+    }
+
+    #[test]
+    fn day_loads_when_coverage_matches() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("market-2026-07-10.json"),
+            r#"{
+                "valuation_date": "2026-07-10",
+                "as_of": "2026-07-10T00:00:00Z",
+                "market_prices": {},
+                "settlement_prices": { "FUT": 76.01, "OPT": 0.54 },
+                "discount_curves": {}
+            }"#,
+        )
+        .unwrap();
+        let store = MarketStore::load(&write_manifest(dir.path(), MANIFEST)).unwrap();
+        let md = store.day(Date::new(2026, 7, 10)).unwrap();
+        assert_eq!(md.settlement_ids(), ["FUT", "OPT"]);
+    }
+
+    #[test]
+    fn day_checks_settle_coverage() {
+        let dir = tempfile::tempdir().unwrap();
+        // Manifest claims FUT + OPT; the file has FUT + XTR — one settle
+        // missing, one unlisted. Both directions must be reported.
+        std::fs::write(
+            dir.path().join("market-2026-07-10.json"),
+            r#"{
+                "valuation_date": "2026-07-10",
+                "as_of": "2026-07-10T00:00:00Z",
+                "market_prices": {},
+                "settlement_prices": { "FUT": 76.01, "XTR": 1.0 },
+                "discount_curves": {}
+            }"#,
+        )
+        .unwrap();
+        let store = MarketStore::load(&write_manifest(dir.path(), MANIFEST)).unwrap();
+        let err = store.day(Date::new(2026, 7, 10)).unwrap_err().to_string();
+        assert!(err.contains("settle coverage disagrees"), "{err}");
+        assert!(
+            err.contains("manifest claims settles the file lacks: OPT"),
+            "{err}"
+        );
+        assert!(
+            err.contains("file has settles the manifest omits: XTR"),
+            "{err}"
+        );
     }
 
     #[test]
