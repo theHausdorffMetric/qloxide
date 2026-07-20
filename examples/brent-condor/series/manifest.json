@@ -49,6 +49,16 @@
         "ICE-BRN-U26-P-78",
         "ICE-BRN-U26-P-83"
       ]
+    },
+    "2026-07-17": {
+      "file": "market-2026-07-17.json",
+      "settles": [
+        "ICE-BRN-U26",
+        "ICE-BRN-U26-C-88",
+        "ICE-BRN-U26-C-93",
+        "ICE-BRN-U26-P-78",
+        "ICE-BRN-U26-P-83"
+      ]
     }
   },
   "from": "2026-07-10",
@@ -59,5 +69,5 @@
     "2026-07-12"
   ],
   "source": "ICE",
-  "through": "2026-07-16"
+  "through": "2026-07-17"
 }
