@@ -828,7 +828,7 @@
     }
   },
   "from": "2026-02-02",
-  "generator": "qloxide-ice 0.0.0",
+  "generator": "qloxide-ice 0.0.0 (vol-source=settle-premium)",
   "rate": 0.04,
   "skipped": [
     "2026-02-07",
