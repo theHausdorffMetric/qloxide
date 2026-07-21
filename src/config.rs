@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use crate::core;
 use crate::dates::Date;
-use crate::instruments::{Clearing, FinancialInstrument};
+use crate::instruments::{ClearingStatus, FinancialInstrument};
 use crate::market_data::{MarketData, MarketStore};
 use crate::trades::Deal;
 
@@ -230,7 +230,7 @@ pub fn load_with_market(
             // its settlement price — flag its absence regardless of expiry.
             let cleared = matches!(
                 inst.clearing(),
-                Some(crate::instruments::Clearing::Ice | crate::instruments::Clearing::Cme)
+                Some(crate::instruments::ClearingStatus::Cleared)
             );
             if cleared && market_data.settlement_price(id).is_err() {
                 warnings.push(format!(
@@ -330,14 +330,14 @@ fn check_series_completeness(
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
 ) {
-    // Earliest deal date per cleared instrument (bilateral marks to model —
+    // Earliest deal date per cleared instrument (uncleared marks to model —
     // exempt; undealt instruments have no M2M history to demand).
     let mut inception: BTreeMap<&str, Date> = BTreeMap::new();
     for deal in deals {
         let Some(inst) = instruments.get(&deal.instrument_id) else {
             continue;
         };
-        if !matches!(inst.clearing(), Some(Clearing::Ice | Clearing::Cme)) {
+        if !matches!(inst.clearing(), Some(ClearingStatus::Cleared)) {
             continue;
         }
         let d = deal.timestamp.date();
@@ -470,7 +470,7 @@ market_data = ["market.json"]
   "underlying": "Brent",
   "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
   "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-  "clearing": "ICE",
+  "clearing": "cleared",
   "expiry": "2026-03-31",
   "contract_size": "1000",
   "tick_size": "0.01"
@@ -698,7 +698,7 @@ market_data = ["market.json"]
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "ICE",
+    "clearing": "cleared",
     "expiry": "2026-03-31",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -709,7 +709,7 @@ market_data = ["market.json"]
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "ICE",
+    "clearing": "cleared",
     "expiry": "2026-05-29",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -852,7 +852,7 @@ market_data = ["market.json"]
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "ICE",
+    "clearing": "cleared",
     "expiry": "2026-03-31",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -863,7 +863,7 @@ market_data = ["market.json"]
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act365Fixed"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "ICE",
+    "clearing": "cleared",
     "expiry": "2026-05-29",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -898,7 +898,7 @@ market_data = ["market.json"]
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "ICE",
+    "clearing": "cleared",
     "expiry": "2026-03-31",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -910,7 +910,7 @@ market_data = ["market.json"]
     "credit_id": "ICE",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "ICE",
+    "clearing": "cleared",
     "expiry": "2026-03-27",
     "strike": "75",
     "put_or_call": "Call",
@@ -924,7 +924,7 @@ market_data = ["market.json"]
     "credit_id": "ICE",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "ICE",
+    "clearing": "cleared",
     "expiry": "2026-03-27",
     "strike": "75",
     "put_or_call": "Call",

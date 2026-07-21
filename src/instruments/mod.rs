@@ -115,32 +115,30 @@ impl Settlement {
     }
 }
 
-/// Central clearing of a derivative: the CCP whose daily settlement
-/// publication provides official marks, or `Bilateral` for an uncleared
-/// contract (no official settle exists — such instruments mark to model).
+/// Whether the contract is centrally cleared: `Cleared` means a CCP's daily
+/// settlement publication provides the official mark; `Uncleared` means no
+/// official settle exists — such instruments mark to model.
 ///
 /// This is an *intrinsic fact* of the contract — margining, calendars and
-/// final-settlement mechanics follow from it. It is distinct from
-/// [`Settlement`], which records the *conventions* of the settlement fixing
-/// (venue session/time/lag), and from marking *policy* (which prices a book
-/// chooses to mark against), which is a config-level concern.
+/// final-settlement mechanics follow from it. Which CCP is not recorded
+/// here: venue identity is owned by [`Settlement`] (the fixing source) and
+/// the credit relationship by the deal, while the *mark source* actually
+/// used for a position on a given day (settle, model, or a configured
+/// proxy) is derived from this fact plus book config — a valuation-time
+/// concern, not an instrument attribute.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum Clearing {
-    #[serde(rename = "ICE")]
-    Ice,
-    #[serde(rename = "CME")]
-    Cme,
-    #[serde(rename = "bilateral")]
-    Bilateral,
+#[serde(rename_all = "lowercase")]
+pub enum ClearingStatus {
+    Cleared,
+    Uncleared,
 }
 
-impl std::fmt::Display for Clearing {
-    /// Matches the JSON vocabulary (`"ICE"` / `"CME"` / `"bilateral"`).
+impl std::fmt::Display for ClearingStatus {
+    /// Matches the JSON vocabulary (`"cleared"` / `"uncleared"`).
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
-            Clearing::Ice => "ICE",
-            Clearing::Cme => "CME",
-            Clearing::Bilateral => "bilateral",
+            ClearingStatus::Cleared => "cleared",
+            ClearingStatus::Uncleared => "uncleared",
         })
     }
 }
@@ -185,11 +183,11 @@ pub trait FinancialInstrument: Send + Sync + std::fmt::Debug {
     /// Maturity or expiry date, if applicable.
     fn maturity(&self) -> Option<Date>;
 
-    /// Central clearing, for instrument types that carry the fact
+    /// Clearing status, for instrument types that carry the fact
     /// (exchange-tradeable derivatives). `None` for types without a
     /// clearing dimension (equities, bonds, …). Drives the official
-    /// marking policy: cleared → settlement price, bilateral → model.
-    fn clearing(&self) -> Option<Clearing> {
+    /// marking policy: cleared → settlement price, uncleared → model.
+    fn clearing(&self) -> Option<ClearingStatus> {
         None
     }
 

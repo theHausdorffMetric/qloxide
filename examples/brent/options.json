@@ -6,7 +6,7 @@
     "credit_id": "ICE",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "ICE",
+    "clearing": "cleared",
     "expiry": "2026-03-27",
     "strike": "75",
     "put_or_call": "Call",

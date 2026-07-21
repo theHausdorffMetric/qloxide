@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::dates::Date;
 use crate::instruments::{
-    Clearing, ExerciseStyle, FinancialInstrument, OptionSettlement, PutOrCall, Settlement,
+    ClearingStatus, ExerciseStyle, FinancialInstrument, OptionSettlement, PutOrCall, Settlement,
 };
 use crate::reference_data::Currency;
 
@@ -19,7 +19,7 @@ pub struct EuropeanOption {
     pub settlement: Settlement,
     /// Where the contract clears — required, no default: every instrument
     /// states its nature explicitly (it decides marking + completeness checks).
-    pub clearing: Clearing,
+    pub clearing: ClearingStatus,
     pub expiry: Date,
     pub strike: Decimal,
     pub put_or_call: PutOrCall,
@@ -35,7 +35,7 @@ impl EuropeanOption {
         credit_id: &str,
         currency: Arc<Currency>,
         settlement: Settlement,
-        clearing: Clearing,
+        clearing: ClearingStatus,
         expiry: Date,
         strike: Decimal,
         put_or_call: PutOrCall,
@@ -91,7 +91,7 @@ impl FinancialInstrument for EuropeanOption {
         Some(self.expiry)
     }
 
-    fn clearing(&self) -> Option<Clearing> {
+    fn clearing(&self) -> Option<ClearingStatus> {
         Some(self.clearing)
     }
 

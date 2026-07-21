@@ -345,7 +345,7 @@ pub fn pnl_series(portfolio: &Portfolio) -> crate::core::Result<String> {
 /// size). Delta/Gamma per 1.0 move of the forward, Vega per 1.00 vol
 /// (100 vol points), Theta per year. Futures have delta 1 by definition.
 pub fn risk(portfolio: &Portfolio) -> crate::core::Result<String> {
-    use crate::instruments::{Clearing, EuropeanOption, Future};
+    use crate::instruments::{ClearingStatus, EuropeanOption, Future};
     use crate::pricing::european::greeks_european;
 
     let md = portfolio.market_data.as_ref().ok_or_else(|| {
@@ -509,7 +509,7 @@ pub fn risk(portfolio: &Portfolio) -> crate::core::Result<String> {
         if inst.as_any().downcast_ref::<EuropeanOption>().is_none() {
             continue;
         }
-        if !matches!(inst.clearing(), Some(Clearing::Ice | Clearing::Cme)) {
+        if !matches!(inst.clearing(), Some(ClearingStatus::Cleared)) {
             continue;
         }
         let expired = inst.maturity().is_some_and(|m| md.valuation_date() > m);
@@ -544,7 +544,7 @@ pub fn risk(portfolio: &Portfolio) -> crate::core::Result<String> {
     let mut model_out = String::new();
     for id in &ids {
         let inst = &portfolio.instruments[*id];
-        let cleared = matches!(inst.clearing(), Some(Clearing::Ice | Clearing::Cme));
+        let cleared = matches!(inst.clearing(), Some(ClearingStatus::Cleared));
         if cleared && md.settlement_price(id).is_ok() {
             continue;
         }
@@ -555,7 +555,7 @@ pub fn risk(portfolio: &Portfolio) -> crate::core::Result<String> {
         let why = if cleared {
             "no settle"
         } else {
-            "bilateral/unlisted"
+            "uncleared/unlisted"
         };
         writeln!(model_out, "{:<16}  {:>10.4}  ({why})", id, model).unwrap();
     }
@@ -673,7 +673,7 @@ mod tests {
     use crate::config::Portfolio;
     use crate::dates::rules::DateRule;
     use crate::dates::{Date, Timestamp};
-    use crate::instruments::{Clearing, FinancialInstrument, Future, Settlement};
+    use crate::instruments::{ClearingStatus, FinancialInstrument, Future, Settlement};
     use crate::market_data::MarketStore;
     use crate::reference_data::Currency;
     use crate::trades::{BuySell, Deal};
@@ -742,7 +742,7 @@ mod tests {
             "Brent",
             usd,
             Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
-            Clearing::Ice,
+            ClearingStatus::Cleared,
             Date::new(2026, 3, 4),
             Decimal::ONE,
             "0.01".parse().unwrap(),
@@ -820,7 +820,7 @@ mod risk_tests {
     use crate::dates::rules::DateRule;
     use crate::dates::{Date, Timestamp};
     use crate::instruments::{
-        Clearing, EuropeanOption, FinancialInstrument, Future, OptionSettlement, PutOrCall,
+        ClearingStatus, EuropeanOption, FinancialInstrument, Future, OptionSettlement, PutOrCall,
         Settlement,
     };
     use crate::market_data::{MarketData, VolSurface};
@@ -840,7 +840,7 @@ mod risk_tests {
             "Brent",
             usd.clone(),
             settle.clone(),
-            Clearing::Ice,
+            ClearingStatus::Cleared,
             Date::new(2026, 6, 30),
             Decimal::from(1000),
             "0.01".parse().unwrap(),
@@ -851,7 +851,7 @@ mod risk_tests {
             "ICE",
             usd,
             settle,
-            Clearing::Ice,
+            ClearingStatus::Cleared,
             Date::new(2026, 6, 25),
             Decimal::from(75),
             PutOrCall::Call,

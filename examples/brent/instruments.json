@@ -5,7 +5,7 @@
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "ICE",
+    "clearing": "cleared",
     "expiry": "2025-11-28",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -16,7 +16,7 @@
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "ICE",
+    "clearing": "cleared",
     "expiry": "2025-12-31",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -27,7 +27,7 @@
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "ICE",
+    "clearing": "cleared",
     "expiry": "2026-01-30",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -38,7 +38,7 @@
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "ICE",
+    "clearing": "cleared",
     "expiry": "2026-02-27",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -49,7 +49,7 @@
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "ICE",
+    "clearing": "cleared",
     "expiry": "2026-03-31",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -60,7 +60,7 @@
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "ICE",
+    "clearing": "cleared",
     "expiry": "2026-04-30",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -71,7 +71,7 @@
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "ICE",
+    "clearing": "cleared",
     "expiry": "2026-05-29",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -82,7 +82,7 @@
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "ICE",
+    "clearing": "cleared",
     "expiry": "2026-06-30",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -93,7 +93,7 @@
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "ICE",
+    "clearing": "cleared",
     "expiry": "2026-07-31",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -104,7 +104,7 @@
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "ICE",
+    "clearing": "cleared",
     "expiry": "2026-08-31",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -115,7 +115,7 @@
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "ICE",
+    "clearing": "cleared",
     "expiry": "2026-09-30",
     "contract_size": "1000",
     "tick_size": "0.01"
@@ -126,7 +126,7 @@
     "underlying": "Brent",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "ICE",
+    "clearing": "cleared",
     "expiry": "2026-10-30",
     "contract_size": "1000",
     "tick_size": "0.01"

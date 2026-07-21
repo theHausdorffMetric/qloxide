@@ -4,7 +4,7 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::dates::Date;
-use crate::instruments::{Clearing, FinancialInstrument, Settlement};
+use crate::instruments::{ClearingStatus, FinancialInstrument, Settlement};
 use crate::reference_data::Currency;
 
 /// An exchange-traded future contract.
@@ -16,7 +16,7 @@ pub struct Future {
     pub settlement: Settlement,
     /// Where the contract clears — required, no default: every instrument
     /// states its nature explicitly (it decides marking + completeness checks).
-    pub clearing: Clearing,
+    pub clearing: ClearingStatus,
     pub expiry: Date,
     pub contract_size: Decimal,
     pub tick_size: Decimal,
@@ -29,7 +29,7 @@ impl Future {
         underlying: &str,
         currency: Arc<Currency>,
         settlement: Settlement,
-        clearing: Clearing,
+        clearing: ClearingStatus,
         expiry: Date,
         contract_size: Decimal,
         tick_size: Decimal,
@@ -65,7 +65,7 @@ impl FinancialInstrument for Future {
         Some(self.expiry)
     }
 
-    fn clearing(&self) -> Option<Clearing> {
+    fn clearing(&self) -> Option<ClearingStatus> {
         Some(self.clearing)
     }
 

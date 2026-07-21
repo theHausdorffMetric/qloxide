@@ -34,7 +34,7 @@ pub struct Valuation {
 pub enum MarkSource {
     /// Official settlement price — audit-grade, no model in the path.
     Settle,
-    /// Model price (bilateral instruments, or types without settles).
+    /// Model price (uncleared instruments, or types without settles).
     Model,
 }
 
@@ -176,15 +176,15 @@ fn value_deal(
 ///
 /// - **cleared** → the own-venue settlement price; a missing settle is an
 ///   *error*, never a silent model fallback (a data failure must be loud);
-/// - **bilateral**, and instrument types with no clearing dimension → the
+/// - **uncleared**, and instrument types with no clearing dimension → the
 ///   model (which for expired instruments resolves to settles/intrinsic).
 fn official_mark(
     inst: &dyn FinancialInstrument,
     md: &crate::market_data::MarketData,
 ) -> core::Result<(f64, MarkSource)> {
-    use crate::instruments::Clearing;
+    use crate::instruments::ClearingStatus;
     match inst.clearing() {
-        Some(Clearing::Ice | Clearing::Cme) => md
+        Some(ClearingStatus::Cleared) => md
             .settlement_price(inst.id())
             .map(|p| (p, MarkSource::Settle))
             .map_err(|_| {
@@ -301,7 +301,7 @@ mod tests {
         use crate::dates::Date;
         use crate::dates::daycount::DayCount;
         use crate::dates::rules::DateRule;
-        use crate::instruments::{Clearing, FinancialInstrument, Settlement};
+        use crate::instruments::{ClearingStatus, FinancialInstrument, Settlement};
         use crate::market_data::MarketData;
         use crate::reference_data::Currency;
         use std::sync::Arc;
@@ -313,7 +313,7 @@ mod tests {
             "Brent",
             usd.clone(),
             settle.clone(),
-            Clearing::Ice,
+            ClearingStatus::Cleared,
             Date::new(2026, 6, 30),
             Decimal::from(1000),
             "0.01".parse().unwrap(),
@@ -323,7 +323,7 @@ mod tests {
             "Brent",
             usd,
             settle,
-            Clearing::Ice,
+            ClearingStatus::Cleared,
             Date::new(2026, 6, 30),
             Decimal::from(1000),
             "0.01".parse().unwrap(),
@@ -384,7 +384,7 @@ mod tests {
         use crate::dates::Date;
         use crate::dates::daycount::DayCount;
         use crate::dates::rules::DateRule;
-        use crate::instruments::{Clearing, OptionSettlement, PutOrCall, Settlement};
+        use crate::instruments::{ClearingStatus, OptionSettlement, PutOrCall, Settlement};
         use crate::market_data::{MarketData, VolSurface};
         use crate::reference_data::Currency;
         use std::sync::Arc;
@@ -396,12 +396,12 @@ mod tests {
             "Brent",
             usd.clone(),
             settle.clone(),
-            Clearing::Ice,
+            ClearingStatus::Cleared,
             Date::new(2026, 6, 30),
             Decimal::from(1000),
             "0.01".parse().unwrap(),
         );
-        // Bilateral → the official mark is the model price (the policy's
+        // Uncleared → the official mark is the model price (the policy's
         // model branch), which also exercises contract-size inheritance.
         let option = crate::instruments::EuropeanOption::new(
             "OPT",
@@ -409,7 +409,7 @@ mod tests {
             "ICE",
             usd,
             settle,
-            Clearing::Bilateral,
+            ClearingStatus::Uncleared,
             Date::new(2026, 6, 25),
             Decimal::from(75),
             PutOrCall::Call,

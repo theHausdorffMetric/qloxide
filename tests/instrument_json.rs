@@ -47,7 +47,7 @@ fn future_serde_roundtrip() {
         "Brent",
         usd(),
         ice_settle(),
-        Clearing::Ice,
+        ClearingStatus::Cleared,
         Date::new(2025, 6, 14),
         Decimal::from(1000),
         Decimal::new(1, 2),
@@ -56,6 +56,7 @@ fn future_serde_roundtrip() {
 
     let json = serde_json::to_string_pretty(&inst).unwrap();
     assert!(json.contains("\"type\": \"Future\""));
+    assert!(json.contains("\"clearing\": \"cleared\""));
 
     let deserialized: Arc<dyn FinancialInstrument> = serde_json::from_str(&json).unwrap();
     assert_eq!(deserialized.id(), "ICE-BRN-Jun25");
@@ -72,7 +73,7 @@ fn option_serde_roundtrip() {
         "OCC",
         usd(),
         Settlement::otc(),
-        Clearing::Bilateral,
+        ClearingStatus::Uncleared,
         Date::new(2025, 6, 20),
         Decimal::from(190),
         PutOrCall::Call,
@@ -84,6 +85,7 @@ fn option_serde_roundtrip() {
 
     let json = serde_json::to_string_pretty(&inst).unwrap();
     assert!(json.contains("\"type\": \"EuropeanOption\""));
+    assert!(json.contains("\"clearing\": \"uncleared\""));
     assert!(json.contains("\"Call\""));
 
     let deserialized: Arc<dyn FinancialInstrument> = serde_json::from_str(&json).unwrap();
@@ -98,7 +100,7 @@ fn option_intrinsic_value() {
         "CR",
         usd(),
         Settlement::otc(),
-        Clearing::Bilateral,
+        ClearingStatus::Uncleared,
         Date::new(2025, 6, 20),
         Decimal::from(100),
         PutOrCall::Call,
@@ -113,7 +115,7 @@ fn option_intrinsic_value() {
         "CR",
         usd(),
         Settlement::otc(),
-        Clearing::Bilateral,
+        ClearingStatus::Uncleared,
         Date::new(2025, 6, 20),
         Decimal::from(100),
         PutOrCall::Put,
@@ -231,7 +233,7 @@ fn basket_serde_roundtrip() {
         "OCC",
         usd(),
         Settlement::otc(),
-        Clearing::Bilateral,
+        ClearingStatus::Uncleared,
         Date::new(2025, 6, 20),
         Decimal::from(190),
         PutOrCall::Call,
@@ -286,7 +288,7 @@ fn nested_basket_serde_roundtrip() {
         "SP500",
         usd(),
         Settlement::otc(),
-        Clearing::Cme,
+        ClearingStatus::Cleared,
         Date::new(2025, 6, 20),
         Decimal::from(50),
         Decimal::new(25, 2),
@@ -332,7 +334,7 @@ fn deserialize_future_from_json() {
             "timezone": "Europe/London",
             "payment_lag": "Null"
         },
-        "clearing": "ICE",
+        "clearing": "cleared",
         "expiry": "2025-07-14",
         "contract_size": "1000",
         "tick_size": "0.01"
@@ -344,6 +346,39 @@ fn deserialize_future_from_json() {
     assert_eq!(inst.instrument_type(), "Future");
     assert_eq!(inst.currency().id, "USD");
     assert_eq!(inst.maturity(), Some(Date::new(2025, 7, 14)));
+}
+
+#[test]
+fn legacy_clearing_vocabulary_rejected() {
+    // The pre-0.4 tri-state vocabulary ("ICE"/"CME"/"bilateral") was
+    // retired without serde aliases: venue identity lives in
+    // settlement.venue, so a venue name in the clearing field is a
+    // data error, not a synonym.
+    let json = r#"
+    {
+        "type": "Future",
+        "id": "ICE-BRN-Jul25",
+        "underlying": "Brent",
+        "currency": {
+            "id": "USD",
+            "settlement": "Null",
+            "day_count": "Act360"
+        },
+        "settlement": {
+            "venue": "ICE",
+            "session": "SETTLE",
+            "time": "19:30",
+            "timezone": "Europe/London",
+            "payment_lag": "Null"
+        },
+        "clearing": "ICE",
+        "expiry": "2025-07-14",
+        "contract_size": "1000",
+        "tick_size": "0.01"
+    }
+    "#;
+    let result: Result<Arc<dyn FinancialInstrument>, _> = serde_json::from_str(json);
+    assert!(result.is_err());
 }
 
 #[test]

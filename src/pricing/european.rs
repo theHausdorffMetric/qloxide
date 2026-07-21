@@ -92,7 +92,7 @@ mod tests {
     use crate::dates::Date;
     use crate::dates::daycount::DayCount;
     use crate::dates::rules::DateRule;
-    use crate::instruments::{Clearing, OptionSettlement, Settlement};
+    use crate::instruments::{ClearingStatus, OptionSettlement, Settlement};
     use crate::market_data::{MarketData, VolSurface};
     use crate::pricing;
     use crate::reference_data::Currency;
@@ -110,7 +110,7 @@ mod tests {
             "CP",
             usd(),
             Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
-            Clearing::Ice,
+            ClearingStatus::Cleared,
             expiry,
             Decimal::from(strike),
             put_or_call,
