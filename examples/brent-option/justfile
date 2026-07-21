@@ -1,4 +1,4 @@
-# Brent Dec26 72 straddle — recipes for this example book.
+# Brent Dec26 72 ATM call — recipes for this example book.
 # Run from this directory (`just` finds the nearest justfile), or from the
 # repo root via `just -f examples/brent-option/justfile <recipe>`.
 

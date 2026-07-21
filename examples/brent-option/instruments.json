@@ -23,19 +23,5 @@
     "put_or_call": "Call",
     "exercise_style": "European",
     "option_settlement": "Cash"
-  },
-  {
-    "type": "EuropeanOption",
-    "id": "ICE-BRN-Z26-P-72",
-    "underlying": "ICE-BRN-Z26",
-    "credit_id": "ICE",
-    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
-    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
-    "clearing": "cleared",
-    "expiry": "2026-10-27",
-    "strike": "72",
-    "put_or_call": "Put",
-    "exercise_style": "European",
-    "option_settlement": "Cash"
   }
 ]

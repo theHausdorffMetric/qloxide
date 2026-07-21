@@ -1,6 +1,6 @@
-# Brent Dec26 72 straddle, bought 2026-07-01 @ 10.98 net (15 lots/leg,
-# ATM: Z26 settled 72.16 that day): a real book against real ICE EOD
-# settlement data, and — being a single long-dated tenor (option expiry
+# Brent Dec26 72 call, bought 2026-07-01 @ 5.57 (15 lots; ATM: Z26
+# settled 72.16 that day): a real book against real ICE EOD settlement
+# data, and — being a single long-dated tenor (option expiry
 # 2026-10-27) — the second RND test case beside brent-condor's short
 # Sep26 tenor.
 #
