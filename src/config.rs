@@ -36,6 +36,16 @@ pub struct PricingConfig {
     /// downgrade from integrity errors to warnings.
     #[serde(default)]
     pub waivers: Vec<Waiver>,
+    /// Per-book proxy marks: uncleared lookalike id → cleared twin whose
+    /// settle serves as the official mark (architecture.md §5). An explicit
+    /// valuation-policy decision, committed in the book's config:
+    ///
+    /// ```toml
+    /// [proxy_marks]
+    /// "BIL-BRN-U26" = "ICE-BRN-U26"
+    /// ```
+    #[serde(default)]
+    pub proxy_marks: crate::portfolio::ProxyMarks,
     #[serde(default)]
     pub reports: Vec<String>,
 }
@@ -76,6 +86,8 @@ pub struct Portfolio {
     /// Unwaived completeness failures. Valuation reports refuse while any
     /// are present; static listings still render (diagnosability).
     pub integrity_errors: Vec<String>,
+    /// Validated proxy-mark policy (see [`PricingConfig::proxy_marks`]).
+    pub proxy_marks: crate::portfolio::ProxyMarks,
     pub reports: Vec<String>,
 }
 
@@ -211,9 +223,48 @@ pub fn load_with_market(
         }
     }
 
+    // Proxy-mark policy is part of the book's definition — a broken mapping
+    // is a config error, not a warning.
+    for (id, twin) in &config.proxy_marks {
+        let Some(inst) = instruments.get(id) else {
+            return Err(core::Error::Config(format!(
+                "proxy_marks: unknown instrument '{id}'"
+            )));
+        };
+        if !matches!(inst.clearing(), Some(ClearingStatus::Uncleared)) {
+            return Err(core::Error::Config(format!(
+                "proxy_marks: '{id}' is not uncleared — it marks at its own settle"
+            )));
+        }
+        let Some(twin_inst) = instruments.get(twin) else {
+            return Err(core::Error::Config(format!(
+                "proxy_marks: '{id}' proxies unknown instrument '{twin}'"
+            )));
+        };
+        if !matches!(twin_inst.clearing(), Some(ClearingStatus::Cleared)) {
+            return Err(core::Error::Config(format!(
+                "proxy_marks: twin '{twin}' of '{id}' is not cleared — a proxy mark borrows an official settle"
+            )));
+        }
+    }
+
     // Market-dependent checks only apply when market data is loaded; a
-    // static (listing-only) run has nothing to check marks against.
+    // static (listing-only) run has nothing to check marks against. The
+    // *requirement* an instrument places on the market data is dispatched
+    // on classification (architecture.md §5): cleared → its settle;
+    // uncleared+proxy → the twin's settle; uncleared model-marked options →
+    // a statically arbitrage-free vol surface. A failed requirement on a
+    // *dealt* instrument blocks pnl (integrity error, waivable by date);
+    // on an undealt one it stays an advisory warning.
+    let mut integrity_errors: Vec<String> = Vec::new();
     if let Some(market_data) = &market_data {
+        let waived_now = config
+            .waivers
+            .iter()
+            .any(|w| w.covers(market_data.valuation_date()));
+        let dealt: std::collections::BTreeSet<&str> =
+            deals.iter().map(|d| d.instrument_id.as_str()).collect();
+
         for (id, inst) in &instruments {
             let ccy = inst.currency().id.clone();
             if market_data.discount_curve(&ccy).is_err() {
@@ -225,22 +276,40 @@ pub fn load_with_market(
             let expired = inst
                 .maturity()
                 .is_some_and(|m| market_data.valuation_date() > m);
+            let is_dealt = dealt.contains(id.as_str());
+            let cleared = matches!(inst.clearing(), Some(ClearingStatus::Cleared));
 
             // Settle-primary marking: a cleared instrument's official mark is
             // its settlement price — flag its absence regardless of expiry.
-            let cleared = matches!(
-                inst.clearing(),
-                Some(crate::instruments::ClearingStatus::Cleared)
-            );
+            // A proxied uncleared instrument places the same requirement on
+            // its twin's settle.
             if cleared && market_data.settlement_price(id).is_err() {
-                warnings.push(format!(
-                    "instrument '{}': cleared but no settlement price (official mark)",
-                    id,
-                ));
+                require(
+                    is_dealt,
+                    waived_now,
+                    format!("instrument '{id}': cleared but no settlement price (official mark)"),
+                    &mut warnings,
+                    &mut integrity_errors,
+                );
+            }
+            if let Some(twin) = config.proxy_marks.get(id.as_str())
+                && market_data.settlement_price(twin).is_err()
+            {
+                require(
+                    is_dealt,
+                    waived_now,
+                    format!(
+                        "instrument '{id}': proxy twin '{twin}' has no settlement price (official mark)"
+                    ),
+                    &mut warnings,
+                    &mut integrity_errors,
+                );
             }
 
             // Options price via the model, not a quoted market price: check
-            // their actual inputs (underlying instrument + vol surface) instead.
+            // their actual inputs (underlying instrument + vol surface)
+            // instead. For an uncleared, unproxied option the surface is a
+            // marking requirement, not a risk-side nicety.
             if let Some(opt) = inst
                 .as_any()
                 .downcast_ref::<crate::instruments::EuropeanOption>()
@@ -251,11 +320,26 @@ pub fn load_with_market(
                         id, opt.underlying,
                     ));
                 }
+                let model_marked = matches!(inst.clearing(), Some(ClearingStatus::Uncleared))
+                    && !config.proxy_marks.contains_key(id.as_str());
                 if !expired && !market_data.has_vol_surface(&opt.underlying) {
-                    warnings.push(format!(
-                        "option '{}': no vol surface for underlying '{}'",
-                        id, opt.underlying,
-                    ));
+                    if model_marked {
+                        require(
+                            is_dealt,
+                            waived_now,
+                            format!(
+                                "option '{id}': uncleared and model-marked, but no vol surface for underlying '{}'",
+                                opt.underlying,
+                            ),
+                            &mut warnings,
+                            &mut integrity_errors,
+                        );
+                    } else {
+                        warnings.push(format!(
+                            "option '{}': no vol surface for underlying '{}'",
+                            id, opt.underlying,
+                        ));
+                    }
                 }
                 continue;
             }
@@ -273,12 +357,52 @@ pub fn load_with_market(
                 warnings.push(format!("instrument '{}': no market price", id,));
             }
         }
+
+        // No-arb gate: a surface that model-marks an uncleared, dealt,
+        // unexpired position produces books-grade P&L — it must be free of
+        // static arbitrage (§5). Findings are integrity errors; the alarm
+        // is the deliverable, repair is an upstream policy decision.
+        let mut gated: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
+        for (id, inst) in &instruments {
+            if !dealt.contains(id.as_str())
+                || !matches!(inst.clearing(), Some(ClearingStatus::Uncleared))
+                || config.proxy_marks.contains_key(id.as_str())
+            {
+                continue;
+            }
+            let Some(opt) = inst
+                .as_any()
+                .downcast_ref::<crate::instruments::EuropeanOption>()
+            else {
+                continue;
+            };
+            if inst
+                .maturity()
+                .is_some_and(|m| market_data.valuation_date() > m)
+                || !gated.insert(opt.underlying.as_str())
+            {
+                continue;
+            }
+            if let Ok(surface) = market_data.vol_surface(&opt.underlying) {
+                for finding in crate::pricing::no_arb::surface_no_arb(surface) {
+                    require(
+                        true,
+                        waived_now,
+                        format!(
+                            "vol surface '{}' (books-grade, model-marks uncleared '{}'): {}",
+                            opt.underlying, id, finding,
+                        ),
+                        &mut warnings,
+                        &mut integrity_errors,
+                    );
+                }
+            }
+        }
     }
 
     // Series settle-completeness: for every cleared, dealt instrument,
     // each trading day in [earliest deal date, eval] must carry a settle.
     // Unwaived findings are integrity errors — pnl refuses on them.
-    let mut integrity_errors: Vec<String> = Vec::new();
     if let Some(store) = &market_series {
         let eval = market_data
             .as_ref()
@@ -304,8 +428,28 @@ pub fn load_with_market(
         market_series,
         warnings,
         integrity_errors,
+        proxy_marks: config.proxy_marks,
         reports: config.reports,
     })
+}
+
+/// Route a completeness finding by severity: a dealt instrument's failed
+/// marking requirement is an integrity error (pnl refuses) unless waived;
+/// undealt findings are advisory warnings.
+fn require(
+    dealt: bool,
+    waived: bool,
+    finding: String,
+    warnings: &mut Vec<String>,
+    errors: &mut Vec<String>,
+) {
+    if dealt && !waived {
+        errors.push(finding);
+    } else if dealt {
+        warnings.push(format!("waived: {finding}"));
+    } else {
+        warnings.push(finding);
+    }
 }
 
 /// Kinds of per-day completeness findings.
@@ -795,11 +939,13 @@ market_data = ["market.json"]
         .unwrap();
 
         let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
-        // no settle (cleared) + no market price + no curve
-        assert_eq!(portfolio.warnings.len(), 3);
+        // no market price + no curve stay warnings; the missing settle on a
+        // cleared *dealt* instrument escalates to an integrity error.
+        assert_eq!(portfolio.warnings.len(), 2);
+        assert_eq!(portfolio.integrity_errors.len(), 1);
         assert!(
             portfolio
-                .warnings
+                .integrity_errors
                 .iter()
                 .any(|w| w.contains("cleared but no settlement price"))
         );
@@ -987,5 +1133,225 @@ market_data = ["market.json"]
     fn missing_config_file_errors() {
         let result = load(Path::new("/nonexistent/pricing.toml"));
         assert!(result.is_err());
+    }
+
+    // ── classification-dispatched marking requirements (task 68) ─────
+
+    /// A two-instrument book: cleared future + an option on it whose
+    /// clearing status is the test's axis. Both have settles; the surface
+    /// and any proxy/waiver config are the caller's choice.
+    fn write_marking_book(
+        dir: &Path,
+        option_clearing: &str,
+        vol_surfaces: Option<&str>,
+        config_extra: &str,
+    ) {
+        fs::write(
+            dir.join("pricing.toml"),
+            format!(
+                r#"
+instruments = ["instruments.json"]
+deals = ["deals.json"]
+market_data = ["market.json"]
+{config_extra}
+"#
+            ),
+        )
+        .unwrap();
+        fs::write(
+            dir.join("instruments.json"),
+            format!(
+                r#"[
+  {{
+    "type": "Future",
+    "id": "ICE-BRN-K26",
+    "underlying": "Brent",
+    "currency": {{"id": "USD", "settlement": "Null", "day_count": "Act360"}},
+    "settlement": {{"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"}},
+    "clearing": "cleared",
+    "expiry": "2026-03-31",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  }},
+  {{
+    "type": "EuropeanOption",
+    "id": "OPT-BRN-75",
+    "underlying": "ICE-BRN-K26",
+    "credit_id": "ICE",
+    "currency": {{"id": "USD", "settlement": "Null", "day_count": "Act360"}},
+    "settlement": {{"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"}},
+    "clearing": "{option_clearing}",
+    "expiry": "2026-03-27",
+    "strike": "75",
+    "put_or_call": "Call",
+    "exercise_style": "European",
+    "option_settlement": "Cash"
+  }}
+]"#
+            ),
+        )
+        .unwrap();
+        fs::write(
+            dir.join("deals.json"),
+            r#"[
+  {"id": "D1", "instrument_id": "ICE-BRN-K26", "direction": "Buy", "quantity": "5", "price": "71.80", "timestamp": "2026-03-02T10:00:00Z", "counterparty": "X", "venue": "ICE"},
+  {"id": "D2", "instrument_id": "OPT-BRN-75", "direction": "Buy", "quantity": "5", "price": "1.20", "timestamp": "2026-03-02T10:00:00Z", "counterparty": "X", "venue": "ICE"}
+]"#,
+        )
+        .unwrap();
+        let surfaces = vol_surfaces
+            .map(|s| format!(",\n  \"vol_surfaces\": {s}"))
+            .unwrap_or_default();
+        fs::write(
+            dir.join("market.json"),
+            format!(
+                r#"{{
+  "valuation_date": "2026-03-07",
+  "as_of": "2026-03-07T14:00:00Z",
+  "market_prices": {{"ICE-BRN-K26": 72.45}},
+  "settlement_prices": {{"ICE-BRN-K26": 72.45, "OPT-BRN-75": 1.31}},
+  "discount_curves": {{
+    "USD": {{
+      "base_date": "2026-03-07",
+      "day_count": "Act360",
+      "pillars": [["2026-06-07", 0.043]]
+    }}
+  }}{surfaces}
+}}"#
+            ),
+        )
+        .unwrap();
+    }
+
+    const FLAT_SURFACE: &str = r#"{"ICE-BRN-K26": {"type": "Flat", "vol": 0.3}}"#;
+    /// Grid with a vol spike at the middle strike — butterfly-violating.
+    const BAD_SURFACE: &str = r#"{"ICE-BRN-K26": {"type": "Grid", "tenors": [0.25], "moneyness": [-0.2, -0.1, 0.0, 0.1, 0.2], "vols": [[0.30, 0.30, 0.60, 0.30, 0.30]]}}"#;
+
+    #[test]
+    fn i0_vol_free_pnl_two_sided() {
+        // Side A: a fully-cleared book marks settle-only — deleting
+        // vol_surfaces leaves the pnl report byte-identical.
+        let dir = tempfile::tempdir().unwrap();
+        write_marking_book(dir.path(), "cleared", Some(FLAT_SURFACE), "");
+        let with_vols = crate::reports::pnl(&load(&dir.path().join("pricing.toml")).unwrap());
+        write_marking_book(dir.path(), "cleared", None, "");
+        let without_vols = crate::reports::pnl(&load(&dir.path().join("pricing.toml")).unwrap());
+        assert_eq!(with_vols.unwrap(), without_vols.unwrap());
+
+        // Side B: an uncleared position makes the surface a marking
+        // requirement — deleting it must fail loudly, not thin the report.
+        let dir = tempfile::tempdir().unwrap();
+        write_marking_book(dir.path(), "uncleared", Some(FLAT_SURFACE), "");
+        let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
+        assert!(portfolio.integrity_errors.is_empty());
+        let ok = crate::reports::pnl(&portfolio).unwrap();
+        assert!(ok.contains("model"), "{ok}");
+
+        write_marking_book(dir.path(), "uncleared", None, "");
+        let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
+        assert!(
+            portfolio
+                .integrity_errors
+                .iter()
+                .any(|e| e.contains("no vol surface")),
+            "{:?}",
+            portfolio.integrity_errors
+        );
+        assert!(crate::reports::pnl(&portfolio).is_err());
+    }
+
+    #[test]
+    fn no_arb_gate_blocks_bad_surface_for_uncleared_marks() {
+        let dir = tempfile::tempdir().unwrap();
+        write_marking_book(dir.path(), "uncleared", Some(BAD_SURFACE), "");
+        let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
+        assert!(
+            portfolio
+                .integrity_errors
+                .iter()
+                .any(|e| e.contains("butterfly")),
+            "{:?}",
+            portfolio.integrity_errors
+        );
+
+        // The same surface under a fully-cleared book is risk-side only —
+        // no gate, no integrity errors.
+        let dir = tempfile::tempdir().unwrap();
+        write_marking_book(dir.path(), "cleared", Some(BAD_SURFACE), "");
+        let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
+        assert!(
+            portfolio.integrity_errors.is_empty(),
+            "{:?}",
+            portfolio.integrity_errors
+        );
+
+        // A waiver covering the valuation date downgrades the finding.
+        let dir = tempfile::tempdir().unwrap();
+        write_marking_book(
+            dir.path(),
+            "uncleared",
+            Some(BAD_SURFACE),
+            "[[waivers]]\nfrom = \"2026-03-01\"\nthrough = \"2026-03-31\"\nreason = \"known bad surface\"",
+        );
+        let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
+        assert!(portfolio.integrity_errors.is_empty());
+        assert!(
+            portfolio
+                .warnings
+                .iter()
+                .any(|w| w.starts_with("waived:") && w.contains("butterfly")),
+            "{:?}",
+            portfolio.warnings
+        );
+    }
+
+    #[test]
+    fn proxy_mark_uses_twin_settle() {
+        let dir = tempfile::tempdir().unwrap();
+        // Uncleared option proxied to the cleared future's settle: no
+        // surface needed, pnl marks it at 72.45 with source "proxy".
+        write_marking_book(
+            dir.path(),
+            "uncleared",
+            None,
+            "[proxy_marks]\n\"OPT-BRN-75\" = \"ICE-BRN-K26\"",
+        );
+        let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
+        assert!(
+            portfolio.integrity_errors.is_empty(),
+            "{:?}",
+            portfolio.integrity_errors
+        );
+        let out = crate::reports::pnl(&portfolio).unwrap();
+        assert!(out.contains("proxy"), "{out}");
+        assert!(!out.contains("UNPRICED"), "{out}");
+    }
+
+    #[test]
+    fn proxy_marks_validation_errors() {
+        let check = |extra: &str, needle: &str| {
+            let dir = tempfile::tempdir().unwrap();
+            write_marking_book(dir.path(), "uncleared", Some(FLAT_SURFACE), extra);
+            let err = load(&dir.path().join("pricing.toml"))
+                .unwrap_err()
+                .to_string();
+            assert!(err.contains(needle), "{err}");
+        };
+        check(
+            "[proxy_marks]\n\"NOPE\" = \"ICE-BRN-K26\"",
+            "unknown instrument 'NOPE'",
+        );
+        check(
+            "[proxy_marks]\n\"ICE-BRN-K26\" = \"ICE-BRN-K26\"",
+            "not uncleared",
+        );
+        check(
+            "[proxy_marks]\n\"OPT-BRN-75\" = \"NOPE\"",
+            "proxies unknown instrument 'NOPE'",
+        );
+        check(
+            "[proxy_marks]\n\"OPT-BRN-75\" = \"OPT-BRN-75\"",
+            "is not cleared",
+        );
     }
 }

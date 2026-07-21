@@ -29,13 +29,18 @@ pub struct Valuation {
 }
 
 /// Provenance of an official mark. The epistemic grade of a valuation:
-/// a settle is observed, a model price is computed.
+/// a settle is observed, a model price is computed, a proxy borrows an
+/// observation from a configured twin.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MarkSource {
     /// Official settlement price — audit-grade, no model in the path.
     Settle,
     /// Model price (uncleared instruments, or types without settles).
     Model,
+    /// A cleared twin's settlement price, adopted by explicit per-book
+    /// config for an uncleared lookalike — an observed price, but of a
+    /// different contract; books-grade only by that book's policy.
+    Proxy,
 }
 
 impl std::fmt::Display for MarkSource {
@@ -43,9 +48,16 @@ impl std::fmt::Display for MarkSource {
         f.write_str(match self {
             MarkSource::Settle => "settle",
             MarkSource::Model => "model",
+            MarkSource::Proxy => "proxy",
         })
     }
 }
+
+/// Per-book proxy-mark policy: uncleared lookalike id → the cleared twin
+/// whose settle serves as its official mark. Empty for almost every book;
+/// populating it is an explicit valuation-policy decision, committed in
+/// the book's config.
+pub type ProxyMarks = std::collections::BTreeMap<String, String>;
 
 /// A net position per instrument, derived from deals.
 ///
@@ -112,7 +124,7 @@ pub fn compress(deals: &[Deal]) -> Vec<Position> {
 /// valued deal per input deal. Deals that cannot be priced carry the error.
 pub fn valuate(deals: &[Deal], portfolio: &Portfolio) -> Vec<ValuedDeal> {
     match portfolio.market_data.as_ref() {
-        Some(md) => valuate_at(deals, &portfolio.instruments, md),
+        Some(md) => valuate_at(deals, &portfolio.instruments, md, &portfolio.proxy_marks),
         None => deals
             .iter()
             .map(|deal| ValuedDeal {
@@ -131,12 +143,13 @@ pub fn valuate_at(
     deals: &[Deal],
     instruments: &HashMap<String, Arc<dyn FinancialInstrument>>,
     md: &crate::market_data::MarketData,
+    proxy_marks: &ProxyMarks,
 ) -> Vec<ValuedDeal> {
     deals
         .iter()
         .map(|deal| ValuedDeal {
             deal: deal.clone(),
-            valuation: value_deal(deal, instruments, md),
+            valuation: value_deal(deal, instruments, md, proxy_marks),
         })
         .collect()
 }
@@ -145,12 +158,13 @@ fn value_deal(
     deal: &Deal,
     instruments: &HashMap<String, Arc<dyn FinancialInstrument>>,
     md: &crate::market_data::MarketData,
+    proxy_marks: &ProxyMarks,
 ) -> core::Result<Valuation> {
     let inst = instruments.get(&deal.instrument_id).ok_or_else(|| {
         core::Error::Pricer(format!("unknown instrument '{}'", deal.instrument_id))
     })?;
 
-    let (mark_f64, source) = official_mark(inst.as_ref(), md)?;
+    let (mark_f64, source) = official_mark(inst.as_ref(), md, proxy_marks)?;
     let mark = Decimal::try_from(mark_f64).map_err(|e| {
         core::Error::Pricer(format!(
             "cannot convert mark {} to decimal: {}",
@@ -171,16 +185,20 @@ fn value_deal(
     })
 }
 
-/// Official-valuation mark policy (hard-coded until the first divergence —
-/// second venue, proxy marks, or per-book overrides):
+/// Official-valuation mark policy, dispatched on classification
+/// (architecture.md §5):
 ///
 /// - **cleared** → the own-venue settlement price; a missing settle is an
 ///   *error*, never a silent model fallback (a data failure must be loud);
-/// - **uncleared**, and instrument types with no clearing dimension → the
-///   model (which for expired instruments resolves to settles/intrinsic).
+/// - **uncleared** with a configured proxy → the cleared twin's settle
+///   ([`MarkSource::Proxy`]); a missing twin settle is likewise an error;
+/// - **uncleared** otherwise, and instrument types with no clearing
+///   dimension → the model (which for expired instruments resolves to
+///   settles/intrinsic).
 fn official_mark(
     inst: &dyn FinancialInstrument,
     md: &crate::market_data::MarketData,
+    proxy_marks: &ProxyMarks,
 ) -> core::Result<(f64, MarkSource)> {
     use crate::instruments::ClearingStatus;
     match inst.clearing() {
@@ -193,6 +211,18 @@ fn official_mark(
                     inst.id(),
                 ))
             }),
+        Some(ClearingStatus::Uncleared) if proxy_marks.contains_key(inst.id()) => {
+            let twin = &proxy_marks[inst.id()];
+            md.settlement_price(twin)
+                .map(|p| (p, MarkSource::Proxy))
+                .map_err(|_| {
+                    core::Error::Pricer(format!(
+                        "uncleared instrument '{}' proxies '{}': no settlement price for the twin at valuation date",
+                        inst.id(),
+                        twin,
+                    ))
+                })
+        }
         _ => pricing::price(inst, md).map(|p| (p, MarkSource::Model)),
     }
 }
@@ -347,6 +377,7 @@ mod tests {
             deals: deals.clone(),
             market_data: Some(md),
             market_series: None,
+            proxy_marks: Default::default(),
             integrity_errors: vec![],
             warnings: vec![],
             reports: vec![],
@@ -435,6 +466,7 @@ mod tests {
             deals: deals.clone(),
             market_data: Some(md),
             market_series: None,
+            proxy_marks: Default::default(),
             integrity_errors: vec![],
             warnings: vec![],
             reports: vec![],

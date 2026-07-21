@@ -3,6 +3,7 @@ pub mod bond;
 pub mod european;
 pub mod future;
 pub mod implied;
+pub mod no_arb;
 
 use crate::core;
 use crate::curves::DiscountCurve;

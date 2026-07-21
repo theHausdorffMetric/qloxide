@@ -303,7 +303,8 @@ pub fn pnl_series(portfolio: &Portfolio) -> crate::core::Result<String> {
             .filter(|d| d.timestamp.date() <= date)
             .cloned()
             .collect();
-        let valued = portfolio::valuate_at(&active, &portfolio.instruments, &md);
+        let valued =
+            portfolio::valuate_at(&active, &portfolio.instruments, &md, &portfolio.proxy_marks);
         let unpriced = valued.iter().filter(|v| v.valuation.is_err()).count();
         if unpriced > 0 {
             unpriced_days.push((date, unpriced));
@@ -545,7 +546,9 @@ pub fn risk(portfolio: &Portfolio) -> crate::core::Result<String> {
     for id in &ids {
         let inst = &portfolio.instruments[*id];
         let cleared = matches!(inst.clearing(), Some(ClearingStatus::Cleared));
-        if cleared && md.settlement_price(id).is_ok() {
+        if (cleared && md.settlement_price(id).is_ok())
+            || portfolio.proxy_marks.contains_key(id.as_str())
+        {
             continue;
         }
         let Ok(model) = crate::pricing::price(inst.as_ref(), md) else {
@@ -562,6 +565,41 @@ pub fn risk(portfolio: &Portfolio) -> crate::core::Result<String> {
     if any_model_mark {
         writeln!(out, "\nModel marks (no official settle):").unwrap();
         out.push_str(&model_out);
+    }
+
+    // — Proxy IPV: a proxied lookalike's official mark is its twin's
+    //   settle; the model view of the same position is a free daily
+    //   independent-price-verification diff —
+    if !portfolio.proxy_marks.is_empty() {
+        writeln!(out, "\nProxy IPV (official twin settle vs model):").unwrap();
+        for (id, twin) in &portfolio.proxy_marks {
+            let Some(inst) = portfolio.instruments.get(id) else {
+                continue;
+            };
+            match (
+                md.settlement_price(twin),
+                crate::pricing::price(inst.as_ref(), md),
+            ) {
+                (Ok(s), Ok(m)) => writeln!(
+                    out,
+                    "{:<16}  settle[{twin}] {:>10.4}  model {:>10.4}  diff {:>+9.4}",
+                    id,
+                    s,
+                    m,
+                    m - s,
+                )
+                .unwrap(),
+                (Ok(s), Err(_)) => writeln!(
+                    out,
+                    "{:<16}  settle[{twin}] {:>10.4}  model unavailable",
+                    id, s,
+                )
+                .unwrap(),
+                (Err(_), _) => {
+                    writeln!(out, "{:<16}  twin '{twin}' has no settle", id).unwrap();
+                }
+            }
+        }
     }
 
     Ok(out)
@@ -758,6 +796,7 @@ mod tests {
             ],
             market_data: None,
             market_series: Some(MarketStore::load(&dir.path().join("manifest.json")).unwrap()),
+            proxy_marks: Default::default(),
             warnings: vec![],
             integrity_errors: vec![],
             reports: vec![],
@@ -800,6 +839,7 @@ mod tests {
             deals: vec![],
             market_data: None,
             market_series: None,
+            proxy_marks: Default::default(),
             warnings: vec![],
             integrity_errors: vec![],
             reports: vec![],
@@ -895,6 +935,7 @@ mod risk_tests {
             deals,
             market_data: Some(md),
             market_series: None,
+            proxy_marks: Default::default(),
             warnings: vec![],
             integrity_errors: vec![],
             reports: vec![],
