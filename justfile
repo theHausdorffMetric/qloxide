@@ -43,6 +43,8 @@ bond:
 # Brent Sep26 iron condor vs real ICE settles (data via qloxide-ice) has its
 # own justfile with the example: examples/brent-condor/justfile
 # (`cd examples/brent-condor && just book` / `just day <date>` / `just series`)
+# Brent Dec26 ATM straddle (long-tenor sibling, same layout):
+# examples/brent-option/justfile
 
 # ── scenario playground ──────────────────────────────────────────────
 # A throwaway copy of the Brent portfolio in {{play}}; mutate its market

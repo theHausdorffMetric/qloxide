@@ -1,0 +1,4 @@
+instruments = ["../instruments.json"]
+deals = ["../deals.json"]
+market_data = ["market-2026-07-10.json"]
+reports = ["pnl"]

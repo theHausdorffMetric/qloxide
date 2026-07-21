@@ -1,0 +1,20 @@
+[
+  {
+    "id": "STR-Z26-72C",
+    "instrument_id": "ICE-BRN-Z26-C-72",
+    "direction": "Buy",
+    "quantity": "15",
+    "price": "5.57",
+    "timestamp": "2026-07-01T16:58:00Z",
+    "counterparty": "Marex"
+  },
+  {
+    "id": "STR-Z26-72P",
+    "instrument_id": "ICE-BRN-Z26-P-72",
+    "direction": "Buy",
+    "quantity": "15",
+    "price": "5.41",
+    "timestamp": "2026-07-01T16:58:00Z",
+    "counterparty": "Marex"
+  }
+]
