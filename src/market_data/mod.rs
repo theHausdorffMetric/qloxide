@@ -1,7 +1,7 @@
 pub mod store;
 pub mod vol;
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
@@ -30,12 +30,15 @@ pub struct MarketData {
     /// File-level lineage: what produced this file (e.g. `"qloxide-ice 0.1.0"`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     generator: Option<String>,
-    market_prices: HashMap<String, f64>,
+    // BTreeMaps, not HashMaps: serialization must be byte-deterministic so
+    // regenerating an unchanged series reproduces the committed files
+    // exactly (I4 — deterministic regeneration).
+    market_prices: BTreeMap<String, f64>,
     #[serde(default)]
-    settlement_prices: HashMap<String, f64>,
-    discount_curves: HashMap<String, DiscountCurve>,
+    settlement_prices: BTreeMap<String, f64>,
+    discount_curves: BTreeMap<String, DiscountCurve>,
     #[serde(default)]
-    vol_surfaces: HashMap<String, VolSurface>,
+    vol_surfaces: BTreeMap<String, VolSurface>,
 }
 
 impl MarketData {
@@ -45,10 +48,10 @@ impl MarketData {
             as_of,
             source: None,
             generator: None,
-            market_prices: HashMap::new(),
-            settlement_prices: HashMap::new(),
-            discount_curves: HashMap::new(),
-            vol_surfaces: HashMap::new(),
+            market_prices: BTreeMap::new(),
+            settlement_prices: BTreeMap::new(),
+            discount_curves: BTreeMap::new(),
+            vol_surfaces: BTreeMap::new(),
         }
     }
 

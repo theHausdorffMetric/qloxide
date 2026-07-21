@@ -8,8 +8,8 @@
     "ICE-BRN-Z26": 88.24
   },
   "settlement_prices": {
-    "ICE-BRN-Z26": 88.24,
-    "ICE-BRN-N26": 105.02
+    "ICE-BRN-N26": 105.02,
+    "ICE-BRN-Z26": 88.24
   },
   "discount_curves": {
     "USD": {

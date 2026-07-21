@@ -4,12 +4,12 @@
   "source": "ICE",
   "generator": "qloxide-ice 0.0.0",
   "market_prices": {
-    "ICE-BRN-Z26": 81.8,
-    "ICE-BRN-N26": 100.06
+    "ICE-BRN-N26": 100.06,
+    "ICE-BRN-Z26": 81.8
   },
   "settlement_prices": {
-    "ICE-BRN-Z26": 81.8,
-    "ICE-BRN-N26": 100.06
+    "ICE-BRN-N26": 100.06,
+    "ICE-BRN-Z26": 81.8
   },
   "discount_curves": {
     "USD": {

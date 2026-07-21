@@ -7,11 +7,11 @@
     "ICE-BRN-U26": 88.1
   },
   "settlement_prices": {
-    "ICE-BRN-U26-P-83": 1.47,
     "ICE-BRN-U26": 88.1,
-    "ICE-BRN-U26-C-93": 2.14,
     "ICE-BRN-U26-C-88": 3.77,
-    "ICE-BRN-U26-P-78": 0.5
+    "ICE-BRN-U26-C-93": 2.14,
+    "ICE-BRN-U26-P-78": 0.5,
+    "ICE-BRN-U26-P-83": 1.47
   },
   "discount_curves": {
     "USD": {
