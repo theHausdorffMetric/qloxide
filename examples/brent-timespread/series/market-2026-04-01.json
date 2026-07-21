@@ -2,7 +2,7 @@
   "valuation_date": "2026-04-01",
   "as_of": "2026-04-01T00:00:00Z",
   "source": "ICE",
-  "generator": "qloxide-ice 0.0.0 (vol-source=settle-premium)",
+  "generator": "qloxide-ice 0.0.0 (vol-source=ice-vol)",
   "market_prices": {
     "ICE-BRN-N26": 93.5,
     "ICE-BRN-Z26": 78.15
