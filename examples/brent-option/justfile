@@ -10,22 +10,22 @@ default:
 
 # All reports against the current book
 book:
-    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml -- --config book.toml
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- --config book.toml
 
 # What-if: the full current book against one historical series day
 # (includes deals struck later — not P&L history; that's `just series`)
 day date:
-    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml -- \
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- \
         --config series/day-{{date}}.toml
 
 # True P&L history over the committed series, in one invocation:
 # composition-aware (deals count from inception), with daily changes
 series:
-    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml -- \
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- \
         --config book.toml --report pnl-series
 
 # Model-world risk: position greeks, calibration residuals (model vs
 # settle), model book value
 risk:
-    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml -- \
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-risk -- \
         --config book.toml --report risk

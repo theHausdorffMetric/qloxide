@@ -30,7 +30,8 @@ hierarchy — each layer depends only on layers below it:
 ```
 src/
 ├── lib.rs              # public API
-├── main.rs             # CLI (qloxide --config pricing.toml)
+├── bin/                # qloxide-book + qloxide-risk (thin wrappers over cli.rs)
+├── cli.rs              # shared CLI driver, report tiers
 ├── core/               # Error enum (thiserror)
 ├── dates/              # Date, Timestamp, Zoned, Calendar, DateRule, DayCount, Compounding
 ├── reference_data/     # Currency, CreditEntity, RateIndex
@@ -58,12 +59,18 @@ src/
 
 ## CLI
 
+The executable surface is split by trust tier: `qloxide-book` serves the
+official world and structurally cannot emit model numbers; `qloxide-risk`
+serves the model world, including `--market` scenario overlays.
+
 ```bash
-qloxide --config pricing.toml
-qloxide --config pricing.toml --report pnl --report instruments
+qloxide-book --config pricing.toml
+qloxide-book --config pricing.toml --report pnl --report instruments
+qloxide-risk --config pricing.toml                    # risk report
+qloxide-risk --config pricing.toml --market bump.json # scenario overlay
 ```
 
-The TOML config references JSON files for instruments, deals, and market data. Available reports: `instruments`, `deals`, `positions`, `pnl`.
+The TOML config references JSON files for instruments, deals, and market data. Book reports: `instruments`, `deals`, `positions`, `pnl`, `pnl-series`. Risk reports: `risk`. Both binaries share the same config; each runs only its own tier's reports.
 
 ## Example
 
@@ -101,7 +108,7 @@ assert_eq!(inst.id(), "ICE-BRN-Jun25");
 ```bash
 cargo build
 cargo test
-cargo run -- --config examples/brent/brent.toml
+cargo run --bin qloxide-book -- --config examples/brent/brent.toml
 ```
 
 ## Dependencies

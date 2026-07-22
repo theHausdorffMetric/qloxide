@@ -24,13 +24,19 @@ clap = { version = "4", features = ["derive"], optional = true }
 
 [features]
 default = ["cli"]
-# The qloxide binary (clap-based report runner). Library consumers can
-# opt out with default-features = false.
+# The qloxide-book / qloxide-risk binaries (clap-based report runners,
+# architecture §9). Library consumers can opt out with
+# default-features = false.
 cli = ["dep:clap"]
 
 [[bin]]
-name = "qloxide"
-path = "src/main.rs"
+name = "qloxide-book"
+path = "src/bin/book.rs"
+required-features = ["cli"]
+
+[[bin]]
+name = "qloxide-risk"
+path = "src/bin/risk.rs"
 required-features = ["cli"]
 
 [dev-dependencies]

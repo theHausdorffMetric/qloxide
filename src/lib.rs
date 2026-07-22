@@ -1,6 +1,8 @@
 pub use rust_decimal::Decimal;
 
 pub mod cashflows;
+#[cfg(feature = "cli")]
+pub mod cli;
 pub mod config;
 pub mod core;
 pub mod curves;

@@ -23,11 +23,13 @@ pub fn run(name: &str, portfolio: &Portfolio) -> crate::core::Result<String> {
     }
 }
 
-/// Every known report: name paired with a one-line description.
+/// Book-tier reports: the official world (architecture §9) — listings,
+/// compression, and settle-primary P&L. Served by `qloxide-book`.
 ///
-/// Single source of truth for [`available`], [`describe`], and the CLI help.
-/// Keep each description in sync with the report function's doc comment.
-const REPORTS: &[(&str, &str)] = &[
+/// Together with [`RISK_REPORTS`] this is the single source of truth for
+/// [`available`], [`describe`], and the CLI help. Keep each description in
+/// sync with the report function's doc comment.
+pub const BOOK_REPORTS: &[(&str, &str)] = &[
     (
         "instruments",
         "Instrument specification listing (static reference data)",
@@ -42,28 +44,31 @@ const REPORTS: &[(&str, &str)] = &[
         "pnl-series",
         "Daily portfolio P&L trajectory over the market series (composition-aware)",
     ),
-    (
-        "risk",
-        "Position greeks, calibration residuals, model marks + model book value",
-    ),
 ];
 
-/// List all known report names.
+/// Risk-tier reports: the model world (architecture §9). Served by
+/// `qloxide-risk`.
+pub const RISK_REPORTS: &[(&str, &str)] = &[(
+    "risk",
+    "Position greeks, calibration residuals, model marks + model book value",
+)];
+
+/// List all known report names, book tier first.
 pub fn available() -> Vec<&'static str> {
-    REPORTS.iter().map(|(name, _)| *name).collect()
+    BOOK_REPORTS
+        .iter()
+        .chain(RISK_REPORTS)
+        .map(|(name, _)| *name)
+        .collect()
 }
 
 /// One-line description for a report name, or `None` if unknown.
 pub fn describe(name: &str) -> Option<&'static str> {
-    REPORTS
+    BOOK_REPORTS
         .iter()
+        .chain(RISK_REPORTS)
         .find(|(n, _)| *n == name)
         .map(|(_, desc)| *desc)
-}
-
-/// `name -> description` pairs for every report. Drives CLI help.
-pub fn descriptions() -> &'static [(&'static str, &'static str)] {
-    REPORTS
 }
 
 /// Instrument specification listing — pure reference data, no valuation

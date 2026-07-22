@@ -7,6 +7,20 @@ the minor version).
 
 ## [Unreleased]
 
+### Breaking (binary taxonomy)
+
+- The `qloxide` binary is retired, split by trust tier (qloxide-ice
+  architecture §9): **`qloxide-book`** serves the official world
+  (`instruments`, `deals`, `positions`, `pnl`, `pnl-series`; no `--market`
+  override — the binary an EOD job runs structurally cannot emit model
+  numbers) and **`qloxide-risk`** the model world (`risk`, scenario
+  overlays via `--market`). Both share the same TOML config; each filters
+  the config's default report list to its own tier and rejects an explicit
+  `--report` from the other tier with a pointer to the sibling binary.
+  New feature-gated `cli` module hosts the shared driver;
+  `reports::descriptions()` is replaced by the public tiered registries
+  `reports::BOOK_REPORTS` / `reports::RISK_REPORTS`.
+
 ### Breaking
 
 - `Future` and `EuropeanOption` gain a required `clearing` field
@@ -30,6 +44,8 @@ the minor version).
 
 ### Added
 
+- The CLI answers `-V`/`--version` (the clap derive never declared a
+  version, so the flag didn't exist).
 - `MarketStore::day` cross-checks settle coverage: the loaded file's
   `settlement_prices` keys must match the manifest day's `settles` list
   exactly, so a drifted manifest can no longer pass the O(manifest)

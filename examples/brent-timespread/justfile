@@ -9,15 +9,15 @@ default:
 
 # All reports against the current book
 book:
-    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml -- --config book.toml
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- --config book.toml
 
 # True P&L history from inception (2026-02-02): watch the Jul leg
 # realize at its 2026-05-29 expiry, leaving the outright Dec short
 series:
-    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml -- \
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- \
         --config book.toml --report pnl-series
 
 # Model-world risk: futures deltas + model book value
 risk:
-    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml -- \
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-risk -- \
         --config book.toml --report risk
