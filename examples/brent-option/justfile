@@ -8,17 +8,17 @@ qloxide := "../.."
 default:
     @just --list --unsorted
 
-# All reports against the current book
+# All reports, valued at the last history day
 book:
     cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- --config book.toml
 
-# What-if: the full current book against one historical series day
+# What-if: the full current book against one history day
 # (includes deals struck later — not P&L history; that's `just series`)
 day date:
     cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- \
-        --config series/day-{{date}}.toml
+        --config book.toml --as-of {{date}} --report pnl
 
-# True P&L history over the committed series, in one invocation:
+# True P&L history over the market history, in one invocation:
 # composition-aware (deals count from inception), with daily changes
 series:
     cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- \
@@ -28,4 +28,4 @@ series:
 # settle), model book value
 risk:
     cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-risk -- \
-        --config book.toml --report risk
+        --config risk.toml

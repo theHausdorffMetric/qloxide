@@ -7,7 +7,7 @@ qloxide := "../.."
 default:
     @just --list --unsorted
 
-# All reports against the current book
+# All reports, valued at the last history day
 book:
     cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- --config book.toml
 
@@ -20,4 +20,4 @@ series:
 # Model-world risk: futures deltas + model book value
 risk:
     cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-risk -- \
-        --config book.toml --report risk
+        --config risk.toml

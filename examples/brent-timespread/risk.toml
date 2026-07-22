@@ -1,0 +1,6 @@
+# Risk config for the brent-timespread book (arch §9): futures only, so
+# no vol_data — the risk report is deltas + model book value.
+instruments = ["instruments.json"]
+deals = ["deals.json"]
+market = "market.json"
+reports = ["risk"]

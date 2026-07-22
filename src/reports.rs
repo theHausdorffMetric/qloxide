@@ -248,9 +248,9 @@ pub fn pnl(portfolio: &Portfolio) -> crate::core::Result<String> {
 /// against a historical day (`--config series/day-<date>.toml`) is a
 /// what-if, not history.
 pub fn pnl_series(portfolio: &Portfolio) -> crate::core::Result<String> {
-    let store = portfolio.market_series.as_ref().ok_or_else(|| {
+    let store = portfolio.history.as_ref().ok_or_else(|| {
         crate::core::Error::Config(
-            "report 'pnl-series' requires market_series in the config".to_string(),
+            "report 'pnl-series' requires a market history in the config".to_string(),
         )
     })?;
     if !portfolio.integrity_errors.is_empty() {
@@ -309,7 +309,7 @@ pub fn pnl_series(portfolio: &Portfolio) -> crate::core::Result<String> {
             .cloned()
             .collect();
         let valued =
-            portfolio::valuate_at(&active, &portfolio.instruments, &md, &portfolio.proxy_marks);
+            portfolio::valuate_at(&active, &portfolio.instruments, md, &portfolio.proxy_marks);
         let unpriced = valued.iter().filter(|v| v.valuation.is_err()).count();
         if unpriced > 0 {
             unpriced_days.push((date, unpriced));
@@ -717,7 +717,7 @@ mod tests {
     use crate::dates::rules::DateRule;
     use crate::dates::{Date, Timestamp};
     use crate::instruments::{ClearingStatus, FinancialInstrument, Future, Settlement};
-    use crate::market_data::MarketStore;
+    use crate::market_data::MarketHistory;
     use crate::reference_data::Currency;
     use crate::trades::{BuySell, Deal};
     use rust_decimal::Decimal;
@@ -748,32 +748,18 @@ mod tests {
     /// frozen final settle (expiry cash-settlement).
     #[test]
     fn pnl_series_trajectory_composition_and_expiry() {
-        let dir = tempfile::tempdir().unwrap();
-        for (date, settle) in [
-            ("2026-03-02", 101.0),
-            ("2026-03-03", 102.0),
-            ("2026-03-04", 105.0),
-            ("2026-03-05", 105.0), // frozen final settle post-expiry
-        ] {
-            std::fs::write(
-                dir.path().join(format!("market-{date}.json")),
-                day_json(date, settle),
-            )
-            .unwrap();
-        }
-        let day =
-            |d: &str| format!(r#""{d}": {{ "file": "market-{d}.json", "settles": ["FUT"] }}"#);
-        std::fs::write(
-            dir.path().join("manifest.json"),
-            format!(
-                r#"{{ "days": {{ {}, {}, {}, {} }} }}"#,
-                day("2026-03-02"),
-                day("2026-03-03"),
-                day("2026-03-04"),
-                day("2026-03-05"),
-            ),
-        )
-        .unwrap();
+        let history = MarketHistory::new(
+            [
+                ("2026-03-02", 101.0),
+                ("2026-03-03", 102.0),
+                ("2026-03-04", 105.0),
+                ("2026-03-05", 105.0), // frozen final settle post-expiry
+            ]
+            .iter()
+            .map(|(date, settle)| serde_json::from_str(&day_json(date, *settle)).unwrap())
+            .collect(),
+        );
+        history.validate().unwrap();
 
         let usd = Arc::new(Currency::new(
             "USD",
@@ -800,7 +786,7 @@ mod tests {
                 deal("D2", "102", "2026-03-03T10:00:00Z"),
             ],
             market_data: None,
-            market_series: Some(MarketStore::load(&dir.path().join("manifest.json")).unwrap()),
+            history: Some(history),
             proxy_marks: Default::default(),
             warnings: vec![],
             integrity_errors: vec![],
@@ -843,14 +829,14 @@ mod tests {
             instruments: HashMap::new(),
             deals: vec![],
             market_data: None,
-            market_series: None,
+            history: None,
             proxy_marks: Default::default(),
             warnings: vec![],
             integrity_errors: vec![],
             reports: vec![],
         };
         let err = super::pnl_series(&portfolio).unwrap_err().to_string();
-        assert!(err.contains("requires market_series"), "{err}");
+        assert!(err.contains("requires a market history"), "{err}");
     }
 }
 
@@ -939,7 +925,7 @@ mod risk_tests {
             instruments,
             deals,
             market_data: Some(md),
-            market_series: None,
+            history: None,
             proxy_marks: Default::default(),
             warnings: vec![],
             integrity_errors: vec![],

@@ -1,4 +1,0 @@
-instruments = ["../instruments.json"]
-deals = ["../deals.json"]
-market_data = ["market-2026-07-01.json"]
-reports = ["pnl"]

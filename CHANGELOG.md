@@ -7,6 +7,32 @@ the minor version).
 
 ## [Unreleased]
 
+### Breaking (one-file market history + config split)
+
+- **`market.json` is the history** (architecture §9): `{source, generator,
+  skipped_days, days: [...]}` — one MarketData-shaped record per trading
+  day from deal inception to the generation point. Valuation = the last
+  day; new `--as-of <DATE>` on both binaries selects any contained day
+  (what-if, replacing the per-day `day-<date>.toml` configs); `pnl-series`
+  walks the file. The legacy single-day schema is rejected with a
+  targeted migration error. Settle-completeness always runs when a market
+  file is present — a history that doesn't cover [inception, eval] needs
+  explicit waivers. Retired: the `series/` per-day files, the manifest,
+  `MarketStore` (replaced by `market_data::MarketHistory`), and the
+  `market_series` config key. Scenario overlay files are one-day
+  histories. `vols.json` carries the same envelope (per-day risk
+  surfaces — the homogeneous series hist-VaR needs).
+- **Separate book and risk configs** (resolves architecture §8.3):
+  `qloxide-book` reads `book.toml` (strict `BookConfig` schema — unknown
+  or risk-tier keys like `vol_data` are errors, so "book data is
+  vol-free" is enforced structurally); `qloxide-risk` reads `risk.toml`
+  (`RiskConfig`: the same data files listed directly, plus `vol_data`
+  histories merged day-wise, and its own copy of proxy_marks/waivers).
+  Config report lists are tier-owned: a sibling-tier report errors with
+  a pointer to the other binary instead of being silently filtered.
+  `config::load_with_market` is replaced by `load_book(path, as_of)` /
+  `load_risk(path, market_override, as_of)`.
+
 ### Added (vol-free book data plane)
 
 - Optional `vol_data` config key (architecture §9): risk-tier vol surface

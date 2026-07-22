@@ -61,16 +61,18 @@ src/
 
 The executable surface is split by trust tier: `qloxide-book` serves the
 official world and structurally cannot emit model numbers; `qloxide-risk`
-serves the model world, including `--market` scenario overlays.
+serves the model world, including `--market` scenario overlays. Each tier
+has its own config — `book.toml` (strict schema: risk keys are errors)
+and `risk.toml` (same data files listed directly, plus `vol_data`).
 
 ```bash
-qloxide-book --config pricing.toml
-qloxide-book --config pricing.toml --report pnl --report instruments
-qloxide-risk --config pricing.toml                    # risk report
-qloxide-risk --config pricing.toml --market bump.json # scenario overlay
+qloxide-book --config book.toml
+qloxide-book --config book.toml --as-of 2026-07-10 --report pnl  # what-if day
+qloxide-risk --config risk.toml                       # risk report
+qloxide-risk --config risk.toml --market bump.json    # scenario overlay
 ```
 
-The TOML config references JSON files for instruments, deals, and market data. Book reports: `instruments`, `deals`, `positions`, `pnl`, `pnl-series`. Risk reports: `risk`. Both binaries share the same config; each runs only its own tier's reports. Book market data is vol-free (surfaces appear only where an uncleared position needs them for marking); the optional `vol_data` key lists risk-tier surface files that `qloxide-risk` merges and `qloxide-book` ignores.
+`market.json` is the one-file market history: `{source, generator, skipped_days, days: [...]}`, one record per trading day from deal inception to the generation point. Valuation is the last day (`--as-of` selects any contained day); `pnl-series` walks the file. Book day records are vol-free — surfaces appear only where an uncleared position needs them for marking; the full per-day surfaces live in a `vols.json` history that `qloxide-risk` merges via `vol_data`. Book reports: `instruments`, `deals`, `positions`, `pnl`, `pnl-series`. Risk reports: `risk`.
 
 ## Example
 

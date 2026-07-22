@@ -8,17 +8,17 @@ qloxide := "../.."
 default:
     @just --list --unsorted
 
-# All reports against the 2026-07-16 book
+# All reports, valued at the last history day
 book:
     cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- --config book.toml
 
-# What-if: the full current book against one historical series day
+# What-if: the full current book against one history day
 # (includes deals struck later — not P&L history; that's `just series`)
 day date:
     cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- \
-        --config series/day-{{date}}.toml
+        --config book.toml --as-of {{date}} --report pnl
 
-# True P&L history over the committed series, in one invocation:
+# True P&L history over the market history, in one invocation:
 # composition-aware (deals count from inception), with daily changes
 series:
     cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- \
@@ -28,26 +28,17 @@ series:
 # settle), model book value
 risk:
     cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-risk -- \
-        --config book.toml --report risk
+        --config risk.toml
 
 # Model book value under each committed scenario (settles stripped, so
 # only the model responds; scenario P&L = value minus base)
 scenarios:
     @echo "== base"
     @cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-risk -- \
-        --config book.toml --report risk 2>/dev/null | grep 'Model value'
+        --config risk.toml 2>/dev/null | grep 'Model value'
     @for f in scenarios/*.json; do \
         echo "== $(basename $f .json)"; \
         cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-risk -- \
-            --config book.toml --market $f --report risk 2>/dev/null \
+            --config risk.toml --market $f 2>/dev/null \
             | grep 'Model value'; \
-    done
-
-# What-if across every committed series day (the pre-3.5e loop): today's
-# full book valued against each historical market
-series-whatif:
-    for f in series/day-*.toml; do \
-        echo "== $(basename $f .toml)"; \
-        cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- \
-            --config $f --report pnl | tail -3; \
     done

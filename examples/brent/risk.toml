@@ -1,0 +1,12 @@
+# Risk config for the legacy brent book (arch §9): same data files as
+# brent.toml, plus the risk-tier vol history.
+instruments = ["instruments.json", "options.json"]
+deals = ["deals.json"]
+market = "market.json"
+vol_data = ["vols.json"]
+reports = ["risk"]
+
+[[waivers]]
+from = "2026-03-02"
+through = "2026-03-09"
+reason = "legacy example — no settle history before the eval day"

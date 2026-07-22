@@ -1,7 +1,12 @@
 instruments = ["instruments.json", "options.json"]
 deals = ["deals.json"]
-market_data = ["market.json"]
-# Risk-tier vol surfaces (architecture §9): merged by qloxide-risk only;
-# qloxide-book never reads them — book data is vol-free.
-vol_data = ["vols.json"]
+market = "market.json"
 reports = ["instruments", "deals", "positions", "pnl"]
+
+# Legacy single-day book: the market history holds only the eval day
+# (2026-03-10), so the M2M span back to the first deals is uncovered —
+# waived explicitly rather than silently accepted (arch §9).
+[[waivers]]
+from = "2026-03-02"
+through = "2026-03-09"
+reason = "legacy example — no settle history before the eval day"

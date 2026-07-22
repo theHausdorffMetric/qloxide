@@ -7,37 +7,37 @@ use serde::Deserialize;
 use crate::core;
 use crate::dates::Date;
 use crate::instruments::{ClearingStatus, FinancialInstrument};
-use crate::market_data::{MarketData, MarketStore};
+use crate::market_data::{MarketData, MarketHistory};
 use crate::trades::Deal;
 
 /// TOML configuration pointing to JSON data files.
 ///
-/// Paths are resolved relative to the directory containing the config file.
-/// `market_data` is optional: the static reports (instruments, deals,
-/// positions) run without it; valuation reports (pnl) require it.
+/// Book and risk are separate configs (architecture §9, resolving §8.3):
+/// `book.toml` is the contract of record and rejects unknown keys — a risk
+/// key in a book config is a schema error, so "book data is vol-free" is
+/// enforced structurally. `risk.toml` is flat and independent: it lists
+/// the same data files directly and adds risk-tier enrichment. Sharing
+/// happens at the data files, not the configs.
+///
+/// Paths are resolved relative to the directory containing the config
+/// file. `market` names the one-file market history (`{source, generator,
+/// skipped_days, days: [...]}`); it is optional — the static reports
+/// (instruments, deals, positions) run without it.
 ///
 /// ```toml
-/// instruments = ["instruments/futures.json", "instruments/bonds.json"]
-/// deals = ["deals/march_book.json"]
-/// market_data = ["market/2026-03-07.json"]
+/// instruments = ["instruments.json"]
+/// deals = ["deals.json"]
+/// market = "market.json"
+/// reports = ["instruments", "deals", "positions", "pnl"]
 /// ```
 #[derive(Debug, Deserialize)]
-pub struct PricingConfig {
+#[serde(deny_unknown_fields)]
+pub struct BookConfig {
     pub instruments: Vec<PathBuf>,
     pub deals: Vec<PathBuf>,
+    /// The book's market history file.
     #[serde(default)]
-    pub market_data: Vec<PathBuf>,
-    /// Optional series manifest (see [`MarketStore`]). When set, the loader
-    /// checks settle-completeness for every cleared, dealt instrument over
-    /// [its earliest deal date, the evaluation date].
-    #[serde(default)]
-    pub market_series: Option<PathBuf>,
-    /// Risk-tier vol enrichment (architecture §9): surface files merged into
-    /// the market data by [`load_risk`] only. The P&L path never reads
-    /// these (I2) — surfaces an uncleared position needs for *marking* must
-    /// live in `market_data` proper.
-    #[serde(default)]
-    pub vol_data: Vec<PathBuf>,
+    pub market: Option<PathBuf>,
     /// Date-scoped waivers: completeness findings inside a waiver window
     /// downgrade from integrity errors to warnings.
     #[serde(default)]
@@ -54,6 +54,52 @@ pub struct PricingConfig {
     pub proxy_marks: crate::portfolio::ProxyMarks,
     #[serde(default)]
     pub reports: Vec<String>,
+}
+
+/// The risk tier's own config (`risk.toml`): the same data files as the
+/// book, listed directly, plus risk-only enrichment. Policy tables
+/// (proxy_marks, waivers) are duplicated from the book config where the
+/// risk report needs them — an accepted trade-off; the risk report prints
+/// the policy it ran under so divergence is visible.
+///
+/// ```toml
+/// instruments = ["instruments.json"]
+/// deals = ["deals.json"]
+/// market = "market.json"
+/// vol_data = ["vols.json"]
+/// reports = ["risk"]
+/// ```
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RiskConfig {
+    pub instruments: Vec<PathBuf>,
+    pub deals: Vec<PathBuf>,
+    /// The book's market history file.
+    #[serde(default)]
+    pub market: Option<PathBuf>,
+    /// Risk-tier vol histories, merged day-wise into the market history —
+    /// the P&L path never reads these (I2); surfaces an uncleared position
+    /// needs for *marking* must live in the market file itself.
+    #[serde(default)]
+    pub vol_data: Vec<PathBuf>,
+    #[serde(default)]
+    pub waivers: Vec<Waiver>,
+    #[serde(default)]
+    pub proxy_marks: crate::portfolio::ProxyMarks,
+    #[serde(default)]
+    pub reports: Vec<String>,
+}
+
+/// The tier-independent loading recipe a config resolves to.
+struct LoadSpec {
+    instruments: Vec<PathBuf>,
+    deals: Vec<PathBuf>,
+    market: Option<PathBuf>,
+    vol_data: Vec<PathBuf>,
+    waivers: Vec<Waiver>,
+    proxy_marks: crate::portfolio::ProxyMarks,
+    reports: Vec<String>,
+    risk_tier: bool,
 }
 
 /// A date-scoped waiver for known series holes (e.g. an upstream data gap).
@@ -83,65 +129,98 @@ impl Waiver {
 pub struct Portfolio {
     pub instruments: HashMap<String, Arc<dyn FinancialInstrument>>,
     pub deals: Vec<Deal>,
-    /// `None` when the config lists no market_data files — static reports
-    /// still run; valuation errors.
+    /// The valuation-day record selected from the history (the last day,
+    /// or `--as-of`). `None` when the config names no market file —
+    /// static reports still run; valuation errors.
     pub market_data: Option<MarketData>,
-    /// The historical series behind this book, when configured.
-    pub market_series: Option<MarketStore>,
+    /// The full market history behind the book, when configured. For the
+    /// risk tier, vol_data enrichment is already merged day-wise.
+    pub history: Option<MarketHistory>,
     pub warnings: Vec<String>,
     /// Unwaived completeness failures. Valuation reports refuse while any
     /// are present; static listings still render (diagnosability).
     pub integrity_errors: Vec<String>,
-    /// Validated proxy-mark policy (see [`PricingConfig::proxy_marks`]).
+    /// Validated proxy-mark policy (see [`BookConfig::proxy_marks`]).
     pub proxy_marks: crate::portfolio::ProxyMarks,
     pub reports: Vec<String>,
 }
 
-/// Load a TOML config file and assemble a [`Portfolio`].
-///
-/// Each instrument/deal file may contain a single JSON object or an array.
-/// After loading, consistency checks run and warnings are collected.
+/// Load a book config and assemble a [`Portfolio`] valued at the
+/// history's last day. See [`load_book`].
 pub fn load(config_path: &Path) -> core::Result<Portfolio> {
-    load_with_market(config_path, None)
+    load_book(config_path, None)
 }
 
-/// [`load`], with the config's `market_data` files replaced by a single
-/// explicit market file (resolved as given, relative to the caller's cwd).
-/// The scenario entry point: price the same book against a bumped market
-/// without editing the config.
-///
-/// Book-tier semantics: the config's `vol_data` files are ignored, and
-/// surfaces in the market data that no position needs draw a warning
-/// (architecture §9 — book data should be vol-free).
-pub fn load_with_market(
+/// Load a `book.toml` (strict schema — risk keys are an error) and
+/// assemble a [`Portfolio`]: valuation day = the history's last day, or
+/// `as_of` (what-if against any contained day). Surfaces in the market
+/// data that no position needs draw a warning (architecture §9 — book
+/// data is vol-free).
+pub fn load_book(config_path: &Path, as_of: Option<Date>) -> core::Result<Portfolio> {
+    let (config_dir, toml_str) = read_config(config_path)?;
+    let config: BookConfig = toml::from_str(&toml_str).map_err(|e| {
+        core::Error::Config(format!("invalid config {}: {}", config_path.display(), e))
+    })?;
+    let spec = LoadSpec {
+        instruments: config.instruments,
+        deals: config.deals,
+        market: config.market,
+        vol_data: Vec::new(),
+        waivers: config.waivers,
+        proxy_marks: config.proxy_marks,
+        reports: config.reports,
+        risk_tier: false,
+    };
+    load_impl(&config_dir, spec, None, as_of)
+}
+
+/// Load a `risk.toml` (risk-tier semantics, architecture §9): the
+/// config's `vol_data` histories are merged day-wise into the market
+/// history — unless a `--market` override replaces the market wholesale
+/// (scenario files are self-contained one-day histories, resolved
+/// relative to the caller's cwd) — and the book tier's unneeded-surface
+/// warning is skipped: risk surfaces are beyond marking needs by
+/// definition.
+pub fn load_risk(
     config_path: &Path,
     market_override: Option<&Path>,
+    as_of: Option<Date>,
 ) -> core::Result<Portfolio> {
-    load_impl(config_path, market_override, false)
+    let (config_dir, toml_str) = read_config(config_path)?;
+    let config: RiskConfig = toml::from_str(&toml_str).map_err(|e| {
+        core::Error::Config(format!("invalid config {}: {}", config_path.display(), e))
+    })?;
+    let spec = LoadSpec {
+        instruments: config.instruments,
+        deals: config.deals,
+        market: config.market,
+        vol_data: config.vol_data,
+        waivers: config.waivers,
+        proxy_marks: config.proxy_marks,
+        reports: config.reports,
+        risk_tier: true,
+    };
+    load_impl(&config_dir, spec, market_override, as_of)
 }
 
-/// [`load_with_market`] with risk-tier semantics (architecture §9): the
-/// config's `vol_data` files are merged into the market data (unless a
-/// `--market` override replaces the market wholesale — scenario files are
-/// self-contained), and the book tier's unneeded-surface warning is
-/// skipped — risk surfaces are by definition beyond marking needs.
-pub fn load_risk(config_path: &Path, market_override: Option<&Path>) -> core::Result<Portfolio> {
-    load_impl(config_path, market_override, true)
-}
-
-fn load_impl(
-    config_path: &Path,
-    market_override: Option<&Path>,
-    risk_tier: bool,
-) -> core::Result<Portfolio> {
-    let config_dir = config_path.parent().unwrap_or_else(|| Path::new("."));
-
+fn read_config(config_path: &Path) -> core::Result<(PathBuf, String)> {
+    let config_dir = config_path
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .to_path_buf();
     let toml_str = std::fs::read_to_string(config_path).map_err(|e| {
         core::Error::Config(format!("cannot read {}: {}", config_path.display(), e))
     })?;
-    let config: PricingConfig = toml::from_str(&toml_str).map_err(|e| {
-        core::Error::Config(format!("invalid config {}: {}", config_path.display(), e))
-    })?;
+    Ok((config_dir, toml_str))
+}
+
+fn load_impl(
+    config_dir: &Path,
+    config: LoadSpec,
+    market_override: Option<&Path>,
+    as_of: Option<Date>,
+) -> core::Result<Portfolio> {
+    let risk_tier = config.risk_tier;
 
     // Load instruments
     let mut instruments: HashMap<String, Arc<dyn FinancialInstrument>> = HashMap::new();
@@ -180,62 +259,72 @@ fn load_impl(
         }
     }
 
-    // Load market data (merge multiple files); an override replaces the
-    // config's list entirely and resolves relative to the cwd, not the
-    // config file.
-    let market_paths: Vec<PathBuf> = match market_override {
-        Some(p) => vec![p.to_path_buf()],
-        None => config
-            .market_data
-            .iter()
-            .map(|rel| config_dir.join(rel))
-            .collect(),
+    // Load the market history. An override replaces the config's market
+    // wholesale and resolves relative to the cwd, not the config file
+    // (the scenario entry point: a self-contained one-day history).
+    let market_path: Option<PathBuf> = match market_override {
+        Some(p) => Some(p.to_path_buf()),
+        None => config.market.as_ref().map(|rel| config_dir.join(rel)),
     };
-    let mut market_data: Option<MarketData> = None;
-    for path in &market_paths {
-        let md_json = read_json_file(path)?;
-        let md: MarketData = serde_json::from_str(&md_json).map_err(|e| {
-            core::Error::Config(format!("invalid market data {}: {}", path.display(), e))
-        })?;
-        match &mut market_data {
-            None => market_data = Some(md),
-            Some(existing) => existing.merge(md).map_err(|e| {
-                core::Error::Config(format!("market data {}: {}", path.display(), e))
-            })?,
-        }
+    let mut history: Option<MarketHistory> = None;
+    if let Some(path) = &market_path {
+        history = Some(load_history(path, "market data")?);
     }
-    // Risk-tier enrichment: merge the vol_data overlays (skipped under a
-    // --market override — scenario files are self-contained).
+    // Risk-tier enrichment: merge the vol_data histories day-wise
+    // (skipped under a --market override — scenario files are
+    // self-contained).
     if risk_tier && market_override.is_none() {
         for rel_path in &config.vol_data {
             let path = config_dir.join(rel_path);
-            let md_json = read_json_file(&path)?;
-            let vols: MarketData = serde_json::from_str(&md_json).map_err(|e| {
-                core::Error::Config(format!("invalid vol data {}: {}", path.display(), e))
-            })?;
-            match &mut market_data {
+            let vols = load_history(&path, "vol data")?;
+            match &mut history {
                 None => {
                     return Err(core::Error::Config(format!(
-                        "vol_data {} without market_data — surfaces enrich a market, they aren't one",
+                        "vol_data {} without a market file — surfaces enrich a market, they aren't one",
                         path.display()
                     )));
                 }
-                Some(existing) => existing.merge(vols).map_err(|e| {
+                Some(existing) => existing.merge_days(vols).map_err(|e| {
                     core::Error::Config(format!("vol data {}: {}", path.display(), e))
                 })?,
             }
         }
     }
-    if let Some(md) = &market_data {
-        md.validate()
+    if let Some(h) = &history {
+        h.validate()
             .map_err(|e| core::Error::Config(format!("market data: {e}")))?;
     }
 
-    // Load the series manifest, if configured (day files stay unopened —
-    // completeness runs off the manifest's coverage lists).
-    let market_series = match &config.market_series {
-        Some(rel) => Some(MarketStore::load(&config_dir.join(rel))?),
-        None => None,
+    // Select the valuation day: the last record, or --as-of. The record
+    // inherits the header's provenance stamps so reports can label their
+    // source without per-day duplication.
+    let market_data: Option<MarketData> = match &history {
+        None => {
+            if let Some(date) = as_of {
+                return Err(core::Error::Config(format!(
+                    "--as-of {date} without a market file"
+                )));
+            }
+            None
+        }
+        Some(h) => {
+            let day = match as_of {
+                Some(date) => h.day(date)?,
+                None => h.last()?,
+            };
+            let mut md = day.clone();
+            if md.source().is_none()
+                && let Some(s) = h.source()
+            {
+                md.set_source(s);
+            }
+            if md.generator().is_none()
+                && let Some(g) = h.generator()
+            {
+                md.set_generator(g);
+            }
+            Some(md)
+        }
     };
 
     // Consistency checks
@@ -482,15 +571,17 @@ fn load_impl(
 
     // Series settle-completeness: for every cleared, dealt instrument,
     // each trading day in [earliest deal date, eval] must carry a settle.
-    // Unwaived findings are integrity errors — pnl refuses on them.
-    if let Some(store) = &market_series {
+    // The history claims to run from inception (§9), so this always runs
+    // when a market file is present. Unwaived findings are integrity
+    // errors — pnl refuses on them.
+    if let Some(h) = &history {
         let eval = market_data
             .as_ref()
             .map(|md| md.valuation_date())
-            .or_else(|| store.last_day());
+            .or_else(|| h.last_day());
         if let Some(eval) = eval {
             check_series_completeness(
-                store,
+                h,
                 &instruments,
                 &deals,
                 eval,
@@ -505,12 +596,39 @@ fn load_impl(
         instruments,
         deals,
         market_data,
-        market_series,
+        history,
         warnings,
         integrity_errors,
         proxy_marks: config.proxy_marks,
         reports: config.reports,
     })
+}
+
+/// Read and parse a one-file market history. A legacy single-day file
+/// (top-level `valuation_date`) gets a targeted migration error.
+fn load_history(path: &Path, what: &str) -> core::Result<MarketHistory> {
+    let json = read_json_file(path)?;
+    match serde_json::from_str::<MarketHistory>(&json) {
+        Ok(h) => Ok(h),
+        Err(e) => {
+            let legacy = serde_json::from_str::<serde_json::Value>(&json)
+                .ok()
+                .is_some_and(|v| v.get("valuation_date").is_some());
+            if legacy {
+                Err(core::Error::Config(format!(
+                    "{what} {} is a legacy single-day file — market files are histories \
+                     now: wrap the record in {{\"days\": [ … ]}} (architecture §9)",
+                    path.display()
+                )))
+            } else {
+                Err(core::Error::Config(format!(
+                    "invalid {what} {}: {}",
+                    path.display(),
+                    e
+                )))
+            }
+        }
+    }
 }
 
 /// Route a completeness finding by severity: a dealt instrument's failed
@@ -546,7 +664,7 @@ enum Gap {
 /// as one warning (waived) or one integrity error (not).
 #[allow(clippy::too_many_arguments)]
 fn check_series_completeness(
-    store: &MarketStore,
+    store: &MarketHistory,
     instruments: &HashMap<String, Arc<dyn FinancialInstrument>>,
     deals: &[Deal],
     eval: Date,
@@ -673,6 +791,42 @@ mod tests {
     use super::*;
     use std::fs;
 
+    /// The standard fixture span: deal inception (2026-03-02) through eval
+    /// (2026-03-07), one record per day so completeness stays clean.
+    const FIXTURE_DAYS: &[&str] = &[
+        "2026-03-02",
+        "2026-03-03",
+        "2026-03-04",
+        "2026-03-05",
+        "2026-03-06",
+        "2026-03-07",
+    ];
+
+    /// Wrap per-day record bodies into the one-file history envelope.
+    fn history_json(days: &[&str], body: impl Fn(&str) -> String) -> String {
+        let records: Vec<String> = days.iter().map(|d| body(d)).collect();
+        format!("{{ \"days\": [\n{}\n] }}", records.join(",\n"))
+    }
+
+    /// The standard single-future day record.
+    fn future_day(date: &str) -> String {
+        format!(
+            r#"{{
+  "valuation_date": "{date}",
+  "as_of": "{date}T14:00:00Z",
+  "market_prices": {{"ICE-BRN-K26": 72.45}},
+  "settlement_prices": {{"ICE-BRN-K26": 72.45}},
+  "discount_curves": {{
+    "USD": {{
+      "base_date": "{date}",
+      "day_count": "Act360",
+      "pillars": [["2026-06-07", 0.043]]
+    }}
+  }}
+}}"#
+        )
+    }
+
     fn write_test_files(dir: &Path) {
         // Config
         fs::write(
@@ -680,7 +834,7 @@ mod tests {
             r#"
 instruments = ["instruments.json"]
 deals = ["deals.json"]
-market_data = ["market.json"]
+market = "market.json"
 "#,
         )
         .unwrap();
@@ -718,22 +872,10 @@ market_data = ["market.json"]
         )
         .unwrap();
 
-        // Market data
+        // Market history: inception through eval, complete settles.
         fs::write(
             dir.join("market.json"),
-            r#"{
-  "valuation_date": "2026-03-07",
-  "as_of": "2026-03-07T14:00:00Z",
-  "market_prices": {"ICE-BRN-K26": 72.45},
-  "settlement_prices": {"ICE-BRN-K26": 72.45},
-  "discount_curves": {
-    "USD": {
-      "base_date": "2026-03-07",
-      "day_count": "Act360",
-      "pillars": [["2026-06-07", 0.043]]
-    }
-  }
-}"#,
+            history_json(FIXTURE_DAYS, future_day),
         )
         .unwrap();
     }
@@ -778,31 +920,26 @@ market_data = ["market.json"]
         assert!(err.contains("requires market_data"), "{err}");
     }
 
-    /// Series manifest for the standard fixture: deal 2026-03-02 (Mon),
-    /// eval 2026-03-07 (Sat, the market.json valuation date). `covered`
-    /// controls whether 03-04 records the instrument's settle.
-    fn write_series_manifest(dir: &Path, covered: bool) {
-        fs::create_dir_all(dir.join("series")).unwrap();
-        let day = |settles: &str| format!("{{ \"file\": \"x.json\", \"settles\": [{settles}] }}");
-        let full = day("\"ICE-BRN-K26\"");
-        let d4 = if covered { full.clone() } else { day("") };
-        fs::write(
-            dir.join("series/manifest.json"),
-            format!(
-                r#"{{ "days": {{
-                    "2026-03-02": {full}, "2026-03-03": {full},
-                    "2026-03-04": {d4},   "2026-03-05": {full},
-                    "2026-03-06": {full} }},
-                    "skipped": ["2026-03-07"] }}"#
-            ),
-        )
-        .unwrap();
+    /// Rewrite market.json so the 2026-03-04 record optionally lacks the
+    /// instrument's settle — the completeness axis.
+    fn write_series_market(dir: &Path, covered: bool) {
+        let body = |date: &str| {
+            if date == "2026-03-04" && !covered {
+                future_day(date).replace(
+                    r#""settlement_prices": {"ICE-BRN-K26": 72.45}"#,
+                    r#""settlement_prices": {}"#,
+                )
+            } else {
+                future_day(date)
+            }
+        };
+        fs::write(dir.join("market.json"), history_json(FIXTURE_DAYS, body)).unwrap();
     }
 
     fn config_with_series(extra: &str) -> String {
         format!(
             "instruments = [\"instruments.json\"]\ndeals = [\"deals.json\"]\n\
-             market_data = [\"market.json\"]\nmarket_series = \"series/manifest.json\"\n{extra}"
+             market = \"market.json\"\n{extra}"
         )
     }
 
@@ -810,7 +947,7 @@ market_data = ["market.json"]
     fn series_completeness_clean() {
         let dir = tempfile::tempdir().unwrap();
         write_test_files(dir.path());
-        write_series_manifest(dir.path(), true);
+        write_series_market(dir.path(), true);
         fs::write(dir.path().join("pricing.toml"), config_with_series("")).unwrap();
 
         let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
@@ -820,14 +957,14 @@ market_data = ["market.json"]
             portfolio.integrity_errors
         );
         assert!(portfolio.warnings.is_empty(), "{:?}", portfolio.warnings);
-        assert!(portfolio.market_series.is_some());
+        assert!(portfolio.history.is_some());
     }
 
     #[test]
     fn series_missing_settle_is_integrity_error() {
         let dir = tempfile::tempdir().unwrap();
         write_test_files(dir.path());
-        write_series_manifest(dir.path(), false);
+        write_series_market(dir.path(), false);
         fs::write(dir.path().join("pricing.toml"), config_with_series("")).unwrap();
 
         let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
@@ -850,7 +987,7 @@ market_data = ["market.json"]
     fn series_waiver_downgrades_to_warning() {
         let dir = tempfile::tempdir().unwrap();
         write_test_files(dir.path());
-        write_series_manifest(dir.path(), false);
+        write_series_market(dir.path(), false);
         fs::write(
             dir.path().join("pricing.toml"),
             config_with_series(
@@ -880,15 +1017,13 @@ market_data = ["market.json"]
     fn series_uncovered_days_collapse_to_one_run() {
         let dir = tempfile::tempdir().unwrap();
         write_test_files(dir.path());
-        // Manifest starts 03-04: 03-02..03-03 are unaccounted for.
-        fs::create_dir_all(dir.path().join("series")).unwrap();
+        // History starts 03-04: 03-02..03-03 are unaccounted for.
         fs::write(
-            dir.path().join("series/manifest.json"),
-            r#"{ "days": {
-                "2026-03-04": { "file": "x.json", "settles": ["ICE-BRN-K26"] },
-                "2026-03-05": { "file": "x.json", "settles": ["ICE-BRN-K26"] },
-                "2026-03-06": { "file": "x.json", "settles": ["ICE-BRN-K26"] } },
-                "skipped": ["2026-03-07"] }"#,
+            dir.path().join("market.json"),
+            history_json(
+                &["2026-03-04", "2026-03-05", "2026-03-06", "2026-03-07"],
+                future_day,
+            ),
         )
         .unwrap();
         fs::write(dir.path().join("pricing.toml"), config_with_series("")).unwrap();
@@ -959,7 +1094,7 @@ market_data = ["market.json"]
             r#"
 instruments = ["instruments.json", "instruments2.json"]
 deals = ["deals.json"]
-market_data = ["market.json"]
+market = "market.json"
 "#,
         )
         .unwrap();
@@ -1006,23 +1141,33 @@ market_data = ["market.json"]
         let dir = tempfile::tempdir().unwrap();
         write_test_files(dir.path());
 
-        // Market data with no market_prices or curves
+        // A history whose days carry no market_prices, settles, or curves.
         fs::write(
             dir.path().join("market.json"),
-            r#"{
-  "valuation_date": "2026-03-07",
-  "as_of": "2026-03-07T14:00:00Z",
-  "market_prices": {},
-  "discount_curves": {}
-}"#,
+            history_json(FIXTURE_DAYS, |date| {
+                format!(
+                    r#"{{
+  "valuation_date": "{date}",
+  "as_of": "{date}T14:00:00Z",
+  "market_prices": {{}},
+  "discount_curves": {{}}
+}}"#
+                )
+            }),
         )
         .unwrap();
 
         let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
         // no market price + no curve stay warnings; the missing settle on a
-        // cleared *dealt* instrument escalates to an integrity error.
+        // cleared *dealt* instrument escalates to an integrity error — once
+        // at the eval day, once as the whole-span completeness run.
         assert_eq!(portfolio.warnings.len(), 2);
-        assert_eq!(portfolio.integrity_errors.len(), 1);
+        assert_eq!(
+            portfolio.integrity_errors.len(),
+            2,
+            "{:?}",
+            portfolio.integrity_errors
+        );
         assert!(
             portfolio
                 .integrity_errors
@@ -1173,7 +1318,7 @@ market_data = ["market.json"]
             "book tier must not warn on a cleared option's missing surface: {:?}",
             portfolio.warnings,
         );
-        let risk_portfolio = load_risk(&dir.path().join("pricing.toml"), None).unwrap();
+        let risk_portfolio = load_risk(&dir.path().join("pricing.toml"), None, None).unwrap();
         assert!(
             risk_portfolio
                 .warnings
@@ -1244,7 +1389,7 @@ market_data = ["market.json"]
                 r#"
 instruments = ["instruments.json"]
 deals = ["deals.json"]
-market_data = ["market.json"]
+market = "market.json"
 {config_extra}
 "#
             ),
@@ -1294,25 +1439,24 @@ market_data = ["market.json"]
         let surfaces = vol_surfaces
             .map(|s| format!(",\n  \"vol_surfaces\": {s}"))
             .unwrap_or_default();
-        fs::write(
-            dir.join("market.json"),
+        let body = |date: &str| {
             format!(
                 r#"{{
-  "valuation_date": "2026-03-07",
-  "as_of": "2026-03-07T14:00:00Z",
+  "valuation_date": "{date}",
+  "as_of": "{date}T14:00:00Z",
   "market_prices": {{"ICE-BRN-K26": 72.45}},
   "settlement_prices": {{"ICE-BRN-K26": 72.45, "OPT-BRN-75": 1.31}},
   "discount_curves": {{
     "USD": {{
-      "base_date": "2026-03-07",
+      "base_date": "{date}",
       "day_count": "Act360",
       "pillars": [["2026-06-07", 0.043]]
     }}
   }}{surfaces}
 }}"#
-            ),
-        )
-        .unwrap();
+            )
+        };
+        fs::write(dir.join("market.json"), history_json(FIXTURE_DAYS, body)).unwrap();
     }
 
     const FLAT_SURFACE: &str = r#"{"ICE-BRN-K26": {"type": "Flat", "vol": 0.3}}"#;
@@ -1354,18 +1498,18 @@ market_data = ["market.json"]
 
     // ── vol-free book data plane (architecture §9, task 73) ──────────
 
-    /// A vols overlay for the marking book: surfaces only, same date.
+    /// A vols history for the marking book: surfaces only, eval day.
     fn write_vols_file(dir: &Path) {
         fs::write(
             dir.join("vols.json"),
             format!(
-                r#"{{
+                r#"{{ "days": [{{
   "valuation_date": "2026-03-07",
   "as_of": "2026-03-07T14:00:00Z",
   "market_prices": {{}},
   "discount_curves": {{}},
   "vol_surfaces": {FLAT_SURFACE}
-}}"#
+}}] }}"#
             ),
         )
         .unwrap();
@@ -1402,13 +1546,40 @@ market_data = ["market.json"]
         );
     }
 
+    /// The risk.toml companion to the marking book: same data files, plus
+    /// vol_data enrichment.
+    fn write_risk_config(dir: &Path, extra: &str) {
+        fs::write(
+            dir.join("risk.toml"),
+            format!(
+                r#"
+instruments = ["instruments.json"]
+deals = ["deals.json"]
+market = "market.json"
+vol_data = ["vols.json"]
+{extra}
+"#
+            ),
+        )
+        .unwrap();
+    }
+
     #[test]
     fn vol_data_loads_for_risk_tier_only() {
         let dir = tempfile::tempdir().unwrap();
-        write_marking_book(dir.path(), "cleared", None, "vol_data = [\"vols.json\"]");
+        write_marking_book(dir.path(), "cleared", None, "");
         write_vols_file(dir.path());
+        write_risk_config(dir.path(), "");
 
-        // Book tier: vol_data ignored — the P&L path never reads it (I2).
+        // Book config: vol_data is a schema error, not an ignored key —
+        // "book data is vol-free" is enforced structurally (§9).
+        write_marking_book(dir.path(), "cleared", None, "vol_data = [\"vols.json\"]");
+        let err = load(&dir.path().join("pricing.toml")).unwrap_err();
+        assert!(
+            err.to_string().contains("unknown field `vol_data`"),
+            "unhelpful error: {err}"
+        );
+        write_marking_book(dir.path(), "cleared", None, "");
         let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
         assert!(
             !portfolio
@@ -1418,9 +1589,10 @@ market_data = ["market.json"]
                 .has_vol_surface("ICE-BRN-K26")
         );
 
-        // Risk tier: overlay merged, and no unneeded-surface warning —
-        // risk surfaces are beyond marking needs by definition.
-        let portfolio = load_risk(&dir.path().join("pricing.toml"), None).unwrap();
+        // Risk tier: overlay merged into the eval day, and no
+        // unneeded-surface warning — risk surfaces are beyond marking
+        // needs by definition.
+        let portfolio = load_risk(&dir.path().join("risk.toml"), None, None).unwrap();
         assert!(
             portfolio
                 .market_data
@@ -1439,13 +1611,61 @@ market_data = ["market.json"]
     }
 
     #[test]
-    fn vol_data_without_market_data_errors_for_risk() {
+    fn legacy_single_day_market_rejected() {
         let dir = tempfile::tempdir().unwrap();
-        write_marking_book(dir.path(), "cleared", None, "vol_data = [\"vols.json\"]");
-        write_vols_file(dir.path());
-        // Rewrite the config without market_data.
+        write_test_files(dir.path());
+        // The pre-§9 single-day schema: hard migration, targeted error.
+        fs::write(dir.path().join("market.json"), future_day("2026-03-07")).unwrap();
+        let err = load(&dir.path().join("pricing.toml")).unwrap_err();
+        assert!(
+            err.to_string().contains("legacy single-day file"),
+            "unhelpful error: {err}"
+        );
+    }
+
+    #[test]
+    fn as_of_selects_history_day() {
+        let dir = tempfile::tempdir().unwrap();
+        write_test_files(dir.path());
+        // Per-day settles so day selection is observable.
         fs::write(
-            dir.path().join("pricing.toml"),
+            dir.path().join("market.json"),
+            history_json(FIXTURE_DAYS, |date| {
+                let settle = format!("72.{}", &date[8..10]);
+                future_day(date).replace("72.45", &settle)
+            }),
+        )
+        .unwrap();
+
+        // Default: the last day.
+        let portfolio = load_book(&dir.path().join("pricing.toml"), None).unwrap();
+        let md = portfolio.market_data.as_ref().unwrap();
+        assert_eq!(md.valuation_date().to_string(), "2026-03-07");
+        assert_eq!(md.settlement_price("ICE-BRN-K26").unwrap(), 72.07);
+
+        // --as-of: any contained day.
+        let day: Date = "2026-03-04".parse().unwrap();
+        let portfolio = load_book(&dir.path().join("pricing.toml"), Some(day)).unwrap();
+        let md = portfolio.market_data.as_ref().unwrap();
+        assert_eq!(md.valuation_date(), day);
+        assert_eq!(md.settlement_price("ICE-BRN-K26").unwrap(), 72.04);
+
+        // A day outside the history errors with the covered span.
+        let missing: Date = "2026-04-01".parse().unwrap();
+        let err = load_book(&dir.path().join("pricing.toml"), Some(missing)).unwrap_err();
+        assert!(
+            err.to_string().contains("2026-03-02..2026-03-07"),
+            "unhelpful error: {err}"
+        );
+    }
+
+    #[test]
+    fn vol_data_without_market_errors_for_risk() {
+        let dir = tempfile::tempdir().unwrap();
+        write_marking_book(dir.path(), "cleared", None, "");
+        write_vols_file(dir.path());
+        fs::write(
+            dir.path().join("risk.toml"),
             r#"
 instruments = ["instruments.json"]
 deals = ["deals.json"]
@@ -1453,9 +1673,9 @@ vol_data = ["vols.json"]
 "#,
         )
         .unwrap();
-        let err = load_risk(&dir.path().join("pricing.toml"), None).unwrap_err();
+        let err = load_risk(&dir.path().join("risk.toml"), None, None).unwrap_err();
         assert!(
-            err.to_string().contains("without market_data"),
+            err.to_string().contains("without a market file"),
             "unhelpful error: {err}"
         );
     }

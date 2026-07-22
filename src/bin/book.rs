@@ -7,18 +7,25 @@ use std::path::PathBuf;
 use clap::Parser;
 
 use qloxide::cli;
+use qloxide::dates::Date;
 
 #[derive(Parser)]
 #[command(
     name = "qloxide-book",
     version,
     about = "Official-marks book reports: listings, positions, P&L",
-    after_long_help = cli::config_help()
+    after_long_help = cli::BOOK.config_help
 )]
 struct Cli {
-    /// Path to TOML pricing config
+    /// Path to the book's TOML config
     #[arg(long)]
     config: PathBuf,
+
+    /// Value the current book against this day of the market history
+    /// instead of the last one (what-if, not P&L history — that's the
+    /// pnl-series report).
+    #[arg(long, value_name = "DATE")]
+    as_of: Option<Date>,
 
     /// Reports to run (overrides config).
     #[arg(long = "report", long_help = cli::report_long_help(&cli::BOOK))]
@@ -27,5 +34,5 @@ struct Cli {
 
 fn main() {
     let args = Cli::parse();
-    cli::run(&cli::BOOK, &args.config, None, &args.reports)
+    cli::run(&cli::BOOK, &args.config, None, args.as_of, &args.reports)
 }

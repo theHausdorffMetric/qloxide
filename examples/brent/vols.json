@@ -1,13 +1,17 @@
 {
-  "valuation_date": "2026-03-10",
-  "as_of": "2026-03-10T19:30:00Z",
-  "market_prices": {},
-  "settlement_prices": {},
-  "discount_curves": {},
-  "vol_surfaces": {
-    "ICE-BRN-K26": {
-      "type": "Flat",
-      "vol": 0.3
+  "days": [
+    {
+      "valuation_date": "2026-03-10",
+      "as_of": "2026-03-10T19:30:00Z",
+      "market_prices": {},
+      "settlement_prices": {},
+      "discount_curves": {},
+      "vol_surfaces": {
+        "ICE-BRN-K26": {
+          "type": "Flat",
+          "vol": 0.3
+        }
+      }
     }
-  }
+  ]
 }

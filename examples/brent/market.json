@@ -1,50 +1,54 @@
 {
-  "valuation_date": "2026-03-10",
-  "as_of": "2026-03-10T19:30:00Z",
-  "market_prices": {
-    "ICE-BRN-K26": 72.45,
-    "ICE-BRN-M26": 72.15,
-    "ICE-BRN-N26": 71.9,
-    "ICE-BRN-Q26": 71.65,
-    "ICE-BRN-U26": 71.4,
-    "ICE-BRN-V26": 71.15,
-    "ICE-BRN-X26": 70.9,
-    "ICE-BRN-Z26": 70.65
-  },
-  "settlement_prices": {
-    "ICE-BRN-F26": 63.2,
-    "ICE-BRN-G26": 61.92,
-    "ICE-BRN-H26": 70.69,
-    "ICE-BRN-J26": 72.48,
-    "ICE-BRN-K26": 72.45,
-    "ICE-BRN-K26-C-75": 0.9038,
-    "ICE-BRN-M26": 72.15,
-    "ICE-BRN-N26": 71.9,
-    "ICE-BRN-Q26": 71.65,
-    "ICE-BRN-U26": 71.4,
-    "ICE-BRN-V26": 71.15,
-    "ICE-BRN-X26": 70.9,
-    "ICE-BRN-Z26": 70.65
-  },
-  "discount_curves": {
-    "USD": {
-      "base_date": "2026-03-10",
-      "day_count": "Act360",
-      "pillars": [
-        [
-          "2026-06-10",
-          0.043
-        ],
-        [
-          "2026-09-10",
-          0.042
-        ],
-        [
-          "2027-03-10",
-          0.041
-        ]
-      ]
+  "days": [
+    {
+      "valuation_date": "2026-03-10",
+      "as_of": "2026-03-10T19:30:00Z",
+      "market_prices": {
+        "ICE-BRN-K26": 72.45,
+        "ICE-BRN-M26": 72.15,
+        "ICE-BRN-N26": 71.9,
+        "ICE-BRN-Q26": 71.65,
+        "ICE-BRN-U26": 71.4,
+        "ICE-BRN-V26": 71.15,
+        "ICE-BRN-X26": 70.9,
+        "ICE-BRN-Z26": 70.65
+      },
+      "settlement_prices": {
+        "ICE-BRN-F26": 63.2,
+        "ICE-BRN-G26": 61.92,
+        "ICE-BRN-H26": 70.69,
+        "ICE-BRN-J26": 72.48,
+        "ICE-BRN-K26": 72.45,
+        "ICE-BRN-K26-C-75": 0.9038,
+        "ICE-BRN-M26": 72.15,
+        "ICE-BRN-N26": 71.9,
+        "ICE-BRN-Q26": 71.65,
+        "ICE-BRN-U26": 71.4,
+        "ICE-BRN-V26": 71.15,
+        "ICE-BRN-X26": 70.9,
+        "ICE-BRN-Z26": 70.65
+      },
+      "discount_curves": {
+        "USD": {
+          "base_date": "2026-03-10",
+          "day_count": "Act360",
+          "pillars": [
+            [
+              "2026-06-10",
+              0.043
+            ],
+            [
+              "2026-09-10",
+              0.042
+            ],
+            [
+              "2027-03-10",
+              0.041
+            ]
+          ]
+        }
+      },
+      "vol_surfaces": {}
     }
-  },
-  "vol_surfaces": {}
+  ]
 }
