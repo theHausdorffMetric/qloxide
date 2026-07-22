@@ -32,6 +32,12 @@ pub struct PricingConfig {
     /// [its earliest deal date, the evaluation date].
     #[serde(default)]
     pub market_series: Option<PathBuf>,
+    /// Risk-tier vol enrichment (architecture §9): surface files merged into
+    /// the market data by [`load_risk`] only. The P&L path never reads
+    /// these (I2) — surfaces an uncleared position needs for *marking* must
+    /// live in `market_data` proper.
+    #[serde(default)]
+    pub vol_data: Vec<PathBuf>,
     /// Date-scoped waivers: completeness findings inside a waiver window
     /// downgrade from integrity errors to warnings.
     #[serde(default)]
@@ -103,9 +109,30 @@ pub fn load(config_path: &Path) -> core::Result<Portfolio> {
 /// explicit market file (resolved as given, relative to the caller's cwd).
 /// The scenario entry point: price the same book against a bumped market
 /// without editing the config.
+///
+/// Book-tier semantics: the config's `vol_data` files are ignored, and
+/// surfaces in the market data that no position needs draw a warning
+/// (architecture §9 — book data should be vol-free).
 pub fn load_with_market(
     config_path: &Path,
     market_override: Option<&Path>,
+) -> core::Result<Portfolio> {
+    load_impl(config_path, market_override, false)
+}
+
+/// [`load_with_market`] with risk-tier semantics (architecture §9): the
+/// config's `vol_data` files are merged into the market data (unless a
+/// `--market` override replaces the market wholesale — scenario files are
+/// self-contained), and the book tier's unneeded-surface warning is
+/// skipped — risk surfaces are by definition beyond marking needs.
+pub fn load_risk(config_path: &Path, market_override: Option<&Path>) -> core::Result<Portfolio> {
+    load_impl(config_path, market_override, true)
+}
+
+fn load_impl(
+    config_path: &Path,
+    market_override: Option<&Path>,
+    risk_tier: bool,
 ) -> core::Result<Portfolio> {
     let config_dir = config_path.parent().unwrap_or_else(|| Path::new("."));
 
@@ -175,6 +202,28 @@ pub fn load_with_market(
             Some(existing) => existing.merge(md).map_err(|e| {
                 core::Error::Config(format!("market data {}: {}", path.display(), e))
             })?,
+        }
+    }
+    // Risk-tier enrichment: merge the vol_data overlays (skipped under a
+    // --market override — scenario files are self-contained).
+    if risk_tier && market_override.is_none() {
+        for rel_path in &config.vol_data {
+            let path = config_dir.join(rel_path);
+            let md_json = read_json_file(&path)?;
+            let vols: MarketData = serde_json::from_str(&md_json).map_err(|e| {
+                core::Error::Config(format!("invalid vol data {}: {}", path.display(), e))
+            })?;
+            match &mut market_data {
+                None => {
+                    return Err(core::Error::Config(format!(
+                        "vol_data {} without market_data — surfaces enrich a market, they aren't one",
+                        path.display()
+                    )));
+                }
+                Some(existing) => existing.merge(vols).map_err(|e| {
+                    core::Error::Config(format!("vol data {}: {}", path.display(), e))
+                })?,
+            }
         }
     }
     if let Some(md) = &market_data {
@@ -264,6 +313,11 @@ pub fn load_with_market(
             .any(|w| w.covers(market_data.valuation_date()));
         let dealt: std::collections::BTreeSet<&str> =
             deals.iter().map(|d| d.instrument_id.as_str()).collect();
+        // Underlyings whose surface is a *marking* requirement (unexpired,
+        // uncleared, unproxied options) — everything beyond this set is
+        // risk-tier data that doesn't belong in book market data (§9).
+        let mut needed_surfaces: std::collections::BTreeSet<String> =
+            std::collections::BTreeSet::new();
 
         for (id, inst) in &instruments {
             let ccy = inst.currency().id.clone();
@@ -322,6 +376,9 @@ pub fn load_with_market(
                 }
                 let model_marked = matches!(inst.clearing(), Some(ClearingStatus::Uncleared))
                     && !config.proxy_marks.contains_key(id.as_str());
+                if !expired && model_marked {
+                    needed_surfaces.insert(opt.underlying.clone());
+                }
                 if !expired && !market_data.has_vol_surface(&opt.underlying) {
                     if model_marked {
                         require(
@@ -334,7 +391,11 @@ pub fn load_with_market(
                             &mut warnings,
                             &mut integrity_errors,
                         );
-                    } else {
+                    } else if risk_tier {
+                        // For a cleared/proxied option the surface is a
+                        // risk-side input (greeks), not a marking need —
+                        // its absence is only worth noting on the risk
+                        // tier; vol-free book data is the §9 contract.
                         warnings.push(format!(
                             "option '{}': no vol surface for underlying '{}'",
                             id, opt.underlying,
@@ -396,6 +457,25 @@ pub fn load_with_market(
                         &mut integrity_errors,
                     );
                 }
+            }
+        }
+
+        // The inverse of the marking requirement (§9): book data should be
+        // vol-free beyond what model-marking needs — the risk tier loads
+        // its surfaces from vol_data instead.
+        if !risk_tier {
+            let unneeded: Vec<&str> = market_data
+                .vol_surface_ids()
+                .into_iter()
+                .filter(|id| !needed_surfaces.contains(*id))
+                .collect();
+            if !unneeded.is_empty() {
+                warnings.push(format!(
+                    "market data carries {} vol surface(s) no position needs ({}) — \
+                     book data should be vol-free; move them to a vol_data file (risk tier)",
+                    unneeded.len(),
+                    unneeded.join(", ")
+                ));
             }
         }
     }
@@ -1081,14 +1161,26 @@ market_data = ["market.json"]
         )
         .unwrap();
 
+        // Book tier: a cleared option's missing surface is the §9 contract
+        // (vol-free book data), not a warning; the risk tier — where the
+        // surface would feed greeks — still flags it.
         let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
         assert!(
-            portfolio
+            !portfolio
                 .warnings
                 .iter()
                 .any(|w| w.contains("OPT-NO-VOL") && w.contains("no vol surface")),
-            "expected vol surface warning, got: {:?}",
+            "book tier must not warn on a cleared option's missing surface: {:?}",
             portfolio.warnings,
+        );
+        let risk_portfolio = load_risk(&dir.path().join("pricing.toml"), None).unwrap();
+        assert!(
+            risk_portfolio
+                .warnings
+                .iter()
+                .any(|w| w.contains("OPT-NO-VOL") && w.contains("no vol surface")),
+            "expected vol surface warning on the risk tier, got: {:?}",
+            risk_portfolio.warnings,
         );
         assert!(
             portfolio
@@ -1258,6 +1350,114 @@ market_data = ["market.json"]
             portfolio.integrity_errors
         );
         assert!(crate::reports::pnl(&portfolio).is_err());
+    }
+
+    // ── vol-free book data plane (architecture §9, task 73) ──────────
+
+    /// A vols overlay for the marking book: surfaces only, same date.
+    fn write_vols_file(dir: &Path) {
+        fs::write(
+            dir.join("vols.json"),
+            format!(
+                r#"{{
+  "valuation_date": "2026-03-07",
+  "as_of": "2026-03-07T14:00:00Z",
+  "market_prices": {{}},
+  "discount_curves": {{}},
+  "vol_surfaces": {FLAT_SURFACE}
+}}"#
+            ),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn book_warns_on_surface_no_position_needs() {
+        // Fully-cleared book with an embedded surface: P&L is settle-only
+        // (I0), so the surface is risk-tier data in the wrong file.
+        let dir = tempfile::tempdir().unwrap();
+        write_marking_book(dir.path(), "cleared", Some(FLAT_SURFACE), "");
+        let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
+        assert!(
+            portfolio
+                .warnings
+                .iter()
+                .any(|w| w.contains("no position needs")),
+            "{:?}",
+            portfolio.warnings
+        );
+
+        // An uncleared model-marked position licenses the surface in-file:
+        // no warning.
+        let dir = tempfile::tempdir().unwrap();
+        write_marking_book(dir.path(), "uncleared", Some(FLAT_SURFACE), "");
+        let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
+        assert!(
+            !portfolio
+                .warnings
+                .iter()
+                .any(|w| w.contains("no position needs")),
+            "{:?}",
+            portfolio.warnings
+        );
+    }
+
+    #[test]
+    fn vol_data_loads_for_risk_tier_only() {
+        let dir = tempfile::tempdir().unwrap();
+        write_marking_book(dir.path(), "cleared", None, "vol_data = [\"vols.json\"]");
+        write_vols_file(dir.path());
+
+        // Book tier: vol_data ignored — the P&L path never reads it (I2).
+        let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
+        assert!(
+            !portfolio
+                .market_data
+                .as_ref()
+                .unwrap()
+                .has_vol_surface("ICE-BRN-K26")
+        );
+
+        // Risk tier: overlay merged, and no unneeded-surface warning —
+        // risk surfaces are beyond marking needs by definition.
+        let portfolio = load_risk(&dir.path().join("pricing.toml"), None).unwrap();
+        assert!(
+            portfolio
+                .market_data
+                .as_ref()
+                .unwrap()
+                .has_vol_surface("ICE-BRN-K26")
+        );
+        assert!(
+            !portfolio
+                .warnings
+                .iter()
+                .any(|w| w.contains("no position needs")),
+            "{:?}",
+            portfolio.warnings
+        );
+    }
+
+    #[test]
+    fn vol_data_without_market_data_errors_for_risk() {
+        let dir = tempfile::tempdir().unwrap();
+        write_marking_book(dir.path(), "cleared", None, "vol_data = [\"vols.json\"]");
+        write_vols_file(dir.path());
+        // Rewrite the config without market_data.
+        fs::write(
+            dir.path().join("pricing.toml"),
+            r#"
+instruments = ["instruments.json"]
+deals = ["deals.json"]
+vol_data = ["vols.json"]
+"#,
+        )
+        .unwrap();
+        let err = load_risk(&dir.path().join("pricing.toml"), None).unwrap_err();
+        assert!(
+            err.to_string().contains("without market_data"),
+            "unhelpful error: {err}"
+        );
     }
 
     #[test]

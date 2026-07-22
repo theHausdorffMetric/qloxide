@@ -70,7 +70,7 @@ qloxide-risk --config pricing.toml                    # risk report
 qloxide-risk --config pricing.toml --market bump.json # scenario overlay
 ```
 
-The TOML config references JSON files for instruments, deals, and market data. Book reports: `instruments`, `deals`, `positions`, `pnl`, `pnl-series`. Risk reports: `risk`. Both binaries share the same config; each runs only its own tier's reports.
+The TOML config references JSON files for instruments, deals, and market data. Book reports: `instruments`, `deals`, `positions`, `pnl`, `pnl-series`. Risk reports: `risk`. Both binaries share the same config; each runs only its own tier's reports. Book market data is vol-free (surfaces appear only where an uncleared position needs them for marking); the optional `vol_data` key lists risk-tier surface files that `qloxide-risk` merges and `qloxide-book` ignores.
 
 ## Example
 

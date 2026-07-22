@@ -25,6 +25,10 @@ pub struct Tier {
     /// this tier. Empty = run nothing (the book tier: an explicit config
     /// is the contract; the risk tier defaults to its one report).
     pub fallback: &'static [&'static str],
+    /// Tier-specific loader: the book tier ignores `vol_data` and warns on
+    /// surfaces no position needs; the risk tier merges the `vol_data`
+    /// enrichment (architecture §9).
+    pub load: fn(&Path, Option<&Path>) -> crate::core::Result<config::Portfolio>,
 }
 
 /// The official world: `qloxide-book`.
@@ -33,6 +37,7 @@ pub const BOOK: Tier = Tier {
     other_bin: "qloxide-risk",
     reports: reports::BOOK_REPORTS,
     fallback: &[],
+    load: config::load_with_market,
 };
 
 /// The model world: `qloxide-risk`.
@@ -41,6 +46,7 @@ pub const RISK: Tier = Tier {
     other_bin: "qloxide-book",
     reports: reports::RISK_REPORTS,
     fallback: &["risk"],
+    load: config::load_risk,
 };
 
 impl Tier {
@@ -71,6 +77,7 @@ pub fn config_help() -> String {
      deals         = [\"path.json\", ...]   # trades\n  \
      market_data   = [\"path.json\", ...]   # quotes, curves, valuation date (optional: static reports run without it)\n  \
      market_series = \"series/manifest.json\" # optional historical series; enables settle-completeness checks\n  \
+     vol_data      = [\"vols.json\", ...]   # risk-tier vol surfaces; merged by qloxide-risk only, ignored by qloxide-book\n  \
      reports       = [\"pnl\", ...]         # default reports when --report is omitted (filtered to this binary's tier)\n\n  \
      [[waivers]]                          # optional: downgrade known series holes to warnings\n  \
      from = \"2020-01-01\"\n  \
@@ -111,7 +118,7 @@ pub fn run(tier: &Tier, config_path: &Path, market: Option<&Path>, requested: &[
         }
     }
 
-    let portfolio = config::load_with_market(config_path, market).unwrap_or_else(|e| {
+    let portfolio = (tier.load)(config_path, market).unwrap_or_else(|e| {
         eprintln!("error: {e}");
         process::exit(1);
     });

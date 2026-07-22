@@ -140,6 +140,18 @@ impl MarketData {
         self.vol_surfaces.contains_key(id)
     }
 
+    /// All underlying IDs carrying a vol surface, sorted.
+    pub fn vol_surface_ids(&self) -> Vec<&str> {
+        self.vol_surfaces.keys().map(String::as_str).collect()
+    }
+
+    /// Drop every vol surface, returning them keyed by underlying — the
+    /// book/risk data split (architecture §9): the remainder is vol-free
+    /// book data, the returned map is the risk-tier vols product.
+    pub fn take_vol_surfaces(&mut self) -> BTreeMap<String, VolSurface> {
+        std::mem::take(&mut self.vol_surfaces)
+    }
+
     /// Merge another `MarketData` into this one.
     ///
     /// `valuation_date` and `as_of` must match. Spots and discount curves are merged;

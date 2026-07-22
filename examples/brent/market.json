@@ -17,14 +17,14 @@
     "ICE-BRN-H26": 70.69,
     "ICE-BRN-J26": 72.48,
     "ICE-BRN-K26": 72.45,
+    "ICE-BRN-K26-C-75": 0.9038,
     "ICE-BRN-M26": 72.15,
     "ICE-BRN-N26": 71.9,
     "ICE-BRN-Q26": 71.65,
     "ICE-BRN-U26": 71.4,
     "ICE-BRN-V26": 71.15,
     "ICE-BRN-X26": 70.9,
-    "ICE-BRN-Z26": 70.65,
-    "ICE-BRN-K26-C-75": 0.9038
+    "ICE-BRN-Z26": 70.65
   },
   "discount_curves": {
     "USD": {
@@ -46,10 +46,5 @@
       ]
     }
   },
-  "vol_surfaces": {
-    "ICE-BRN-K26": {
-      "type": "Flat",
-      "vol": 0.3
-    }
-  }
+  "vol_surfaces": {}
 }

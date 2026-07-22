@@ -7,6 +7,29 @@ the minor version).
 
 ## [Unreleased]
 
+### Added (vol-free book data plane)
+
+- Optional `vol_data` config key (architecture §9): risk-tier vol surface
+  files merged into the market data by `qloxide-risk` only — the P&L path
+  never reads them (I2). Surfaces an uncleared position needs for
+  *marking* must still live in `market_data` proper.
+- `qloxide-book` warns when the market data carries vol surfaces no
+  position needs — the data-plane analogue of the I0 vol-free-P&L test.
+- `MarketData::vol_surface_ids` / `MarketData::take_vol_surfaces` (the
+  book/risk split primitive).
+
+### Changed (vol-free book data plane)
+
+- The advisory "no vol surface for underlying" warning for cleared/proxied
+  options moved to the risk tier: on the book tier a missing surface is
+  the §9 contract, not a defect.
+- Example data split: `market[-<date>].json` files are vol-free; surfaces
+  moved verbatim to sibling `vols[-<date>].json` files wired via
+  `vol_data`. Settles and every P&L number are unchanged (the split is a
+  pure projection; generator provenance stamps refresh with the native
+  gen-series split). The legacy `brent/market.json` was byte-normalized
+  to canonical key order in passing.
+
 ### Breaking (binary taxonomy)
 
 - The `qloxide` binary is retired, split by trust tier (qloxide-ice

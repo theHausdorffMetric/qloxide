@@ -1,4 +1,7 @@
 instruments = ["instruments.json", "options.json"]
 deals = ["deals.json"]
 market_data = ["market.json"]
+# Risk-tier vol surfaces (architecture §9): merged by qloxide-risk only;
+# qloxide-book never reads them — book data is vol-free.
+vol_data = ["vols.json"]
 reports = ["instruments", "deals", "positions", "pnl"]
