@@ -5,7 +5,28 @@ All notable changes to qloxide are documented here. The format follows
 [Semantic Versioning](https://semver.org/) (pre-1.0: breaking changes bump
 the minor version).
 
-## [Unreleased]
+## [0.4.0] — 2026-07-23
+
+### Added (publishable example)
+
+- `examples/example-public/` — a fully synthetic book against the
+  fictional "SYN" venue: every settle, curve, and vol surface is a pure
+  function of the date (libm for cross-platform determinism), and option
+  settles are Black-76 premiums off the same smile the vols history
+  carries. The committed histories regenerate byte-identically via
+  `cargo run --features gen --example example-public`; the book is
+  replayed by the `gen_replay` suite like the ICE books, and the README
+  walkthrough prices it.
+
+### Changed (packaging)
+
+- The ICE-data example books (`examples/brent*/`) are excluded from the
+  published package — licensed ICE settlement data stays out of the
+  crate. `gen_replay` skips example directories that are not present, so
+  the packaged crate's test suite runs green with only the synthetic
+  book.
+- The bond example moved into its own `examples/bond_pricing/` directory
+  (a cargo directory example; `--example bond_pricing` unchanged).
 
 ### Added (generator seam, architecture §10)
 
