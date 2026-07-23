@@ -1,0 +1,52 @@
+[
+  {
+    "type": "Future",
+    "id": "SYN-U26",
+    "underlying": "Synthetic Crude",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "SYN", "session": "SETTLE", "time": "19:30", "timezone": "UTC", "payment_lag": "Null"},
+    "clearing": "cleared",
+    "expiry": "2026-08-14",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  },
+  {
+    "type": "Future",
+    "id": "SYN-Z26",
+    "underlying": "Synthetic Crude",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "SYN", "session": "SETTLE", "time": "19:30", "timezone": "UTC", "payment_lag": "Null"},
+    "clearing": "cleared",
+    "expiry": "2026-11-13",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  },
+  {
+    "type": "EuropeanOption",
+    "id": "SYN-U26-C-105",
+    "underlying": "SYN-U26",
+    "credit_id": "SYN",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "SYN", "session": "SETTLE", "time": "19:30", "timezone": "UTC", "payment_lag": "Null"},
+    "clearing": "cleared",
+    "expiry": "2026-08-07",
+    "strike": "105",
+    "put_or_call": "Call",
+    "exercise_style": "European",
+    "option_settlement": "Cash"
+  },
+  {
+    "type": "EuropeanOption",
+    "id": "SYN-U26-P-95",
+    "underlying": "SYN-U26",
+    "credit_id": "SYN",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "SYN", "session": "SETTLE", "time": "19:30", "timezone": "UTC", "payment_lag": "Null"},
+    "clearing": "cleared",
+    "expiry": "2026-08-07",
+    "strike": "95",
+    "put_or_call": "Put",
+    "exercise_style": "European",
+    "option_settlement": "Cash"
+  }
+]

@@ -1,0 +1,15 @@
+# The publishable example book: long Sep-26 synthetic crude + a Sep/Dec
+# spread leg + 20 lots of the 105 call, against a fully synthetic venue
+# ("SYN") — every settle, curve, and surface is a pure function of the
+# date (see main.rs). No licensed market data anywhere in this directory.
+#
+# market.json is the one-file market history (arch §9): every trading
+# day from deal inception to the generation point. Book data is vol-free —
+# the risk-tier surfaces live in vols.json, wired via risk.toml.
+#
+#   cargo run --bin qloxide-book -- --config examples/example-public/book.toml
+#   cargo run --example example-public     # regenerate market.json + vols.json
+instruments = ["instruments.json"]
+deals = ["deals.json"]
+market = "market.json"
+reports = ["instruments", "deals", "positions", "pnl"]

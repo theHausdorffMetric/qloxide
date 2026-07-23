@@ -39,8 +39,14 @@ fn read_deals(dir: &Path) -> Vec<Deal> {
 }
 
 /// Replay one example book: byte-identical regeneration + clean I5 run.
+/// The ICE-data books are excluded from the published package (licensed
+/// data); a missing directory skips rather than fails.
 fn replay_book(book: &str, instrument_files: &[&str]) {
     let dir = examples().join(book);
+    if !dir.exists() {
+        eprintln!("{book}: example not present (excluded from the published package) — skipping");
+        return;
+    }
     let committed_market = std::fs::read_to_string(dir.join("market.json")).unwrap();
     let market: MarketHistory = serde_json::from_str(&committed_market).unwrap();
     let vols_path = dir.join("vols.json");
@@ -84,6 +90,13 @@ fn replay_book(book: &str, instrument_files: &[&str]) {
     assert!(findings.is_empty(), "{book}: I5 findings: {findings:#?}");
 }
 
+/// The synthetic public book (`examples/example-public/`): the one
+/// replay that always runs, in the repo and in the published package.
+#[test]
+fn replay_example_public() {
+    replay_book("example-public", &["instruments.json"]);
+}
+
 #[test]
 fn replay_brent_condor() {
     replay_book("brent-condor", &["instruments.json"]);
@@ -105,6 +118,10 @@ fn replay_brent_timespread() {
 #[test]
 fn conformance_brent_legacy() {
     let dir = examples().join("brent");
+    if !dir.exists() {
+        eprintln!("brent: example not present (excluded from the published package) — skipping");
+        return;
+    }
     let market = read_history(&dir.join("market.json"));
     let vols = read_history(&dir.join("vols.json"));
     let instruments = read_instruments(&dir, &["instruments.json", "options.json"]);

@@ -9,7 +9,13 @@ repository = "https://git.sr.ht/~danprobst/qloxide"
 keywords = ["finance", "quantitative", "pricing", "instruments", "trading"]
 categories = ["finance"]
 readme = "README.md"
-exclude = ["CLAUDE.md"]
+exclude = [
+    "CLAUDE.md",
+    "examples/brent/",
+    "examples/brent-condor/",
+    "examples/brent-option/",
+    "examples/brent-timespread/",
+]
 
 [dependencies]
 thiserror = "2"
@@ -42,6 +48,11 @@ required-features = ["cli"]
 name = "qloxide-risk"
 path = "src/bin/risk.rs"
 required-features = ["cli"]
+
+[[example]]
+name = "example-public"
+path = "examples/example-public/main.rs"
+required-features = ["gen"]
 
 [dev-dependencies]
 tempfile = "3"

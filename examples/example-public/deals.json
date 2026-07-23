@@ -1,0 +1,29 @@
+[
+  {
+    "id": "PB-001",
+    "instrument_id": "SYN-U26",
+    "direction": "Buy",
+    "quantity": "10",
+    "price": "101.10",
+    "timestamp": "2026-07-06T10:15:00Z",
+    "counterparty": "SYN-DESK"
+  },
+  {
+    "id": "PB-002",
+    "instrument_id": "SYN-Z26",
+    "direction": "Sell",
+    "quantity": "10",
+    "price": "103.90",
+    "timestamp": "2026-07-06T10:15:05Z",
+    "counterparty": "SYN-DESK"
+  },
+  {
+    "id": "PB-003",
+    "instrument_id": "SYN-U26-C-105",
+    "direction": "Buy",
+    "quantity": "20",
+    "price": "2.35",
+    "timestamp": "2026-07-07T11:00:00Z",
+    "counterparty": "SYN-DESK"
+  }
+]

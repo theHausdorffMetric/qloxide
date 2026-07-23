@@ -1,0 +1,7 @@
+# Risk config for the example-public book (arch §9): the same data
+# files as book.toml, plus the risk-tier vol history.
+instruments = ["instruments.json"]
+deals = ["deals.json"]
+market = "market.json"
+vol_data = ["vols.json"]
+reports = ["risk"]
