@@ -7,6 +7,29 @@ the minor version).
 
 ## [Unreleased]
 
+### Added (generator seam, architecture §10)
+
+- Feature-gated `generator` module (feature `gen`, zero new deps): the
+  producer-side contract as code. `MarketSource`/`DaySession` — span-
+  scoped sessions answering per-day venue questions (calendar, prices,
+  settles with frozen finals, curves, surfaces, provenance stamps) — and
+  the generic engine `generate`, which owns the day walk, record
+  assembly, the §9 book/risk surface split, header stamping (I1/I4), and
+  validation. `generator::replay::ReplaySource` replays committed
+  histories (the engine reproduces every generated example book
+  byte-identically — the driver-equivalence gate), and
+  `generator::conformance::check` is the I5 acceptance kit any driver
+  runs (I4 determinism, I3 settle pass-through, calendar consistency,
+  the §9 split). `MarketHistory::to_canonical_json` is the one writer
+  every producer goes through.
+
+### Fixed
+
+- serde_json now parses floats correctly rounded (`float_roundtrip`):
+  the default fast path could perturb long-mantissa surface nodes by one
+  ULP on read, so a parse-rewrite of generated data was not
+  byte-identical (I3/I4 for read-modify-write flows).
+
 ### Breaking (one-file market history + config split)
 
 - **`market.json` is the history** (architecture §9): `{source, generator,

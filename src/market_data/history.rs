@@ -193,6 +193,16 @@ impl MarketHistory {
             _ => "nothing".to_string(),
         }
     }
+
+    /// The canonical on-disk form: pretty JSON + trailing newline. Every
+    /// writer (generators, projections) goes through this so regeneration
+    /// stays byte-deterministic (I4).
+    pub fn to_canonical_json(&self) -> core::Result<String> {
+        let mut s = serde_json::to_string_pretty(self)
+            .map_err(|e| core::Error::MarketData(format!("serialize history: {e}")))?;
+        s.push('\n');
+        Ok(s)
+    }
 }
 
 #[cfg(test)]

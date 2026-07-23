@@ -32,6 +32,7 @@ src/
 ├── lib.rs              # public API
 ├── bin/                # qloxide-book + qloxide-risk (thin wrappers over cli.rs)
 ├── cli.rs              # shared CLI driver, report tiers
+├── generator/          # MarketSource trait + generic history engine + I5 kit (feature "gen")
 ├── core/               # Error enum (thiserror)
 ├── dates/              # Date, Timestamp, Zoned, Calendar, DateRule, DayCount, Compounding
 ├── reference_data/     # Currency, CreditEntity, RateIndex

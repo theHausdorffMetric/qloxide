@@ -7,6 +7,8 @@ pub mod config;
 pub mod core;
 pub mod curves;
 pub mod dates;
+#[cfg(feature = "gen")]
+pub mod generator;
 pub mod instruments;
 pub mod market_data;
 pub mod math;

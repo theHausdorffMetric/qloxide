@@ -14,9 +14,11 @@ ci: test lint fmt-check deny
 
 test:
     cargo test
+    cargo test --features gen
 
 lint:
     cargo clippy --all-targets -- -D warnings
+    cargo clippy --all-targets --all-features -- -D warnings
 
 fmt-check:
     cargo fmt --check

@@ -14,7 +14,7 @@ exclude = ["CLAUDE.md"]
 [dependencies]
 thiserror = "2"
 serde = { version = "1", features = ["derive", "rc"] }
-serde_json = "1"
+serde_json = { version = "1", features = ["float_roundtrip"] }
 jiff = { version = "0.2", features = ["serde"] }
 libm = "0.2"
 typetag = "0.2"
@@ -28,6 +28,10 @@ default = ["cli"]
 # architecture §9). Library consumers can opt out with
 # default-features = false.
 cli = ["dep:clap"]
+# The generator seam (architecture §10): MarketSource trait, generic
+# series engine, replay source, I5 conformance kit. Zero extra deps;
+# gated so pure pricing consumers never see the producer-side API.
+gen = []
 
 [[bin]]
 name = "qloxide-book"
@@ -41,3 +45,7 @@ required-features = ["cli"]
 
 [dev-dependencies]
 tempfile = "3"
+
+[[test]]
+name = "gen_replay"
+required-features = ["gen"]
