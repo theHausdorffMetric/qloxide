@@ -111,8 +111,13 @@ assert_eq!(inst.id(), "ICE-BRN-Jun25");
 ```bash
 cargo build
 cargo test
-cargo run --bin qloxide-book -- --config examples/brent/brent.toml
+cargo run --bin qloxide-book -- --config examples/example-public/book.toml
 ```
+
+`examples/example-public/` is a fully synthetic book — every settle, curve,
+and vol surface is a pure function of the date (see its `main.rs`), so it
+ships with the crate and prices out of the box. Regenerate its committed
+histories with `cargo run --features gen --example example-public`.
 
 ## Dependencies
 
