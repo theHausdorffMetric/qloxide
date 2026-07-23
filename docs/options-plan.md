@@ -62,7 +62,7 @@ Rename across the entire codebase before adding new code. This is a mechanical f
 - `src/config.rs` — consistency checks
 - `src/reports.rs` — status/price lookups
 - `examples/brent/market.json` — `"spots"` → `"market_prices"`, `"spot_date"` → `"valuation_date"`
-- `examples/bond_pricing_market.json` — same renames
+- `examples/bond_pricing/bond_pricing_market.json` — same renames
 - `tests/instrument_json.rs` — if it references spot data
 
 Run `cargo test` after to confirm no breakage.
@@ -231,7 +231,7 @@ This means a 10-lot option deal with premium change of $0.50/bbl on 1000-bbl con
 ### Step 7: Add Brent option to example
 
 **New file:** `qloxide/examples/brent/options.json`
-- One European call on ICE-BRN-K26, strike $75, expiry 2026-03-27
+- One European call on ICE-BRN-K26, strike $75, expiry 2026-03-26
 
 **Modify:** `qloxide/examples/brent/market.json`
 - Add vol surface:
@@ -269,7 +269,7 @@ This means a 10-lot option deal with premium change of $0.50/bbl on 1000-bbl con
 | `src/config.rs` | Modify | Update calls |
 | `src/reports.rs` | Modify | Update calls |
 | `examples/brent/market.json` | Modify | `"spots"` → `"market_prices"`, `"spot_date"` → `"valuation_date"` |
-| `examples/bond_pricing_market.json` | Modify | Same renames |
+| `examples/bond_pricing/bond_pricing_market.json` | Modify | Same renames |
 | _Step 1+: Options_ | | |
 | `Cargo.toml` | Modify | Add `libm = "0.2"` |
 | `src/lib.rs` | Modify | Add `pub mod math;` |

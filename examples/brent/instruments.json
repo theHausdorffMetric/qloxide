@@ -105,7 +105,7 @@
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
     "clearing": "cleared",
-    "expiry": "2026-08-31",
+    "expiry": "2026-08-28",
     "contract_size": "1000",
     "tick_size": "0.01"
   },

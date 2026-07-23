@@ -7,7 +7,7 @@
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
     "clearing": "cleared",
-    "expiry": "2026-03-27",
+    "expiry": "2026-03-26",
     "strike": "75",
     "put_or_call": "Call",
     "exercise_style": "European",
