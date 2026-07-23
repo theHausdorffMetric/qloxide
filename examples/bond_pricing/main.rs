@@ -8,7 +8,7 @@ fn main() {
     // Load instrument from JSON
     let inst_path = std::env::args()
         .nth(1)
-        .unwrap_or_else(|| "examples/bond_pricing.json".to_string());
+        .unwrap_or_else(|| "examples/bond_pricing/bond_pricing.json".to_string());
     let inst_json = std::fs::read_to_string(&inst_path).unwrap_or_else(|e| {
         eprintln!("Failed to read {inst_path}: {e}");
         std::process::exit(1);
@@ -21,7 +21,7 @@ fn main() {
     // Load market data from JSON
     let market_path = std::env::args()
         .nth(2)
-        .unwrap_or_else(|| "examples/bond_pricing_market.json".to_string());
+        .unwrap_or_else(|| "examples/bond_pricing/bond_pricing_market.json".to_string());
     let market_json = std::fs::read_to_string(&market_path).unwrap_or_else(|e| {
         eprintln!("Failed to read {market_path}: {e}");
         std::process::exit(1);
