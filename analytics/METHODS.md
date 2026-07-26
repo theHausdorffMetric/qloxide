@@ -187,6 +187,23 @@ statistics only with their bands.
 - **Figlewski GEV value-matching** — superseded by the BMT repricing
   criterion above.
 
+## External validation
+
+Compared against the Minneapolis Fed's market-based probability
+densities (independent implementation: Shimko-style cubic B-spline in
+IV space, 5-day traded-quote window, linear extrapolation) on WTI over
+Jan–Apr 2020 — the COVID crash, and the Fed series' final months (their
+oil MPD was discontinued the week WTI settled negative; a ln-return
+pipeline cannot represent that regime). On calm dates the distribution
+bodies agree to within a percentage point: ±20% move probabilities
+within 0.1–0.8pp, decile spreads within 3%. Divergences are
+sign-consistent with method: this pipeline enforces `E[S] = F` exactly
+and carries crash mass in the GPD tails, so its median sits below and
+its left tail above the Fed's — most visibly at peak stress, where the
+Fed's published moments imply a mean several percent off the settle
+(trade-window pooling + non-enforced martingale). Full study: the RND
+bundle's log, 2026-07-26.
+
 ## References
 
 - Breeden, D.T., R.H. Litzenberger. 1978. "Prices of State-Contingent
