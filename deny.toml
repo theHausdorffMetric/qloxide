@@ -20,7 +20,9 @@ allow = [
 ]
 confidence-threshold = 0.8
 
-# The workspace crate itself is copyleft; dependencies stay permissive-only.
+# The workspace crates themselves are copyleft; dependencies stay
+# permissive-only. (qloxide needs the exception because qloxide-analytics
+# depends on it; analytics itself is a graph root and is not checked.)
 exceptions = [
     { name = "qloxide", allow = ["GPL-3.0-or-later"] },
 ]

@@ -1,0 +1,19 @@
+[package]
+name = "qloxide-analytics"
+version = "0.1.0"
+edition = "2024"
+authors = ["Daniel Probst <dan@probst.dev>"]
+description = "Option-implied risk-neutral densities over qloxide market data: Fengler (2009) arbitrage-free smoothing, Breeden-Litzenberger extraction, GPD tails"
+license = "GPL-3.0-or-later"
+repository = "https://git.sr.ht/~danprobst/qloxide"
+readme = "README.md"
+keywords = ["finance", "quantitative", "risk-neutral-density", "options"]
+categories = ["finance"]
+
+[dependencies]
+# The core stays lean (libm-only); the conic-QP solver lives here.
+qloxide = { path = "..", version = "0.4", default-features = false }
+# The Fengler QP: interior-point conic solver, pure Rust.
+clarabel = "0.11"
+thiserror = "2"
+serde_json = "1"

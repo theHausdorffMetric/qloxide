@@ -13,12 +13,12 @@ default:
 ci: test lint fmt-check deny
 
 test:
-    cargo test
-    cargo test --features gen
+    cargo test --workspace
+    cargo test -p qloxide --features gen
 
 lint:
-    cargo clippy --all-targets -- -D warnings
-    cargo clippy --all-targets --all-features -- -D warnings
+    cargo clippy --workspace --all-targets -- -D warnings
+    cargo clippy --workspace --all-targets --all-features -- -D warnings
 
 fmt-check:
     cargo fmt --check

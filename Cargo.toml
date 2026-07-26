@@ -11,11 +11,15 @@ categories = ["finance"]
 readme = "README.md"
 exclude = [
     "CLAUDE.md",
+    "analytics/",
     "examples/brent/",
     "examples/brent-condor/",
     "examples/brent-option/",
     "examples/brent-timespread/",
 ]
+
+[workspace]
+members = ["analytics"]
 
 [dependencies]
 thiserror = "2"

@@ -5,6 +5,25 @@ All notable changes to qloxide are documented here. The format follows
 [Semantic Versioning](https://semver.org/) (pre-1.0: breaking changes bump
 the minor version).
 
+## [Unreleased]
+
+### Added
+
+- **`qloxide-analytics`** — new workspace sibling crate (`analytics/`):
+  option-implied risk-neutral density extraction over qloxide market
+  data, absorbed from the `rndoxide` PoC (ideas repo) after its M0–M3
+  validation. Pipeline: `SmileSlice` from `VolSurface::Grid` nodes →
+  no-arb prefilter diagnostics → Fengler (2009) constrained QP on
+  forward call prices (clarabel; globally non-negative density by
+  construction) → Breeden-Litzenberger extraction with exact piecewise
+  moments → GPD tails under the Bollinger-Melick-Thomas repricing
+  criterion (`E[S] = F` exact) → Bliss-Panigirtzoglou perturbation
+  bands. Self-contained methods doc + references in
+  `analytics/METHODS.md`. The core crate is untouched: clarabel lives
+  only in the analytics crate; the CLI/figure layer stays downstream
+  (`rndoxide` binary, ideas repo). The `analytics/` directory is
+  excluded from the published qloxide package.
+
 ## [0.4.0] — 2026-07-23
 
 ### Added (publishable example)
