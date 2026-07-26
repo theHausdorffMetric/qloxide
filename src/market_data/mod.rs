@@ -1,4 +1,5 @@
 pub mod history;
+pub mod quotes;
 pub mod vol;
 
 use std::collections::BTreeMap;
@@ -10,6 +11,7 @@ use crate::curves::DiscountCurve;
 use crate::dates::{Date, Timestamp};
 
 pub use history::MarketHistory;
+pub use quotes::QuoteHistory;
 pub use vol::VolSurface;
 
 /// Container for market data: market prices, discount curves, vol surfaces,

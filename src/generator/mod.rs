@@ -18,13 +18,14 @@
 pub mod conformance;
 pub mod replay;
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use crate::core;
 use crate::curves::DiscountCurve;
 use crate::dates::Date;
 use crate::instruments::{ClearingStatus, EuropeanOption, FinancialInstrument};
+use crate::market_data::quotes::{QuoteChain, QuoteDay, QuoteHistory};
 use crate::market_data::{MarketData, MarketHistory, VolSurface};
 use crate::trades::Deal;
 
@@ -72,6 +73,15 @@ pub trait DaySession {
     /// The policy vol surface for an underlying on `date`.
     fn vol_surface(&mut self, underlying: &str, date: Date) -> core::Result<Option<VolSurface>>;
 
+    /// The day's raw quote chains keyed by underlying (the tier-1
+    /// sidecar, one [`QuoteChain`] per underlying with live quotes).
+    /// Provided: sources without tier-1 data return nothing and no
+    /// sidecar is assembled.
+    fn quote_chains(&mut self, date: Date) -> core::Result<BTreeMap<String, QuoteChain>> {
+        let _ = date;
+        Ok(BTreeMap::new())
+    }
+
     /// Venue findings accumulated since the last call (the engine drains
     /// after each day and after the walk).
     fn drain_warnings(&mut self) -> Vec<String> {
@@ -94,6 +104,10 @@ pub struct Generated {
     pub market: MarketHistory,
     /// `None` for a surface-free book (e.g. futures only).
     pub vols: Option<MarketHistory>,
+    /// The tier-1 quote sidecar; `None` when the source has no tier-1
+    /// data. Whether it is *written* is the driver's call (venue quote
+    /// content may be licensing-gated).
+    pub quotes: Option<QuoteHistory>,
     /// Source findings collected during the walk.
     pub warnings: Vec<String>,
 }
@@ -124,12 +138,20 @@ pub fn generate(
     let mut session = source.open(from, params.through)?;
     let mut warnings: Vec<String> = Vec::new();
     let mut days: Vec<MarketData> = Vec::new();
+    let mut quote_days: Vec<QuoteDay> = Vec::new();
     let mut skipped: Vec<Date> = Vec::new();
 
     let mut date = from;
     while date <= params.through {
         if session.is_trading_day(date)? {
             days.push(assemble_day(&mut session, instruments, date)?);
+            let chains = session.quote_chains(date)?;
+            if !chains.is_empty() {
+                quote_days.push(QuoteDay {
+                    valuation_date: date,
+                    chains,
+                });
+            }
         } else {
             skipped.push(date);
         }
@@ -181,9 +203,25 @@ pub fn generate(
         vols.validate()?;
         Some(vols)
     };
+    let quotes = if quote_days.is_empty() {
+        None
+    } else {
+        let mut quotes = QuoteHistory::new(quote_days);
+        let (src, generator) = (source.source_stamp(), source.generator_stamp());
+        if !src.is_empty() {
+            quotes.set_source(&src);
+        }
+        if !generator.is_empty() {
+            quotes.set_generator(&generator);
+        }
+        quotes.set_skipped_days(skipped.clone());
+        quotes.validate()?;
+        Some(quotes)
+    };
     Ok(Generated {
         market,
         vols,
+        quotes,
         warnings,
     })
 }
@@ -331,6 +369,98 @@ mod tests {
         }
     }
 
+    /// Mock with tier-1 data: one quote chain per day on FUT-A.
+    struct QuotingMock;
+
+    impl MarketSource for QuotingMock {
+        type Session<'s> = QuotingMockSession;
+
+        fn open(&self, _from: Date, _through: Date) -> core::Result<QuotingMockSession> {
+            Ok(QuotingMockSession)
+        }
+
+        fn source_stamp(&self) -> String {
+            "MOCK".into()
+        }
+
+        fn generator_stamp(&self) -> String {
+            "mock 0.0.0".into()
+        }
+    }
+
+    struct QuotingMockSession;
+
+    impl DaySession for QuotingMockSession {
+        fn is_trading_day(&mut self, date: Date) -> core::Result<bool> {
+            MockSession.is_trading_day(date)
+        }
+
+        fn market_price(&mut self, id: &str, date: Date) -> core::Result<Option<f64>> {
+            MockSession.market_price(id, date)
+        }
+
+        fn settle(&mut self, id: &str, date: Date) -> core::Result<Option<f64>> {
+            MockSession.settle(id, date)
+        }
+
+        fn final_settle(&mut self, id: &str, date: Date) -> core::Result<Option<f64>> {
+            MockSession.final_settle(id, date)
+        }
+
+        fn discount_curve(
+            &mut self,
+            _currency: &str,
+            _date: Date,
+        ) -> core::Result<Option<DiscountCurve>> {
+            Ok(None)
+        }
+
+        fn vol_surface(
+            &mut self,
+            _underlying: &str,
+            _date: Date,
+        ) -> core::Result<Option<VolSurface>> {
+            Ok(Some(VolSurface::Flat { vol: 0.3 }))
+        }
+
+        fn quote_chains(
+            &mut self,
+            date: Date,
+        ) -> core::Result<BTreeMap<String, crate::market_data::quotes::QuoteChain>> {
+            use crate::market_data::quotes::{Disposition, Quote, QuoteChain, QuoteConventions};
+            Ok(BTreeMap::from([(
+                "FUT-A".to_string(),
+                QuoteChain {
+                    conventions: QuoteConventions {
+                        t: 0.25,
+                        f: 100.0 + date.day() as f64,
+                        r: 0.04,
+                    },
+                    quotes: vec![
+                        Quote {
+                            strike: 100.0,
+                            side: crate::instruments::PutOrCall::Call,
+                            premium: 2.5,
+                            published_vol: 0.3,
+                            delta: 0.5,
+                            disposition: Disposition::Kept,
+                        },
+                        Quote {
+                            strike: 100.0,
+                            side: crate::instruments::PutOrCall::Put,
+                            premium: 2.4,
+                            published_vol: 0.3,
+                            delta: -0.5,
+                            disposition: Disposition::Dropped {
+                                reason: "same-strike call leg preferred".into(),
+                            },
+                        },
+                    ],
+                },
+            )]))
+        }
+    }
+
     fn future(id: &str, expiry: &str) -> Arc<dyn FinancialInstrument> {
         let json = format!(
             r#"{{
@@ -469,6 +599,45 @@ mod tests {
             day("2026-07-07").has_vol_surface("FUT-A"),
             "not embedded for uncleared marks"
         );
+    }
+
+    #[test]
+    fn quote_sidecar_assembles_with_stamps() {
+        let instruments = vec![
+            future("FUT-A", "2026-12-31"),
+            option("OPT-C", "FUT-A", "cleared", "2026-12-01"),
+        ];
+        // The plain mock has no tier-1 data: no sidecar.
+        let generated = generate(&Mock, &instruments, None, &params("2026-07-07")).unwrap();
+        assert!(
+            generated.quotes.is_none(),
+            "quote-less source grew a sidecar"
+        );
+
+        // The quoting mock gets the same envelope treatment as the
+        // market/vols histories: stamps, skipped days, one record per
+        // trading day, dispositions preserved.
+        let generated = generate(
+            &QuotingMock,
+            &instruments,
+            None,
+            &params("2026-07-13"), // Mon..Mon: spans a weekend
+        )
+        .unwrap();
+        let quotes = generated.quotes.expect("tier-1 source => sidecar");
+        quotes.validate().unwrap();
+        assert_eq!(quotes.len(), generated.market.len());
+        assert_eq!(quotes.source(), Some("MOCK"));
+        assert_eq!(quotes.generator(), Some("mock 0.0.0"));
+        assert_eq!(quotes.skipped_days(), generated.market.skipped_days());
+        let day = quotes.day("2026-07-07".parse().unwrap()).unwrap();
+        let chain = &day.chains["FUT-A"];
+        assert_eq!(chain.conventions.f, 107.0);
+        assert_eq!(chain.quotes.len(), 2);
+        assert!(matches!(
+            chain.quotes[1].disposition,
+            crate::market_data::quotes::Disposition::Dropped { .. }
+        ));
     }
 
     #[test]

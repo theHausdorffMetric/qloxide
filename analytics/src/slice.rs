@@ -2,6 +2,7 @@
 
 use qloxide::dates::Date;
 use qloxide::instruments::PutOrCall;
+use qloxide::market_data::quotes::{Disposition, QuoteDay, QuoteHistory};
 use qloxide::market_data::{MarketData, MarketHistory, VolSurface};
 use qloxide::pricing::black76::{Black76Params, black76_price};
 
@@ -93,6 +94,67 @@ impl SmileSlice {
         })
     }
 
+    /// Extract the slice for `underlying` from a tier-1 quote-sidecar
+    /// day — prices straight from the kept venue rows, no surface (and
+    /// no implied-vol solve) anywhere in the path.
+    ///
+    /// Premiums undiscount to forward space through the conventions
+    /// block (`C̃ = e^{rt}·premium`) and put legs parity-flip to calls
+    /// (`C̃ = P̃ + F − K`, exact and model-free in forward space). The
+    /// `vols` field carries the venue's *published* vols — diagnostics
+    /// only, interpretable under the venue's own clock rather than the
+    /// conventions `t`.
+    ///
+    /// Note the regime difference from [`SmileSlice::from_market`]:
+    /// sidecar premiums are the raw rounded settles, so tick-level
+    /// no-arbitrage violations reappear here by design (that is the
+    /// honest tier-1 data the prefilter and the repair literature are
+    /// about); Grid nodes under the ice-vol policy are the cleaned
+    /// risk surface.
+    pub fn from_quotes(day: &QuoteDay, underlying: &str) -> Result<SmileSlice> {
+        let chain = day.chains.get(underlying).ok_or_else(|| {
+            Error::Market(format!(
+                "'{underlying}': no quote chain in the sidecar day {}",
+                day.valuation_date
+            ))
+        })?;
+        let (t, f, r) = (
+            chain.conventions.t,
+            chain.conventions.f,
+            chain.conventions.r,
+        );
+        if t <= 0.0 {
+            return Err(Error::Market(format!(
+                "'{underlying}': expired chain (t = {t})"
+            )));
+        }
+        let growth = (r * t).exp();
+
+        let mut rows: Vec<(f64, f64, f64)> = Vec::new(); // (strike, vol, forward call)
+        for q in &chain.quotes {
+            if q.disposition != Disposition::Kept {
+                continue;
+            }
+            let fwd_premium = q.premium * growth;
+            let call = match q.side {
+                PutOrCall::Call => fwd_premium,
+                PutOrCall::Put => fwd_premium + f - q.strike,
+            };
+            rows.push((q.strike, q.published_vol, call));
+        }
+        rows.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+
+        Ok(SmileSlice {
+            underlying: underlying.to_string(),
+            valuation_date: day.valuation_date.to_string(),
+            f,
+            t,
+            strikes: rows.iter().map(|r| r.0).collect(),
+            vols: rows.iter().map(|r| r.1).collect(),
+            calls: rows.iter().map(|r| r.2).collect(),
+        })
+    }
+
     /// Vol at the node nearest the money (log-moneyness 0).
     pub fn atm_vol(&self) -> f64 {
         let mut best = (f64::MAX, 0.0);
@@ -142,8 +204,32 @@ pub fn day_record(history: &MarketHistory, day: Option<Date>) -> Result<&MarketD
     })
 }
 
+/// IDs of the quote chains in a sidecar day, sorted.
+pub fn chain_ids(day: &QuoteDay) -> Vec<String> {
+    day.chains.keys().cloned().collect()
+}
+
+/// Load the tier-1 quote sidecar conventionally paired with a market
+/// file (`market.json` ↔ `quotes.json`), when it exists.
+pub fn load_quotes(market_path: &std::path::Path) -> Result<Option<QuoteHistory>> {
+    let Some(path) = sibling_file(market_path, "quotes.json") else {
+        return Ok(None);
+    };
+    if !path.exists() {
+        return Ok(None);
+    }
+    let quotes: QuoteHistory = serde_json::from_str(&std::fs::read_to_string(&path)?)?;
+    quotes.validate()?;
+    Ok(Some(quotes))
+}
+
 /// The risk-tier vols file conventionally paired with a market file.
 fn sibling_vols_path(path: &std::path::Path) -> Option<std::path::PathBuf> {
-    let name = path.file_name()?.to_str()?;
-    (name == "market.json").then(|| path.with_file_name("vols.json"))
+    sibling_file(path, "vols.json")
+}
+
+/// A sibling data product of a `market.json` file.
+fn sibling_file(path: &std::path::Path, name: &str) -> Option<std::path::PathBuf> {
+    let file = path.file_name()?.to_str()?;
+    (file == "market.json").then(|| path.with_file_name(name))
 }

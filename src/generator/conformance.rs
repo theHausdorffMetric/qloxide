@@ -103,6 +103,9 @@ fn canonical(generated: &Generated) -> core::Result<String> {
     if let Some(vols) = &generated.vols {
         s.push_str(&vols.to_canonical_json()?);
     }
+    if let Some(quotes) = &generated.quotes {
+        s.push_str(&quotes.to_canonical_json()?);
+    }
     Ok(s)
 }
 

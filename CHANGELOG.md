@@ -9,6 +9,20 @@ the minor version).
 
 ### Added
 
+- **Tier-1 quote sidecar** (`market_data::quotes`): `QuoteHistory` —
+  `quotes.json` beside a book's `market.json`/`vols.json`, same
+  envelope — records every raw venue quote row with its cleaning
+  disposition (`kept` / `dropped {reason}`) plus a per-(underlying, day)
+  conventions block (`t`, `f`, `r`) that makes venue vols interpretable.
+  The generator seam gained a provided `DaySession::quote_chains` hook
+  and `Generated.quotes` (assembled + stamped by the engine; the I4
+  conformance determinism check covers it). `qloxide-analytics` consumes
+  it: `SmileSlice::from_quotes` builds the RND input straight from kept
+  rows (premiums undiscounted to forward space, puts parity-flipped —
+  no surface, no implied-vol solve in the path), with
+  `slice::load_quotes` picking up the sibling file. Writing sidecars is
+  opt-in at the driver (venue quote content is licensing-gated).
+
 - **`qloxide-analytics`** — new workspace sibling crate (`analytics/`):
   option-implied risk-neutral density extraction over qloxide market
   data, absorbed from the `rndoxide` PoC (ideas repo) after its M0–M3
