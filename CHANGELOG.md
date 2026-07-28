@@ -5,7 +5,7 @@ All notable changes to qloxide are documented here. The format follows
 [Semantic Versioning](https://semver.org/) (pre-1.0: breaking changes bump
 the minor version).
 
-## [Unreleased]
+## [0.5.0] — 2026-07-28
 
 ### Added
 
