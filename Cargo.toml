@@ -13,6 +13,7 @@ exclude = [
     "CLAUDE.md",
     "analytics/",
     "examples/brent/",
+    "examples/brent-apo/",
     "examples/brent-condor/",
     "examples/brent-option/",
     "examples/brent-timespread/",
