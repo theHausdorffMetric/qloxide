@@ -64,12 +64,12 @@ play-pnl:
 
 # Set the option's vol (e.g. `just play-vol 0.5`) and reprice
 play-vol vol: && play-pnl
-    {{jq}} '.vol_surfaces."ICE-BRN-K26".vol = {{vol}}' \
+    {{jq}} '.vol_surfaces."ICE-B-K26".vol = {{vol}}' \
         {{play}}/market.json > {{play}}/.tmp && mv {{play}}/.tmp {{play}}/market.json
 
 # Move the option's underlying future (e.g. `just play-underlying 78.0`)
 play-underlying price: && play-pnl
-    {{jq}} '.market_prices."ICE-BRN-K26" = {{price}}' \
+    {{jq}} '.market_prices."ICE-B-K26" = {{price}}' \
         {{play}}/market.json > {{play}}/.tmp && mv {{play}}/.tmp {{play}}/market.json
 
 # Roll the valuation date forward (e.g. `just play-date 2026-03-25`) — watch theta

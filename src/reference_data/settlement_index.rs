@@ -238,8 +238,8 @@ mod tests {
     #[test]
     fn serde_roundtrip_all_rules() {
         let indices = vec![
-            published("ICE-BRN"),
-            front_line("ICE-BRENT-1L", "ICE-BRN"),
+            published("ICE-B"),
+            front_line("ICE-BRENT-1L", "ICE-B"),
             average(
                 "ICE-BRENT-1L-AVG-2026-09",
                 "ICE-BRENT-1L",
@@ -273,7 +273,7 @@ mod tests {
     fn label_falls_back_to_id() {
         let p = published("ICE-BRENT-INDEX");
         assert_eq!(p.label(), "ICE-BRENT-INDEX");
-        let f = front_line("ICE-BRENT-1L", "ICE-BRN");
+        let f = front_line("ICE-BRENT-1L", "ICE-B");
         assert_eq!(f.label(), "Brent 1st Line");
     }
 
@@ -286,8 +286,8 @@ mod tests {
     #[test]
     fn valid_graph_passes() {
         let reg = SettlementIndexRegistry::from_indices(vec![
-            published("ICE-BRN"),
-            front_line("ICE-BRENT-1L", "ICE-BRN"),
+            published("ICE-B"),
+            front_line("ICE-BRENT-1L", "ICE-B"),
             average(
                 "ICE-BRENT-1L-AVG-2026-09",
                 "ICE-BRENT-1L",
@@ -301,11 +301,10 @@ mod tests {
 
     #[test]
     fn dangling_ref_errors() {
-        let reg =
-            SettlementIndexRegistry::from_indices(vec![front_line("ICE-BRENT-1L", "ICE-BRN")])
-                .unwrap();
+        let reg = SettlementIndexRegistry::from_indices(vec![front_line("ICE-BRENT-1L", "ICE-B")])
+            .unwrap();
         let err = reg.validate().unwrap_err().to_string();
-        assert!(err.contains("unknown index 'ICE-BRN'"), "{}", err);
+        assert!(err.contains("unknown index 'ICE-B'"), "{}", err);
     }
 
     #[test]

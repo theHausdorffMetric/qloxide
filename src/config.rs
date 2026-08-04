@@ -52,7 +52,7 @@ pub struct BookConfig {
     ///
     /// ```toml
     /// [proxy_marks]
-    /// "BIL-BRN-U26" = "ICE-BRN-U26"
+    /// "BIL-BRN-U26" = "ICE-B-U26"
     /// ```
     #[serde(default)]
     pub proxy_marks: crate::portfolio::ProxyMarks,
@@ -876,8 +876,8 @@ mod tests {
             r#"{{
   "valuation_date": "{date}",
   "as_of": "{date}T14:00:00Z",
-  "market_prices": {{"ICE-BRN-K26": 72.45}},
-  "settlement_prices": {{"ICE-BRN-K26": 72.45}},
+  "market_prices": {{"ICE-B-K26": 72.45}},
+  "settlement_prices": {{"ICE-B-K26": 72.45}},
   "discount_curves": {{
     "USD": {{
       "base_date": "{date}",
@@ -919,7 +919,7 @@ market = "market.json"
             dir.join("instruments.json"),
             r#"{
   "type": "Future",
-  "id": "ICE-BRN-K26",
+  "id": "ICE-B-K26",
   "underlying": "ICE-BRENT-INDEX",
   "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
   "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -936,7 +936,7 @@ market = "market.json"
             dir.join("deals.json"),
             r#"{
   "id": "DEAL-001",
-  "instrument_id": "ICE-BRN-K26",
+  "instrument_id": "ICE-B-K26",
   "direction": "Buy",
   "quantity": "5",
   "price": "71.80",
@@ -962,9 +962,9 @@ market = "market.json"
 
         let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
         assert_eq!(portfolio.instruments.len(), 1);
-        assert!(portfolio.instruments.contains_key("ICE-BRN-K26"));
+        assert!(portfolio.instruments.contains_key("ICE-B-K26"));
         assert_eq!(portfolio.deals.len(), 1);
-        assert_eq!(portfolio.deals[0].instrument_id, "ICE-BRN-K26");
+        assert_eq!(portfolio.deals[0].instrument_id, "ICE-B-K26");
         assert!(portfolio.warnings.is_empty());
     }
 
@@ -986,7 +986,7 @@ market = "market.json"
         assert!(portfolio.warnings.is_empty(), "{:?}", portfolio.warnings);
 
         let listing = crate::reports::run("instruments", &portfolio).unwrap();
-        assert!(listing.contains("ICE-BRN-K26"), "{listing}");
+        assert!(listing.contains("ICE-B-K26"), "{listing}");
         assert!(listing.contains("Future"), "{listing}");
 
         let err = crate::reports::run("pnl", &portfolio)
@@ -1040,7 +1040,7 @@ market = "market.json"
         let body = |date: &str| {
             if date == "2026-03-04" && !covered {
                 future_day(date).replace(
-                    r#""settlement_prices": {"ICE-BRN-K26": 72.45}"#,
+                    r#""settlement_prices": {"ICE-B-K26": 72.45}"#,
                     r#""settlement_prices": {}"#,
                 )
             } else {
@@ -1167,7 +1167,7 @@ market = "market.json"
             r#"[
   {
     "type": "Future",
-    "id": "ICE-BRN-K26",
+    "id": "ICE-B-K26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -1178,7 +1178,7 @@ market = "market.json"
   },
   {
     "type": "Future",
-    "id": "ICE-BRN-M26",
+    "id": "ICE-B-M26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -1193,8 +1193,8 @@ market = "market.json"
 
         let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
         assert_eq!(portfolio.instruments.len(), 2);
-        assert!(portfolio.instruments.contains_key("ICE-BRN-K26"));
-        assert!(portfolio.instruments.contains_key("ICE-BRN-M26"));
+        assert!(portfolio.instruments.contains_key("ICE-B-K26"));
+        assert!(portfolio.instruments.contains_key("ICE-B-M26"));
     }
 
     #[test]
@@ -1311,8 +1311,8 @@ market = "market.json"
         fs::write(
             dir.path().join("deals.json"),
             r#"[
-  {"id": "D1", "instrument_id": "ICE-BRN-K26", "direction": "Buy", "quantity": "1", "price": "70", "timestamp": "2026-03-02T10:00:00Z", "counterparty": "X", "venue": "Y"},
-  {"id": "D1", "instrument_id": "ICE-BRN-K26", "direction": "Sell", "quantity": "1", "price": "72", "timestamp": "2026-03-03T10:00:00Z", "counterparty": "X", "venue": "Y"}
+  {"id": "D1", "instrument_id": "ICE-B-K26", "direction": "Buy", "quantity": "1", "price": "70", "timestamp": "2026-03-02T10:00:00Z", "counterparty": "X", "venue": "Y"},
+  {"id": "D1", "instrument_id": "ICE-B-K26", "direction": "Sell", "quantity": "1", "price": "72", "timestamp": "2026-03-03T10:00:00Z", "counterparty": "X", "venue": "Y"}
 ]"#,
         )
         .unwrap();
@@ -1334,7 +1334,7 @@ market = "market.json"
             r#"[
   {
     "type": "Future",
-    "id": "ICE-BRN-K26",
+    "id": "ICE-B-K26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -1345,7 +1345,7 @@ market = "market.json"
   },
   {
     "type": "Future",
-    "id": "ICE-BRN-M26",
+    "id": "ICE-B-M26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act365Fixed"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -1380,7 +1380,7 @@ market = "market.json"
             r#"[
   {
     "type": "Future",
-    "id": "ICE-BRN-K26",
+    "id": "ICE-B-K26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -1392,7 +1392,7 @@ market = "market.json"
   {
     "type": "EuropeanOption",
     "id": "OPT-NO-VOL",
-    "underlying": "ICE-BRN-K26",
+    "underlying": "ICE-B-K26",
     "credit_id": "ICE",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -1522,7 +1522,7 @@ market = "market.json"
                 r#"[
   {{
     "type": "Future",
-    "id": "ICE-BRN-K26",
+    "id": "ICE-B-K26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {{"id": "USD", "settlement": "Null", "day_count": "Act360"}},
     "settlement": {{"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"}},
@@ -1534,7 +1534,7 @@ market = "market.json"
   {{
     "type": "EuropeanOption",
     "id": "OPT-BRN-75",
-    "underlying": "ICE-BRN-K26",
+    "underlying": "ICE-B-K26",
     "credit_id": "ICE",
     "currency": {{"id": "USD", "settlement": "Null", "day_count": "Act360"}},
     "settlement": {{"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"}},
@@ -1552,7 +1552,7 @@ market = "market.json"
         fs::write(
             dir.join("deals.json"),
             r#"[
-  {"id": "D1", "instrument_id": "ICE-BRN-K26", "direction": "Buy", "quantity": "5", "price": "71.80", "timestamp": "2026-03-02T10:00:00Z", "counterparty": "X", "venue": "ICE"},
+  {"id": "D1", "instrument_id": "ICE-B-K26", "direction": "Buy", "quantity": "5", "price": "71.80", "timestamp": "2026-03-02T10:00:00Z", "counterparty": "X", "venue": "ICE"},
   {"id": "D2", "instrument_id": "OPT-BRN-75", "direction": "Buy", "quantity": "5", "price": "1.20", "timestamp": "2026-03-02T10:00:00Z", "counterparty": "X", "venue": "ICE"}
 ]"#,
         )
@@ -1565,8 +1565,8 @@ market = "market.json"
                 r#"{{
   "valuation_date": "{date}",
   "as_of": "{date}T14:00:00Z",
-  "market_prices": {{"ICE-BRN-K26": 72.45}},
-  "settlement_prices": {{"ICE-BRN-K26": 72.45, "OPT-BRN-75": 1.31}},
+  "market_prices": {{"ICE-B-K26": 72.45}},
+  "settlement_prices": {{"ICE-B-K26": 72.45, "OPT-BRN-75": 1.31}},
   "discount_curves": {{
     "USD": {{
       "base_date": "{date}",
@@ -1580,9 +1580,9 @@ market = "market.json"
         fs::write(dir.join("market.json"), history_json(FIXTURE_DAYS, body)).unwrap();
     }
 
-    const FLAT_SURFACE: &str = r#"{"ICE-BRN-K26": {"type": "Flat", "vol": 0.3}}"#;
+    const FLAT_SURFACE: &str = r#"{"ICE-B-K26": {"type": "Flat", "vol": 0.3}}"#;
     /// Grid with a vol spike at the middle strike — butterfly-violating.
-    const BAD_SURFACE: &str = r#"{"ICE-BRN-K26": {"type": "Grid", "tenors": [0.25], "moneyness": [-0.2, -0.1, 0.0, 0.1, 0.2], "vols": [[0.30, 0.30, 0.60, 0.30, 0.30]]}}"#;
+    const BAD_SURFACE: &str = r#"{"ICE-B-K26": {"type": "Grid", "tenors": [0.25], "moneyness": [-0.2, -0.1, 0.0, 0.1, 0.2], "vols": [[0.30, 0.30, 0.60, 0.30, 0.30]]}}"#;
 
     #[test]
     fn i0_vol_free_pnl_two_sided() {
@@ -1708,7 +1708,7 @@ vol_data = ["vols.json"]
                 .market_data
                 .as_ref()
                 .unwrap()
-                .has_vol_surface("ICE-BRN-K26")
+                .has_vol_surface("ICE-B-K26")
         );
 
         // Risk tier: overlay merged into the eval day, and no
@@ -1720,7 +1720,7 @@ vol_data = ["vols.json"]
                 .market_data
                 .as_ref()
                 .unwrap()
-                .has_vol_surface("ICE-BRN-K26")
+                .has_vol_surface("ICE-B-K26")
         );
         assert!(
             !portfolio
@@ -1763,14 +1763,14 @@ vol_data = ["vols.json"]
         let portfolio = load_book(&dir.path().join("pricing.toml"), None).unwrap();
         let md = portfolio.market_data.as_ref().unwrap();
         assert_eq!(md.valuation_date().to_string(), "2026-03-07");
-        assert_eq!(md.settlement_price("ICE-BRN-K26").unwrap(), 72.07);
+        assert_eq!(md.settlement_price("ICE-B-K26").unwrap(), 72.07);
 
         // --as-of: any contained day.
         let day: Date = "2026-03-04".parse().unwrap();
         let portfolio = load_book(&dir.path().join("pricing.toml"), Some(day)).unwrap();
         let md = portfolio.market_data.as_ref().unwrap();
         assert_eq!(md.valuation_date(), day);
-        assert_eq!(md.settlement_price("ICE-BRN-K26").unwrap(), 72.04);
+        assert_eq!(md.settlement_price("ICE-B-K26").unwrap(), 72.04);
 
         // A day outside the history errors with the covered span.
         let missing: Date = "2026-04-01".parse().unwrap();
@@ -1857,7 +1857,7 @@ vol_data = ["vols.json"]
             dir.path(),
             "uncleared",
             None,
-            "[proxy_marks]\n\"OPT-BRN-75\" = \"ICE-BRN-K26\"",
+            "[proxy_marks]\n\"OPT-BRN-75\" = \"ICE-B-K26\"",
         );
         let portfolio = load(&dir.path().join("pricing.toml")).unwrap();
         assert!(
@@ -1881,11 +1881,11 @@ vol_data = ["vols.json"]
             assert!(err.contains(needle), "{err}");
         };
         check(
-            "[proxy_marks]\n\"NOPE\" = \"ICE-BRN-K26\"",
+            "[proxy_marks]\n\"NOPE\" = \"ICE-B-K26\"",
             "unknown instrument 'NOPE'",
         );
         check(
-            "[proxy_marks]\n\"ICE-BRN-K26\" = \"ICE-BRN-K26\"",
+            "[proxy_marks]\n\"ICE-B-K26\" = \"ICE-B-K26\"",
             "not uncleared",
         );
         check(

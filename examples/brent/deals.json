@@ -1,7 +1,7 @@
 [
   {
     "id": "BRN-001",
-    "instrument_id": "ICE-BRN-K26",
+    "instrument_id": "ICE-B-K26",
     "direction": "Buy",
     "quantity": "10",
     "price": "71.80",
@@ -10,7 +10,7 @@
   },
   {
     "id": "BRN-002",
-    "instrument_id": "ICE-BRN-M26",
+    "instrument_id": "ICE-B-M26",
     "direction": "Sell",
     "quantity": "10",
     "price": "71.50",
@@ -19,7 +19,7 @@
   },
   {
     "id": "BRN-003",
-    "instrument_id": "ICE-BRN-Q26",
+    "instrument_id": "ICE-B-Q26",
     "direction": "Buy",
     "quantity": "5",
     "price": "70.90",
@@ -28,7 +28,7 @@
   },
   {
     "id": "BRN-004",
-    "instrument_id": "ICE-BRN-Z26",
+    "instrument_id": "ICE-B-Z26",
     "direction": "Buy",
     "quantity": "3",
     "price": "70.20",
@@ -37,7 +37,7 @@
   },
   {
     "id": "BRN-005",
-    "instrument_id": "ICE-BRN-K26-C-75",
+    "instrument_id": "ICE-BUL-K26-C-75",
     "direction": "Buy",
     "quantity": "10",
     "price": "2.50",

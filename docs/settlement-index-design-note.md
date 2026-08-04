@@ -143,7 +143,7 @@ Worked example (naphtha + Brent side by side):
 { "id": "ICE-BRENT-INDEX", "display_name": "ICE Brent Index",
   "rule": { "Published": { "source": "ICE" } }, "calendar": "ICEUK" }
 { "id": "ICE-BRENT-1L", "display_name": "Brent 1st Line",
-  "rule": { "FrontLine": { "of": "ICE-BRN", "roll": "RollOnExpiry" } }, "calendar": "ICEUK" }
+  "rule": { "FrontLine": { "of": "ICE-B", "roll": "RollOnExpiry" } }, "calendar": "ICEUK" }
 
 // generated tier (driver, at listing)
 { "id": "PLATTS-NAPHTHA-AVG-2026-09",
@@ -155,8 +155,8 @@ Worked example (naphtha + Brent side by side):
 
 // futures — structurally identical; only id / underlying / expiry vary
 { "type": "Future", "id": "ICE-NAF-U26", "underlying": "PLATTS-NAPHTHA-AVG-2026-09", "expiry": "2026-09-30", ... }
-{ "type": "Future", "id": "ICE-BFL-U26", "underlying": "ICE-BRENT-1L-AVG-2026-09",   "expiry": "2026-09-30", ... }
-{ "type": "Future", "id": "ICE-BRN-U26", "underlying": "ICE-BRENT-INDEX",            "expiry": "2026-07-31", ... }
+{ "type": "Future", "id": "ICE-I-U26", "underlying": "ICE-BRENT-1L-AVG-2026-09",   "expiry": "2026-09-30", ... }
+{ "type": "Future", "id": "ICE-B-U26", "underlying": "ICE-BRENT-INDEX",            "expiry": "2026-07-31", ... }
 ```
 
 ### Evaluation semantics

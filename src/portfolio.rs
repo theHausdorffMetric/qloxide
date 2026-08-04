@@ -283,13 +283,13 @@ mod tests {
     #[test]
     fn compress_nets_same_instrument() {
         let deals = vec![
-            make_deal("D1", "ICE-BRN-K26", BuySell::Buy, 10, "71.80"),
-            make_deal("D2", "ICE-BRN-K26", BuySell::Sell, 4, "72.50"),
+            make_deal("D1", "ICE-B-K26", BuySell::Buy, 10, "71.80"),
+            make_deal("D2", "ICE-B-K26", BuySell::Sell, 4, "72.50"),
         ];
 
         let positions = compress(&deals);
         assert_eq!(positions.len(), 1);
-        assert_eq!(positions[0].instrument_id, "ICE-BRN-K26");
+        assert_eq!(positions[0].instrument_id, "ICE-B-K26");
         assert_eq!(positions[0].direction, BuySell::Buy);
         assert_eq!(positions[0].quantity, Decimal::from(6));
         // VWAP: (10*71.80 - 4*72.50) / 6 = (718 - 290) / 6 = 71.333...
@@ -300,8 +300,8 @@ mod tests {
     #[test]
     fn compress_fully_offset() {
         let deals = vec![
-            make_deal("D1", "ICE-BRN-K26", BuySell::Buy, 10, "71.80"),
-            make_deal("D2", "ICE-BRN-K26", BuySell::Sell, 10, "72.50"),
+            make_deal("D1", "ICE-B-K26", BuySell::Buy, 10, "71.80"),
+            make_deal("D2", "ICE-B-K26", BuySell::Sell, 10, "72.50"),
         ];
 
         let positions = compress(&deals);
@@ -312,17 +312,17 @@ mod tests {
     #[test]
     fn compress_multiple_instruments() {
         let deals = vec![
-            make_deal("D1", "ICE-BRN-K26", BuySell::Buy, 10, "71.80"),
-            make_deal("D2", "ICE-BRN-M26", BuySell::Sell, 5, "71.50"),
-            make_deal("D3", "ICE-BRN-K26", BuySell::Buy, 5, "72.00"),
+            make_deal("D1", "ICE-B-K26", BuySell::Buy, 10, "71.80"),
+            make_deal("D2", "ICE-B-M26", BuySell::Sell, 5, "71.50"),
+            make_deal("D3", "ICE-B-K26", BuySell::Buy, 5, "72.00"),
         ];
 
         let positions = compress(&deals);
         assert_eq!(positions.len(), 2);
         // Sorted by instrument_id
-        assert_eq!(positions[0].instrument_id, "ICE-BRN-K26");
+        assert_eq!(positions[0].instrument_id, "ICE-B-K26");
         assert_eq!(positions[0].quantity, Decimal::from(15));
-        assert_eq!(positions[1].instrument_id, "ICE-BRN-M26");
+        assert_eq!(positions[1].instrument_id, "ICE-B-M26");
         assert_eq!(positions[1].quantity, Decimal::from(5));
     }
 
@@ -489,8 +489,8 @@ mod tests {
     #[test]
     fn compress_net_short() {
         let deals = vec![
-            make_deal("D1", "ICE-BRN-K26", BuySell::Sell, 10, "72.00"),
-            make_deal("D2", "ICE-BRN-K26", BuySell::Buy, 3, "71.50"),
+            make_deal("D1", "ICE-B-K26", BuySell::Sell, 10, "72.00"),
+            make_deal("D2", "ICE-B-K26", BuySell::Buy, 3, "71.50"),
         ];
 
         let positions = compress(&deals);

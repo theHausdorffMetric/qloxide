@@ -1,7 +1,7 @@
 [
   {
     "type": "Future",
-    "id": "ICE-BRN-Z26",
+    "id": "ICE-B-Z26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -12,8 +12,8 @@
   },
   {
     "type": "EuropeanOption",
-    "id": "ICE-BRN-Z26-C-72",
-    "underlying": "ICE-BRN-Z26",
+    "id": "ICE-BUL-Z26-C-72",
+    "underlying": "ICE-B-Z26",
     "credit_id": "ICE",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},

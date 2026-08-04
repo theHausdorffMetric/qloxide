@@ -74,7 +74,7 @@ const BOOK_CONFIG_HELP: &str = "CONFIG (book.toml — strict schema: unknown or 
      through = \"2020-09-30\"\n  \
      reason = \"upstream data gap\"\n\n  \
      [proxy_marks]                     # optional: uncleared lookalike -> cleared twin's settle\n  \
-     \"BIL-BRN-U26\" = \"ICE-BRN-U26\"\n\n  \
+     \"BIL-BRN-U26\" = \"ICE-B-U26\"\n\n  \
      Paths are resolved relative to the config file's directory.";
 
 const RISK_CONFIG_HELP: &str = "CONFIG (risk.toml — lists the same data files as the book, plus risk enrichment):\n  \

@@ -86,7 +86,7 @@ mod tests {
     fn future_prices_at_market() {
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let future = Future::new(
-            "ICE-BRN-K26",
+            "ICE-B-K26",
             "Brent",
             usd,
             Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
@@ -97,7 +97,7 @@ mod tests {
         );
 
         let mut ctx = TestContext::from_date(Date::new(2026, 3, 7));
-        ctx.market_prices.insert("ICE-BRN-K26".to_string(), 72.45);
+        ctx.market_prices.insert("ICE-B-K26".to_string(), 72.45);
 
         let px = price_future(&future, &ctx).unwrap();
         assert!((px - 72.45).abs() < 1e-12);
@@ -107,7 +107,7 @@ mod tests {
     fn expired_future_uses_settlement_price() {
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let future = Future::new(
-            "ICE-BRN-K26",
+            "ICE-B-K26",
             "Brent",
             usd,
             Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
@@ -118,7 +118,7 @@ mod tests {
         );
 
         let mut ctx = TestContext::from_date(Date::new(2026, 4, 15));
-        ctx.settlements.insert("ICE-BRN-K26".to_string(), 73.10);
+        ctx.settlements.insert("ICE-B-K26".to_string(), 73.10);
 
         let px = price_future(&future, &ctx).unwrap();
         assert!((px - 73.10).abs() < 1e-12);
@@ -128,7 +128,7 @@ mod tests {
     fn on_expiry_date_prices_ok() {
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let future = Future::new(
-            "ICE-BRN-K26",
+            "ICE-B-K26",
             "Brent",
             usd,
             Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
@@ -139,7 +139,7 @@ mod tests {
         );
 
         let mut ctx = TestContext::from_date(Date::new(2026, 3, 31));
-        ctx.market_prices.insert("ICE-BRN-K26".to_string(), 71.90);
+        ctx.market_prices.insert("ICE-B-K26".to_string(), 71.90);
 
         let px = price_future(&future, &ctx).unwrap();
         assert!((px - 71.90).abs() < 1e-12);
@@ -149,7 +149,7 @@ mod tests {
     fn missing_market_price_errors() {
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let future = Future::new(
-            "ICE-BRN-K26",
+            "ICE-B-K26",
             "Brent",
             usd,
             Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
@@ -168,7 +168,7 @@ mod tests {
         // 14:00 UTC on expiry day, settlement is 19:30 London (BST = 18:30 UTC)
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let future = Future::new(
-            "ICE-BRN-K26",
+            "ICE-B-K26",
             "Brent",
             usd,
             Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
@@ -184,7 +184,7 @@ mod tests {
             market_prices: HashMap::new(),
             settlements: HashMap::new(),
         };
-        ctx.market_prices.insert("ICE-BRN-K26".to_string(), 72.00);
+        ctx.market_prices.insert("ICE-B-K26".to_string(), 72.00);
 
         let px = price_future(&future, &ctx).unwrap();
         assert!((px - 72.00).abs() < 1e-12);
@@ -195,7 +195,7 @@ mod tests {
         // 20:00 UTC on expiry day, settlement is 19:30 London (BST = 18:30 UTC)
         let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
         let future = Future::new(
-            "ICE-BRN-K26",
+            "ICE-B-K26",
             "Brent",
             usd,
             Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
@@ -211,7 +211,7 @@ mod tests {
             market_prices: HashMap::new(),
             settlements: HashMap::new(),
         };
-        ctx.settlements.insert("ICE-BRN-K26".to_string(), 71.95);
+        ctx.settlements.insert("ICE-B-K26".to_string(), 71.95);
 
         let px = price_future(&future, &ctx).unwrap();
         assert!((px - 71.95).abs() < 1e-12);

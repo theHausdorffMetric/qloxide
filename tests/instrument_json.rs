@@ -43,7 +43,7 @@ fn equity_serde_roundtrip() {
 #[test]
 fn future_serde_roundtrip() {
     let future = Future::new(
-        "ICE-BRN-Jun25",
+        "ICE-B-Jun25",
         "Brent",
         usd(),
         ice_settle(),
@@ -59,7 +59,7 @@ fn future_serde_roundtrip() {
     assert!(json.contains("\"clearing\": \"cleared\""));
 
     let deserialized: Arc<dyn FinancialInstrument> = serde_json::from_str(&json).unwrap();
-    assert_eq!(deserialized.id(), "ICE-BRN-Jun25");
+    assert_eq!(deserialized.id(), "ICE-B-Jun25");
     assert_eq!(deserialized.maturity(), Some(Date::new(2025, 6, 14)));
 }
 
@@ -320,7 +320,7 @@ fn deserialize_future_from_json() {
     let json = r#"
     {
         "type": "Future",
-        "id": "ICE-BRN-Jul25",
+        "id": "ICE-B-Jul25",
         "underlying": "Brent",
         "currency": {
             "id": "USD",
@@ -342,7 +342,7 @@ fn deserialize_future_from_json() {
     "#;
 
     let inst: Arc<dyn FinancialInstrument> = serde_json::from_str(json).unwrap();
-    assert_eq!(inst.id(), "ICE-BRN-Jul25");
+    assert_eq!(inst.id(), "ICE-B-Jul25");
     assert_eq!(inst.instrument_type(), "Future");
     assert_eq!(inst.currency().id, "USD");
     assert_eq!(inst.maturity(), Some(Date::new(2025, 7, 14)));
@@ -357,7 +357,7 @@ fn legacy_clearing_vocabulary_rejected() {
     let json = r#"
     {
         "type": "Future",
-        "id": "ICE-BRN-Jul25",
+        "id": "ICE-B-Jul25",
         "underlying": "Brent",
         "currency": {
             "id": "USD",

@@ -6,7 +6,7 @@
       "source": "scenario:spot+5%",
       "generator": "qloxide-ice 0.0.0 gen-bumps",
       "market_prices": {
-        "ICE-BRN-U26": 92.505
+        "ICE-B-U26": 92.505
       },
       "settlement_prices": {},
       "discount_curves": {
@@ -26,7 +26,7 @@
         }
       },
       "vol_surfaces": {
-        "ICE-BRN-U26": {
+        "ICE-B-U26": {
           "type": "Grid",
           "tenors": [
             0.030555555555555555

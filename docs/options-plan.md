@@ -231,13 +231,13 @@ This means a 10-lot option deal with premium change of $0.50/bbl on 1000-bbl con
 ### Step 7: Add Brent option to example
 
 **New file:** `qloxide/examples/brent/options.json`
-- One European call on ICE-BRN-K26, strike $75, expiry 2026-03-26
+- One European call on ICE-B-K26, strike $75, expiry 2026-03-26
 
 **Modify:** `qloxide/examples/brent/market.json`
 - Add vol surface:
   ```json
   "vol_surfaces": {
-      "ICE-BRN-K26": { "type": "Flat", "vol": 0.30 }
+      "ICE-B-K26": { "type": "Flat", "vol": 0.30 }
   }
   ```
 
@@ -245,7 +245,7 @@ This means a 10-lot option deal with premium change of $0.50/bbl on 1000-bbl con
 - `instruments = ["instruments.json", "options.json"]`
 
 **Modify:** `qloxide/examples/brent/deals.json`
-- Add option deal: Buy 10 lots of ICE-BRN-K26-C-75 @ $2.50
+- Add option deal: Buy 10 lots of ICE-BUL-K26-C-75 @ $2.50
 
 ### Step 8: Update config checks and reports for options
 
@@ -294,7 +294,7 @@ This means a 10-lot option deal with premium change of $0.50/bbl on 1000-bbl con
 2. **Model choice is implicit in the vol surface.** `VolSurface::Flat` = lognormal = Black76. Future `FlatBachelier` variant = normal = Bachelier. No separate model parameter.
 3. **Vol is a surface, not a scalar.** `VolSurface::vol(tenor, moneyness) -> f64`. Phase 1 implements `Flat` only; the interface is ready for `Grid`, `SABR`, etc.
 4. **Moneyness = ln(K/F).** Log-moneyness is the standard parameterization. The european pricer computes this from strike and underlying spot.
-5. **Vol keyed by underlying ID** (e.g. `"ICE-BRN-K26"`). Each futures contract month has its own vol surface.
+5. **Vol keyed by underlying ID** (e.g. `"ICE-B-K26"`). Each futures contract month has its own vol surface.
 6. **Option P&L in dollar terms.** Multiplied by the underlying future's contract_size (1000 bbl for Brent). Consistent with futures P&L.
 7. **Scenario-ready.** A scenario is just a different `PricingContext`. Everything reprices uniformly — no special cases for different instrument types.
 

@@ -230,7 +230,7 @@ mod tests {
     fn day(date: &str, t: f64) -> QuoteDay {
         QuoteDay {
             valuation_date: date.parse().unwrap(),
-            chains: BTreeMap::from([("ICE-BRN-U26".to_string(), chain(t))]),
+            chains: BTreeMap::from([("ICE-B-U26".to_string(), chain(t))]),
         }
     }
 

@@ -1,7 +1,7 @@
 [
   {
     "type": "Future",
-    "id": "ICE-BRN-U26",
+    "id": "ICE-B-U26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -12,8 +12,8 @@
   },
   {
     "type": "EuropeanOption",
-    "id": "ICE-BRN-U26-P-78",
-    "underlying": "ICE-BRN-U26",
+    "id": "ICE-BUL-U26-P-78",
+    "underlying": "ICE-B-U26",
     "credit_id": "ICE",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -26,8 +26,8 @@
   },
   {
     "type": "EuropeanOption",
-    "id": "ICE-BRN-U26-P-83",
-    "underlying": "ICE-BRN-U26",
+    "id": "ICE-BUL-U26-P-83",
+    "underlying": "ICE-B-U26",
     "credit_id": "ICE",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -40,8 +40,8 @@
   },
   {
     "type": "EuropeanOption",
-    "id": "ICE-BRN-U26-C-88",
-    "underlying": "ICE-BRN-U26",
+    "id": "ICE-BUL-U26-C-88",
+    "underlying": "ICE-B-U26",
     "credit_id": "ICE",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -54,8 +54,8 @@
   },
   {
     "type": "EuropeanOption",
-    "id": "ICE-BRN-U26-C-93",
-    "underlying": "ICE-BRN-U26",
+    "id": "ICE-BUL-U26-C-93",
+    "underlying": "ICE-B-U26",
     "credit_id": "ICE",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},

@@ -10,14 +10,14 @@
       "valuation_date": "2026-07-16",
       "as_of": "2026-07-16T00:00:00Z",
       "market_prices": {
-        "ICE-BRN-U26": 84.23
+        "ICE-B-U26": 84.23
       },
       "settlement_prices": {
-        "ICE-BRN-U26": 84.23,
-        "ICE-BRN-U26-C-88": 2.19,
-        "ICE-BRN-U26-C-93": 1.19,
-        "ICE-BRN-U26-P-78": 1.07,
-        "ICE-BRN-U26-P-83": 2.85
+        "ICE-B-U26": 84.23,
+        "ICE-BUL-U26-C-88": 2.19,
+        "ICE-BUL-U26-C-93": 1.19,
+        "ICE-BUL-U26-P-78": 1.07,
+        "ICE-BUL-U26-P-83": 2.85
       },
       "discount_curves": {
         "USD": {
@@ -41,14 +41,14 @@
       "valuation_date": "2026-07-17",
       "as_of": "2026-07-17T00:00:00Z",
       "market_prices": {
-        "ICE-BRN-U26": 88.1
+        "ICE-B-U26": 88.1
       },
       "settlement_prices": {
-        "ICE-BRN-U26": 88.1,
-        "ICE-BRN-U26-C-88": 3.77,
-        "ICE-BRN-U26-C-93": 2.14,
-        "ICE-BRN-U26-P-78": 0.5,
-        "ICE-BRN-U26-P-83": 1.47
+        "ICE-B-U26": 88.1,
+        "ICE-BUL-U26-C-88": 3.77,
+        "ICE-BUL-U26-C-93": 2.14,
+        "ICE-BUL-U26-P-78": 0.5,
+        "ICE-BUL-U26-P-83": 1.47
       },
       "discount_curves": {
         "USD": {
@@ -72,14 +72,14 @@
       "valuation_date": "2026-07-20",
       "as_of": "2026-07-20T00:00:00Z",
       "market_prices": {
-        "ICE-BRN-U26": 89.22
+        "ICE-B-U26": 89.22
       },
       "settlement_prices": {
-        "ICE-BRN-U26": 89.22,
-        "ICE-BRN-U26-C-88": 3.97,
-        "ICE-BRN-U26-C-93": 1.99,
-        "ICE-BRN-U26-P-78": 0.4,
-        "ICE-BRN-U26-P-83": 1.06
+        "ICE-B-U26": 89.22,
+        "ICE-BUL-U26-C-88": 3.97,
+        "ICE-BUL-U26-C-93": 1.99,
+        "ICE-BUL-U26-P-78": 0.4,
+        "ICE-BUL-U26-P-83": 1.06
       },
       "discount_curves": {
         "USD": {
@@ -103,14 +103,14 @@
       "valuation_date": "2026-07-21",
       "as_of": "2026-07-21T00:00:00Z",
       "market_prices": {
-        "ICE-BRN-U26": 91.01
+        "ICE-B-U26": 91.01
       },
       "settlement_prices": {
-        "ICE-BRN-U26": 91.01,
-        "ICE-BRN-U26-C-88": 4.88,
-        "ICE-BRN-U26-C-93": 2.26,
-        "ICE-BRN-U26-P-78": 0.25,
-        "ICE-BRN-U26-P-83": 0.7
+        "ICE-B-U26": 91.01,
+        "ICE-BUL-U26-C-88": 4.88,
+        "ICE-BUL-U26-C-93": 2.26,
+        "ICE-BUL-U26-P-78": 0.25,
+        "ICE-BUL-U26-P-83": 0.7
       },
       "discount_curves": {
         "USD": {
@@ -134,14 +134,14 @@
       "valuation_date": "2026-07-22",
       "as_of": "2026-07-22T00:00:00Z",
       "market_prices": {
-        "ICE-BRN-U26": 94.07
+        "ICE-B-U26": 94.07
       },
       "settlement_prices": {
-        "ICE-BRN-U26": 94.07,
-        "ICE-BRN-U26-C-88": 7.1,
-        "ICE-BRN-U26-C-93": 3.65,
-        "ICE-BRN-U26-P-78": 0.15,
-        "ICE-BRN-U26-P-83": 0.39
+        "ICE-B-U26": 94.07,
+        "ICE-BUL-U26-C-88": 7.1,
+        "ICE-BUL-U26-C-93": 3.65,
+        "ICE-BUL-U26-P-78": 0.15,
+        "ICE-BUL-U26-P-83": 0.39
       },
       "discount_curves": {
         "USD": {

@@ -1,7 +1,7 @@
 [
   {
     "id": "TS-N26",
-    "instrument_id": "ICE-BRN-N26",
+    "instrument_id": "ICE-B-N26",
     "direction": "Buy",
     "quantity": "10",
     "price": "64.55",
@@ -10,7 +10,7 @@
   },
   {
     "id": "TS-Z26",
-    "instrument_id": "ICE-BRN-Z26",
+    "instrument_id": "ICE-B-Z26",
     "direction": "Sell",
     "quantity": "10",
     "price": "63.26",

@@ -1,6 +1,6 @@
 [
   {
-    "id": "ICE-BRN",
+    "id": "ICE-B",
     "display_name": "Brent futures (ICE)",
     "rule": { "Published": { "source": "ICE" } },
     "calendar": "ICEUK"
@@ -8,7 +8,7 @@
   {
     "id": "ICE-BRENT-1L",
     "display_name": "Brent 1st Line",
-    "rule": { "FrontLine": { "of": "ICE-BRN", "roll": "RollOnExpiry" } },
+    "rule": { "FrontLine": { "of": "ICE-B", "roll": "RollOnExpiry" } },
     "calendar": "ICEUK"
   },
   {

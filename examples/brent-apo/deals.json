@@ -1,7 +1,7 @@
 [
   {
     "id": "APO-U26-100C",
-    "instrument_id": "ICE-BFL-U26-C-100",
+    "instrument_id": "ICE-I-U26-C-100",
     "direction": "Buy",
     "quantity": "500",
     "price": "2.1",
@@ -10,7 +10,7 @@
   },
   {
     "id": "APO-U26-120C",
-    "instrument_id": "ICE-BFL-U26-C-120",
+    "instrument_id": "ICE-I-U26-C-120",
     "direction": "Sell",
     "quantity": "500",
     "price": "0.71",
@@ -19,7 +19,7 @@
   },
   {
     "id": "APO-U26-70P",
-    "instrument_id": "ICE-BFL-U26-P-70",
+    "instrument_id": "ICE-I-U26-P-70",
     "direction": "Sell",
     "quantity": "500",
     "price": "1.3",
@@ -28,7 +28,7 @@
   },
   {
     "id": "APO-Q26-95C",
-    "instrument_id": "ICE-BFL-Q26-C-95",
+    "instrument_id": "ICE-I-Q26-C-95",
     "direction": "Buy",
     "quantity": "300",
     "price": "1.4",
@@ -37,7 +37,7 @@
   },
   {
     "id": "APO-Q26-115C",
-    "instrument_id": "ICE-BFL-Q26-C-115",
+    "instrument_id": "ICE-I-Q26-C-115",
     "direction": "Sell",
     "quantity": "300",
     "price": "0.2",
@@ -46,7 +46,7 @@
   },
   {
     "id": "APO-Q26-75P",
-    "instrument_id": "ICE-BFL-Q26-P-75",
+    "instrument_id": "ICE-I-Q26-P-75",
     "direction": "Sell",
     "quantity": "300",
     "price": "0.72",

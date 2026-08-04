@@ -17,7 +17,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-Z26": {
+        "ICE-B-Z26": {
           "type": "Grid",
           "tenors": [
             0.3277777777777778
@@ -374,7 +374,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-Z26": {
+        "ICE-B-Z26": {
           "type": "Grid",
           "tenors": [
             0.325
@@ -731,7 +731,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-Z26": {
+        "ICE-B-Z26": {
           "type": "Grid",
           "tenors": [
             0.32222222222222224
@@ -1088,7 +1088,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-Z26": {
+        "ICE-B-Z26": {
           "type": "Grid",
           "tenors": [
             0.3138888888888889
@@ -1441,7 +1441,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-Z26": {
+        "ICE-B-Z26": {
           "type": "Grid",
           "tenors": [
             0.3111111111111111
@@ -1798,7 +1798,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-Z26": {
+        "ICE-B-Z26": {
           "type": "Grid",
           "tenors": [
             0.30833333333333335
@@ -2155,7 +2155,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-Z26": {
+        "ICE-B-Z26": {
           "type": "Grid",
           "tenors": [
             0.3055555555555556
@@ -2512,7 +2512,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-Z26": {
+        "ICE-B-Z26": {
           "type": "Grid",
           "tenors": [
             0.30277777777777776
@@ -2865,7 +2865,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-Z26": {
+        "ICE-B-Z26": {
           "type": "Grid",
           "tenors": [
             0.29444444444444445
@@ -3232,7 +3232,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-Z26": {
+        "ICE-B-Z26": {
           "type": "Grid",
           "tenors": [
             0.2916666666666667
@@ -3597,7 +3597,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-Z26": {
+        "ICE-B-Z26": {
           "type": "Grid",
           "tenors": [
             0.28888888888888886
@@ -3962,7 +3962,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-Z26": {
+        "ICE-B-Z26": {
           "type": "Grid",
           "tenors": [
             0.2861111111111111
@@ -4325,7 +4325,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-Z26": {
+        "ICE-B-Z26": {
           "type": "Grid",
           "tenors": [
             0.2833333333333333
@@ -4692,7 +4692,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-Z26": {
+        "ICE-B-Z26": {
           "type": "Grid",
           "tenors": [
             0.275
@@ -5061,7 +5061,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-Z26": {
+        "ICE-B-Z26": {
           "type": "Grid",
           "tenors": [
             0.2722222222222222
@@ -5432,7 +5432,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-Z26": {
+        "ICE-B-Z26": {
           "type": "Grid",
           "tenors": [
             0.26944444444444443

@@ -1,8 +1,8 @@
 [
   {
     "type": "EuropeanOption",
-    "id": "ICE-BRN-K26-C-75",
-    "underlying": "ICE-BRN-K26",
+    "id": "ICE-BUL-K26-C-75",
+    "underlying": "ICE-B-K26",
     "credit_id": "ICE",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},

@@ -1,7 +1,7 @@
 [
   {
     "type": "Future",
-    "id": "ICE-BRN-N26",
+    "id": "ICE-B-N26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -12,7 +12,7 @@
   },
   {
     "type": "Future",
-    "id": "ICE-BRN-Z26",
+    "id": "ICE-B-Z26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},

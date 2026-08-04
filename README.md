@@ -89,7 +89,7 @@ use qloxide::reference_data::Currency;
 let usd = Arc::new(Currency::new("USD", DateRule::Null, DayCount::Act360));
 
 let future = Future::new(
-    "ICE-BRN-Jun25", "Brent", usd,
+    "ICE-B-Jun25", "Brent", usd,
     Settlement::new("ICE", "SETTLE", "19:30", "Europe/London", DateRule::Null),
     Date::new(2025, 6, 14),
     Decimal::from(1000),        // contract size (bbl)
@@ -103,7 +103,7 @@ let json = serde_json::to_string_pretty(
 
 // Deserialize back
 let inst: Arc<dyn FinancialInstrument> = serde_json::from_str(&json).unwrap();
-assert_eq!(inst.id(), "ICE-BRN-Jun25");
+assert_eq!(inst.id(), "ICE-B-Jun25");
 ```
 
 ## Build

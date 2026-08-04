@@ -273,7 +273,7 @@ impl FinancialInstrument for Future {
 
 JSON output:
 ```json
-{"type": "Future", "id": "ICE-BRN-Jun25", "underlying": "Brent", ...}
+{"type": "Future", "id": "ICE-B-Jun25", "underlying": "Brent", ...}
 ```
 
 ### 6.2 Reasoning

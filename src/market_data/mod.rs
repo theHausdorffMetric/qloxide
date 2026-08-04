@@ -245,8 +245,8 @@ mod tests {
     #[test]
     fn add_and_retrieve_market_price() {
         let mut md = md(Date::new(2025, 6, 1));
-        md.add_market_price("ICE-BRN-Aug25", 72.50);
-        assert!((md.market_price("ICE-BRN-Aug25").unwrap() - 72.50).abs() < 1e-12);
+        md.add_market_price("ICE-B-Aug25", 72.50);
+        assert!((md.market_price("ICE-B-Aug25").unwrap() - 72.50).abs() < 1e-12);
     }
 
     #[test]

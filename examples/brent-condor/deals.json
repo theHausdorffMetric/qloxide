@@ -1,7 +1,7 @@
 [
   {
     "id": "IC-U26-78P",
-    "instrument_id": "ICE-BRN-U26-P-78",
+    "instrument_id": "ICE-BUL-U26-P-78",
     "direction": "Sell",
     "quantity": "20",
     "price": "1.07",
@@ -10,7 +10,7 @@
   },
   {
     "id": "IC-U26-83P",
-    "instrument_id": "ICE-BRN-U26-P-83",
+    "instrument_id": "ICE-BUL-U26-P-83",
     "direction": "Buy",
     "quantity": "20",
     "price": "2.86",
@@ -19,7 +19,7 @@
   },
   {
     "id": "IC-U26-88C",
-    "instrument_id": "ICE-BRN-U26-C-88",
+    "instrument_id": "ICE-BUL-U26-C-88",
     "direction": "Buy",
     "quantity": "20",
     "price": "2.20",
@@ -28,7 +28,7 @@
   },
   {
     "id": "IC-U26-93C",
-    "instrument_id": "ICE-BRN-U26-C-93",
+    "instrument_id": "ICE-BUL-U26-C-93",
     "direction": "Sell",
     "quantity": "20",
     "price": "1.19",

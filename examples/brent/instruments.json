@@ -1,7 +1,7 @@
 [
   {
     "type": "Future",
-    "id": "ICE-BRN-F26",
+    "id": "ICE-B-F26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -12,7 +12,7 @@
   },
   {
     "type": "Future",
-    "id": "ICE-BRN-G26",
+    "id": "ICE-B-G26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -23,7 +23,7 @@
   },
   {
     "type": "Future",
-    "id": "ICE-BRN-H26",
+    "id": "ICE-B-H26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -34,7 +34,7 @@
   },
   {
     "type": "Future",
-    "id": "ICE-BRN-J26",
+    "id": "ICE-B-J26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -45,7 +45,7 @@
   },
   {
     "type": "Future",
-    "id": "ICE-BRN-K26",
+    "id": "ICE-B-K26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -56,7 +56,7 @@
   },
   {
     "type": "Future",
-    "id": "ICE-BRN-M26",
+    "id": "ICE-B-M26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -67,7 +67,7 @@
   },
   {
     "type": "Future",
-    "id": "ICE-BRN-N26",
+    "id": "ICE-B-N26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -78,7 +78,7 @@
   },
   {
     "type": "Future",
-    "id": "ICE-BRN-Q26",
+    "id": "ICE-B-Q26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -89,7 +89,7 @@
   },
   {
     "type": "Future",
-    "id": "ICE-BRN-U26",
+    "id": "ICE-B-U26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -100,7 +100,7 @@
   },
   {
     "type": "Future",
-    "id": "ICE-BRN-V26",
+    "id": "ICE-B-V26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -111,7 +111,7 @@
   },
   {
     "type": "Future",
-    "id": "ICE-BRN-X26",
+    "id": "ICE-B-X26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
@@ -122,7 +122,7 @@
   },
   {
     "type": "Future",
-    "id": "ICE-BRN-Z26",
+    "id": "ICE-B-Z26",
     "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},

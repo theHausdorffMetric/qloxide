@@ -52,7 +52,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-K26": {
+        "ICE-B-K26": {
           "type": "Grid",
           "tenors": [
             0.06666666666666667
@@ -137,7 +137,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-K26": {
+        "ICE-B-K26": {
           "type": "Grid",
           "tenors": [
             0.06388888888888888
@@ -222,7 +222,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-K26": {
+        "ICE-B-K26": {
           "type": "Grid",
           "tenors": [
             0.06111111111111111
@@ -317,7 +317,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-K26": {
+        "ICE-B-K26": {
           "type": "Grid",
           "tenors": [
             0.058333333333333334
@@ -414,7 +414,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-K26": {
+        "ICE-B-K26": {
           "type": "Grid",
           "tenors": [
             0.05555555555555555
@@ -513,7 +513,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-K26": {
+        "ICE-B-K26": {
           "type": "Grid",
           "tenors": [
             0.04722222222222222
@@ -608,7 +608,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-K26": {
+        "ICE-B-K26": {
           "type": "Grid",
           "tenors": [
             0.044444444444444446
@@ -733,7 +733,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-K26": {
+        "ICE-B-K26": {
           "type": "Grid",
           "tenors": [
             0.041666666666666664
@@ -864,7 +864,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-K26": {
+        "ICE-B-K26": {
           "type": "Grid",
           "tenors": [
             0.03888888888888889
@@ -983,7 +983,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-K26": {
+        "ICE-B-K26": {
           "type": "Grid",
           "tenors": [
             0.03611111111111111
@@ -1096,7 +1096,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-K26": {
+        "ICE-B-K26": {
           "type": "Grid",
           "tenors": [
             0.027777777777777776
@@ -1207,7 +1207,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-K26": {
+        "ICE-B-K26": {
           "type": "Grid",
           "tenors": [
             0.025
@@ -1314,7 +1314,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-K26": {
+        "ICE-B-K26": {
           "type": "Grid",
           "tenors": [
             0.022222222222222223
@@ -1417,7 +1417,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-K26": {
+        "ICE-B-K26": {
           "type": "Grid",
           "tenors": [
             0.019444444444444445
@@ -1526,7 +1526,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-K26": {
+        "ICE-B-K26": {
           "type": "Grid",
           "tenors": [
             0.016666666666666666
@@ -1635,7 +1635,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-K26": {
+        "ICE-B-K26": {
           "type": "Grid",
           "tenors": [
             0.008333333333333333
@@ -1760,7 +1760,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-K26": {
+        "ICE-B-K26": {
           "type": "Grid",
           "tenors": [
             0.005555555555555556
@@ -1855,7 +1855,7 @@
       "settlement_prices": {},
       "discount_curves": {},
       "vol_surfaces": {
-        "ICE-BRN-K26": {
+        "ICE-B-K26": {
           "type": "Grid",
           "tenors": [
             0.002777777777777778
