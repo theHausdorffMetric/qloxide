@@ -247,9 +247,21 @@ the bank, payable on demand) — derived at the boundary that needs it,
 never a reason to make `Account` an instrument. Same pattern as the
 futures decomposition: one stored thing, richer views derived on demand.
 
-Status: design position only. qloxide computes realized P&L but does not
-track where cash goes; an `Account` ledger + cash-ladder report is the
-natural next consumer of `Payment`, after M1/M2.
+The P&L report is this structure viewed as an identity: total wealth =
+account balance + portfolio at marks, so P&L over a period =
+Δ(balance) + Δ(marked value) — payments that actually landed plus the
+change in value of the *hypothetical unload* (one synthetic Payment per
+open position, quoted by the marking policy: settle / model / proxy).
+The existing `realized` flag (`valuation_date > maturity`,
+`portfolio.rs`) already marks "the conversion event has passed"; for
+cleared futures the unload is not even hypothetical — variation margin
+settles the mark-to-market into the margin account daily, which is why
+futures P&L needs no discounting. Today's report is exactly the account
+view minus the `Account` object: it computes all the payments but has
+nowhere to book them.
+
+Status: design position fixed; implementation scheduled as slice **M4**
+below — the first consumer of `Payment`.
 
 ## What it buys
 
@@ -308,7 +320,7 @@ Parked deliberately:
 - **`Account` + cash ladder**: design position fixed (see "Accounts: the
   cash-side ledger" — a ledger of payments, not an instrument; balance =
   aggregation, custodian credit derived as a Payment-shaped view).
-  Implement as the first consumer of `Payment` once M1/M2 land.
+  Scheduled as slice M4.
 - **Currency as a keyed registry** (`currencies.json`, hard validation
   like indices): the consistent v3 treatment now that registry machinery
   exists; retires embed-by-value duplication and the soft consistency
@@ -326,6 +338,18 @@ Parked deliberately:
 - **M3** — `AsianOption` + Turnbull–Wakeman with the seasoned-strike
   rewrite K̂ = (nK − mĀ)/(n−m) (K̂ ≤ 0 ⇒ discounted cash + forward
   strip).
+- **M4** — `Account` + cash ladder, the first consumer of `Payment`:
+  an account is a per-currency ledger of payments (id, custodian
+  `credit_id`, currency); settlement events *book* — a matured cleared
+  future books its variation/settlement cash, an exercised option its
+  payoff, an `FxForward` its two legs at delivery. Balance(T) =
+  Σ amounts with pay date ≤ T. Reports: cash ladder (projected balances
+  from booked, dated payments) and P&L↔cash reconciliation (reported
+  P&L minus account movements = the open positions' hypothetical-unload
+  leg — zero for fully-margined books, the funding gap otherwise).
+  Custodian exposure derived on demand as a Payment-shaped claim per
+  account. Scope guard: bookkeeping only — no interest accrual on
+  balances (that is a deposit instrument, not the ledger's job).
 
 ## References
 
