@@ -205,6 +205,52 @@ falling off its edge:
 - `FxForward` is re-foundable as exactly two `Payment`s (it already
   carries the fields twice).
 
+### Accounts: the cash-side ledger (design position; not implemented)
+
+"Currency" colloquially bundles three distinct things, and the layering
+assigns each its own home:
+
+1. the **unit of account** (USD as a yardstick) → `Currency`, reference
+   data. A unit cannot be an instrument: a price *is* a ratio of units
+   ("what is USD worth?" has no answer except in another unit — that is
+   FX, a pair instrument), and a unit cannot default — which is why
+   `Currency` carries conventions but no `credit_id`;
+2. a **claim to cash** (counterparty owes N USD on date D) → `Payment`,
+   an instrument — the *atomic* one, the ground term every other
+   instrument converts into;
+3. a **holding of cash** (a balance somewhere) → an **account**, which
+   is not an instrument at all but a *ledger*: the cash-side analogue of
+   the Portfolio.
+
+The two worlds are structurally symmetric:
+
+| | Trading side | Cash side |
+|---|---|---|
+| Unit (reference data) | `Currency` | `Currency` |
+| Contract (instrument) | `Future`, `EuropeanOption`, `Bond`, … | `Payment` |
+| Booking (event) | `Deal` | settled payment |
+| Derived aggregate | position, P&L | balance |
+| Container | portfolio / book | **account** |
+
+An account is a blotter of payments in one currency; its balance at date
+T is the sum of amounts with pay date ≤ T — an aggregation over its
+blotter, exactly as a position is an aggregation over deals. Settlement-
+as-conversion is the arrow between the columns: deals in instruments
+convert into payments, which land in accounts. The account blotter is
+the image of the trade blotter under settlement.
+
+One subtlety, resolved by the note's own doctrine: a *bank* account
+balance is economically a rolling demand-claim on the bank (cash at a
+custodian has credit risk). When a consumer needs custodian exposure,
+the balance is *representable as* a Payment-shaped claim (`credit_id` =
+the bank, payable on demand) — derived at the boundary that needs it,
+never a reason to make `Account` an instrument. Same pattern as the
+futures decomposition: one stored thing, richer views derived on demand.
+
+Status: design position only. qloxide computes realized P&L but does not
+track where cash goes; an `Account` ledger + cash-ladder report is the
+natural next consumer of `Payment`, after M1/M2.
+
 ## What it buys
 
 Everything from v2 (APOs structural, settlement verification generic,
@@ -259,6 +305,14 @@ Parked deliberately:
 - **`AsianOption`**: new instrument type (recommended — its pricer can
   structurally require an `Average` underlying) vs extending
   `EuropeanOption`; decide at M3.
+- **`Account` + cash ladder**: design position fixed (see "Accounts: the
+  cash-side ledger" — a ledger of payments, not an instrument; balance =
+  aggregation, custodian credit derived as a Payment-shaped view).
+  Implement as the first consumer of `Payment` once M1/M2 land.
+- **Currency as a keyed registry** (`currencies.json`, hard validation
+  like indices): the consistent v3 treatment now that registry machinery
+  exists; retires embed-by-value duplication and the soft consistency
+  warning. Mechanical; schedule with M1 cleanup.
 
 ## Slices
 
