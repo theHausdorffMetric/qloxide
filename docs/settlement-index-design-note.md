@@ -1,246 +1,297 @@
-# Design note: settlement series & terms as qloxide reference data
+# Design note: the settlement-index registry & uniform futures
 
-*2026-08-03 · draft v2 for the sr.ht qloxide repo · grew out of the Brent APO
-work (dpdev `ql/brent-apo`, qloxide-ice `BFL` registry entry,
-bitrepo/icedat `docs/option_model_conventions.md` §"Average price options")*
+*2026-08-04 · v3 for the sr.ht qloxide repo · supersedes v2 (2026-08-03)*
 
-*v2 (same day): reshaped after design discussion + research. The window moved
-from the index to the instrument (it is contract masterdata), roll moved into
-the series definition, and the futures-vs-swap representation question is
-resolved by the resolve-boundary architecture below. Research background:
-[`settlement-index-research-quantmath.md`](settlement-index-research-quantmath.md)
-(upstream QuantMath internals) and
-[`settlement-index-research-industry.md`](settlement-index-research-industry.md)
-(Strata/QuantLib overnight futures, ICE 2012 conversion, ETRM practice, APO
-seasoning).*
+*v3: reshaped after the futures-redesign discussion (step-by-step
+walk-through of the ICE Naphtha CIF NWE Cargoes future) and the decision
+that **breaking changes are in scope** at the current level. The v2
+`SettlementTerms` enum on the instrument is gone: `Future.underlying`
+becomes a required reference into a settlement-index registry, windows
+moved fully into the index graph as per-period `Average` entries, and
+settlement-at-termination gained a target type (`Payment`, shipped on the
+`payment-instrument` branch). The v2 research background is unchanged and
+still governs:
+[`settlement-index-research-quantmath.md`](settlement-index-research-quantmath.md),
+[`settlement-index-research-industry.md`](settlement-index-research-industry.md).*
 
 ## Problem
 
-`Future.underlying` is an undocumented free-text `String`, used only as a
-display column; `EuropeanOption.underlying` is the same-named field but is a
-load-bearing foreign key (forward + vol lookup, contract-size inheritance,
-generator planning). Meanwhile the *economically defining* fact about a
-future — **what it settles against** — is not representable at all. The Brent
-APO case showed the cost: "the 1st Line averages front-month ICE Brent settles
-over the contract month, ICEUK publication days, roll-on-expiry" had to be
-carried as a registry comment, a hand-applied Turnbull–Wakeman correction
-(effective vol time T₁ + (T₂−T₁)/3), and per-case documentation. Every one of
-those is derivable *if the instrument set knows its settlement index*.
+Unchanged from v2, plus one requirement sharpened by the discussion:
 
-## Two representations, one instrument: the resolve boundary
+- `Future.underlying` is free text used as a display column; the
+  economically defining fact — **what the contract settles against** — is
+  not representable. The Brent APO work carried it as registry comments
+  and hand-applied corrections.
+- **Uniformity requirement (new in v3):** a Brent future, a Brent 1st
+  Line future, and a naphtha cargoes future are *legally identical
+  objects* — exchange contracts with daily prints, one final published
+  settlement value, and one cash settlement date. Their differences are
+  entirely in *how the final number is generated*. The instrument struct
+  must therefore be **the same for all of them**; everything
+  generation-related belongs in reference data.
 
-A BFL is *legally* a future (id, daily settle prints, cash settlement on a
-date) and *economically* an averaging swap. That duality is historical fact,
-not modeling artifact: ICE converted its cleared OTC oil swap complex to
-futures in place on 2012-10-15 (Dodd-Frank). So when does a system switch
-from the "futures representation" (sufficient for margin/EOD P&L off exchange
-prints) to the "swap representation" (needed for curve risk and APOs)?
+## Doctrine (kept from v2)
 
-The evidence — rates libraries, QuantLib, upstream QuantMath, ETRM vendors;
-see the research docs — is unanimous: **never in the data model.** One booked
-instrument; the swap representation is *derived structure*, produced
-mechanically at a resolve boundary. Fed Funds/SOFR futures are the mature
-precedent (structurally identical: futures settling on an average of daily
-fixings of a published index):
+The resolve-boundary architecture survives verbatim; only the data layout
+changed. One booked instrument, always — the averaging-swap view is
+derived structure, produced per pricing request, never stored:
 
-1. **Resolve** — instrument window + series composition → dated observations,
-   each mapped to a concrete underlying contract. Strata makes the boundary
-   explicit: `resolve()` turns `OvernightFuture` into
-   `ResolvedOvernightFuture`, whose rate field *is* the same rate-computation
-   component an OIS swap leg carries. QuantMath puts the same seam at pricer
-   construction (`Instrument::fix(fixing_table)`, applied exactly once).
-   Resolution happens per pricing request — never at booking, never as a
-   second stored trade.
-2. **Partition** — per observation, against the valuation date, in the
-   *market-data layer*: published fixing (hard error if a past one is
-   missing — universal across implementations) vs forward off the futures
-   curve. Realized fixings are constants, so they are frozen under bumps and
-   delta migrates off the contract as the window elapses — with zero bespoke
-   risk code, in every system examined.
-3. **Overlay** — any residual gap between the margined future and the
-   decomposed expectation is a convexity/basis adjustment (Henrard's
-   overnight-futures convexity is the exact analogue): a model concern
-   layered on the decomposition, never a representation change. QuantMath
-   names the marking half `SpotRequirement::RequiredOnlyForValuation` —
-   value to the instrument's own published quote ("valuation has a basis,
-   which is considered constant with respect to any risks"), risk through
-   the decomposition.
+1. **Resolve** — index graph + contract expiry → dated observations, each
+   mapped to a concrete contract (a September determination month maps to
+   two Brent contracts across the roll).
+2. **Partition** — per observation against the valuation date, in the
+   market-data layer: published fixing (hard error if a past one is
+   missing) vs forward off the curve. Realized fixings are constants, so
+   they freeze under bumps and delta migrates off the contract with zero
+   bespoke risk code.
+3. **Overlay** — any residual gap between the margined print and the
+   decomposed expectation is a constant basis/convexity adjustment
+   (`RequiredOnlyForValuation`), never a representation change.
 
-**Descent criterion.** Even the plain BRN future settles on a derived index
-(the ICE Brent Index, built from the BFOE cash/forward market) — and nobody
-decomposes it, because its constituents live outside our modeled universe;
-the series stays an opaque leaf. Descend exactly when the series'
+**Descent criterion** (unchanged): decompose exactly when the series'
 constituents are inside the modeled risk universe *and* the request needs
-their sensitivities or joint law. For BFL the constituents are the very
-futures curve we already model — which is also *why* risk must descend:
-bumping "BFL's own curve" next to BRN positions would break netting on what
-is economically one curve family.
+their sensitivities or joint law. BRN's own index (BFOE cash market)
+stays an opaque leaf; BFL's constituents are the Brent curve itself.
 
 The consumer ladder over the single instrument:
 
 | Consumer | Reads | Needs |
 |---|---|---|
-| Margin / EOD P&L | settle print by future id | nothing new (today's `price_future`) |
-| Theoretical PV, missing marks, curve coherence | resolve + partition | fixing store + forward curve |
-| Curve risk / scenarios | same, under a shifted `PricingContext` | nothing further — freezing is emergent |
-| APO pricing | full decomposition + vol surface | T-W + the seasoned-strike rewrite |
+| Margin / EOD P&L | settle print by contract id | nothing new |
+| Theoretical PV, missing marks | resolve + partition | fixing store + forward curve |
+| Curve risk / scenarios | same, under a shifted context | nothing further — freezing is emergent |
+| APO pricing | full decomposition + vol surface | T-W + seasoned-strike rewrite |
 
-## Proposal (v2)
+The naphtha contract shows the ladder is not an abstraction: ICE's own
+daily settle during the running month **is** the decomposition formula —
+`(m/n)·Ā_realized + ((n−m)/n)·F_bom` — evaluated with ICE's
+balance-of-month estimate. Level-2 valuation is the identical expression
+with *our* balmo curve in the `F_bom` slot; the last print converges to
+the realized monthly average, which is why level 1 suffices for P&L.
 
-1. **`SettlementSeries` reference data** — instrument-independent; the series
-   knows its own composition (ICE's contract spec puts the roll rule in the
-   index definition; Endur models "indices defined in terms of other
-   indices"):
+## Design
 
-   ```rust
-   pub struct SettlementSeries {
-       pub id: String,                    // "ICE-BRENT-1L"
-       pub rule: SeriesRule,
-       pub calendar: String,              // publication calendar NAME (no fincal dep)
-   }
+### `Future` — uniform across all products
 
-   pub enum SeriesRule {
-       Published { source: String },                 // primary settle/fixing series
-       FrontLine { of: IndexRef, roll: RollRule },   // derived front-month selector
-       Spread    { legs: Vec<(Decimal, IndexRef)> }, // weighted; ±1 in v1
-   }
+```rust
+pub struct Future {
+    pub id: String,
+    pub underlying: IndexRef,     // REQUIRED FK into the settlement-index registry
+    pub currency: Arc<Currency>,
+    pub settlement: Settlement,   // procedure: venue/session/time/tz/payment_lag — unchanged
+    pub clearing: ClearingStatus,
+    pub expiry: Date,             // LTD — the ONLY date the contract owns
+    pub contract_size: Decimal,
+    pub tick_size: Decimal,
+}
+```
 
-   pub enum RollRule { RollOnExpiry }                // single-variant v1
+- `underlying` changes meaning from prose to key (**breaking**). Display
+  labels are derived: `registry[underlying].display_name`.
+- There is **no window field and no `SettlementTerms`**. The governing
+  invariant: **a contract contributes exactly one date — its expiry.
+  Every other date in the system lives in the index graph.**
+- `settlement` already expresses the full settlement *procedure*,
+  including "cash two clearing-house business days after LTD"
+  (`payment_lag: DateRule::BusinessDays`). The procedure is uniform
+  machinery and was never the product differentiator.
 
-   // IndexRef = newtype over String; may name another SettlementSeries
-   // (recursion is a feature). An id with no loaded definition is an opaque
-   // published leaf — fine for marking; an error only for consumers that
-   // need its internals. An IndexRef never names a RateIndex (separate
-   // domain, separate namespace).
-   ```
+### The settlement-index registry
 
-2. **`SettlementTerms` on the instrument** — additive, serde-defaulted; the
-   window is **explicit dates, bound by the generating driver** (contract
-   masterdata — the Strata `OvernightFuture.startDate/endDate` pattern, and
-   qloxide's own `FloatingLeg { rate_index_id, start_date, end_date }`
-   precedent):
+```rust
+pub struct SettlementIndex {
+    pub id: IndexRef,             // newtype over String
+    pub display_name: String,     // retires the free-text label role
+    pub rule: IndexRule,
+    pub calendar: String,         // publication calendar NAME (no fincal dep)
+}
 
-   ```rust
-   pub enum SettlementTerms {
-       Terminal  { series: IndexRef },                     // EDSP-style fixing
-       AverageOf { series: IndexRef, window: (Date, Date) },
-       Physical  { delivery: String },
-   }
+pub enum IndexRule {
+    Published { source: String },                     // opaque leaf: Platts assessment, ICE Brent Index
+    FrontLine { of: IndexRef, roll: RollRule },       // derived front-month selector
+    Average   { of: IndexRef, window: (Date, Date) }, // concrete determination period, explicit dates
+    Spread    { legs: Vec<(Decimal, IndexRef)> },     // weighted legs; ±1 until cracks need real weights
+}
 
-   pub struct Future {
-       pub underlying: String,                             // stays: display label
-       #[serde(default)]
-       pub settlement_terms: Option<SettlementTerms>,
-       // NB field name: `settlement` is taken (settlement *timing*)
-       ...
-   }
-   ```
+pub enum RollRule { RollOnExpiry }                    // single-variant v1
+```
 
-   There is **no `Window` enum and no index "families parameterized by the
-   instrument"**: ContractMonth/Balmo are generation-time concerns of the
-   driver, which knows the strip; qloxide reads dates. (A balmo window is
-   fixed the moment the contract exists — also masterdata.)
+The registry is a graph (recursion is a feature) with **two tiers**:
 
-3. **The resolve step** — a pure function in the pricing module (instruments
-   stay pure data, ARCHITECTURE.md §8.3):
-   `resolve(terms, series_defs) → Vec<Observation { date, contract_id }>`,
-   applying calendar + roll. A September determination month maps to *two*
-   concrete Brent contracts (front until its expiry, next after) — exactly
-   the mapping risk needs.
+- **Curated structural nodes** — month-free, hand-maintained: `Published`
+  leaves, `FrontLine` selectors, `Spread` combinations.
+- **Generated period nodes** — `Average` entries materialized by the
+  driver at listing time, exactly like expiries are. The driver knows the
+  strip and the publication calendar; qloxide reads explicit dates and
+  needs **no calendar math to construct windows**. Balmo is not a special
+  case — just an `Average` with different dates.
 
-4. **The partition** — `PricingContext::fixing(series_id, date)`: hard error
-   on a missing past fixing, forward curve for future dates. Provider-side,
-   per the §8.4 doctrine (context = observable market data; scenarios shift
-   it). The same fixing store serves swap floating legs (pricing build-order
-   step 7) — one mechanism, two consumers.
+A period-average index is legitimate *shared* reference data: the future,
+balmo/monthly swaps, and APOs all settle on the same period object, and
+two venues' lookalikes share one (proxy identity becomes checkable). What
+is deliberately **not** in the registry: per-contract prints (market
+data, keyed by contract id) and fixings (stored under the *leaf* series,
+one print per publication day — period indices are computed, never
+fixed).
 
-5. **Population is the driver's job**: qloxide owns the vocabulary;
-   qloxide-ice's registry emits the ICE-specific definitions alongside its
-   contract mappings (the `BFL` entry already carries this knowledge as a
-   comment).
+Worked example (naphtha + Brent side by side):
 
-6. **Serialization**: embed-by-value like `Currency` (the existing load-time
-   consistency check in `config.rs` extends to series ids). Load validation
-   errors on dangling `IndexRef`s and on reference cycles (DFS, same pass).
+```json
+// curated tier
+{ "id": "PLATTS-NAPHTHA-CIF-NWE", "display_name": "Naphtha CIF NWE cargoes (Platts)",
+  "rule": { "Published": { "source": "PLATTS" } }, "calendar": "PLATTS-EUR" }
+{ "id": "ICE-BRENT-INDEX", "display_name": "ICE Brent Index",
+  "rule": { "Published": { "source": "ICE" } }, "calendar": "ICEUK" }
+{ "id": "ICE-BRENT-1L", "display_name": "Brent 1st Line",
+  "rule": { "FrontLine": { "of": "ICE-BRN", "roll": "RollOnExpiry" } }, "calendar": "ICEUK" }
 
-## What it buys (all hit in practice during the APO work)
+// generated tier (driver, at listing)
+{ "id": "PLATTS-NAPHTHA-AVG-2026-09",
+  "rule": { "Average": { "of": "PLATTS-NAPHTHA-CIF-NWE", "window": ["2026-09-01","2026-09-30"] } } }
+{ "id": "PLATTS-NAPHTHA-BALMO-2026-08-05",
+  "rule": { "Average": { "of": "PLATTS-NAPHTHA-CIF-NWE", "window": ["2026-08-05","2026-08-31"] } } }
+{ "id": "ICE-BRENT-1L-AVG-2026-09",
+  "rule": { "Average": { "of": "ICE-BRENT-1L", "window": ["2026-09-01","2026-09-30"] } } }
 
-- **APOs become structural, not conventional**: an option on a future whose
-  terms are `AverageOf { series, window }` is *knowably* an option on an
-  average — T₁/T₂ sit on the instrument and the effective-vol-time bracket
-  derives from them. The future `AsianOption` pricer needs zero venue config.
-- **Settlement verification is generic**: the Sep-26 BFL settle is computable
-  from the archived front-line series (machinery already verified
-  penny-perfect vs Bloomberg CO1) once the rule is data.
-- **Risk freezing/migration is emergent**: realized fixings are constants in
-  the context, so bump sensitivity flows only to unfixed dates and delta
-  walks off the contract (and across the roll, onto two Brent months) with
-  no bespoke risk code.
-- **Index algebra**: NOB = `PLATTS-NAPHTHA-CIF-NWE-1L − ICE-BRENT-1L` as a
-  weighted-leg `Spread` series — the diff/crack family becomes expressible
-  instead of documented.
-- **Proxy identity**: two venues' lookalikes sharing a series id (and window)
-  are nominally the same economics — `proxy_marks` becomes
-  derivable/checkable rather than configured.
-- **The observed smile relation gets a home**: the APO smile IS the M+2 flat
-  smile (measured within 0.15–1.3 vol pts, Samuelson × window weighting) —
-  with spec'd series, "these two surfaces are projections of one process"
-  is inferable.
+// futures — structurally identical; only id / underlying / expiry vary
+{ "type": "Future", "id": "ICE-NAF-U26", "underlying": "PLATTS-NAPHTHA-AVG-2026-09", "expiry": "2026-09-30", ... }
+{ "type": "Future", "id": "ICE-BFL-U26", "underlying": "ICE-BRENT-1L-AVG-2026-09",   "expiry": "2026-09-30", ... }
+{ "type": "Future", "id": "ICE-BRN-U26", "underlying": "ICE-BRENT-INDEX",            "expiry": "2026-07-31", ... }
+```
+
+### Evaluation semantics
+
+- **Terminal** (underlying is `Published`/`FrontLine`/`Spread`): the
+  settle value is the index value at the contract's expiry, adjusted by
+  the index calendar. Terminal indices stay *functions* — no per-month
+  terminal entries, because the evaluation date is the one date the
+  contract already carries.
+- **Average**: the settle value is the mean of the `of`-series over the
+  entry's explicit window. Period indices are *materialized*.
+
+This asymmetry is chosen, not accidental — it is exactly the
+one-date-per-contract invariant applied twice.
+
+### Validation (load-time, hard — breaking changes accepted)
+
+- Every `Future.underlying` must resolve in the registry. **No
+  opaque-leaf-by-absence**: opacity is declared *in* the registry
+  (`Published` — defined, constituents unmodeled), a dangling ref is an
+  error, full stop.
+- Dangling `of`/`legs` refs and reference cycles: error (DFS, one pass).
+- For an `Average`-underlying future: `window.end == expiry` (both are
+  the last working day of the determination month for these products).
+  This catches "contract points at the wrong month's index" — a bug
+  class v2 could not even express a check for.
+- Serialization stays embed-by-value like `Currency`, with the existing
+  load-time consistency check extended to index ids.
+- Quick win, shippable independently: dangling `option.underlying`
+  silently defaults `contract_size = 1` (`portfolio.rs`) — warn now,
+  error later.
+
+### Settlement is a conversion (`Payment`)
+
+`Payment { id, credit_id, amount, currency, settlement, pay_date }` is a
+bookable instrument (typetag-registered; PV = discounted amount; settled
+payments price at zero — implemented on the `payment-instrument` branch).
+Termination becomes expressible in the instrument algebra instead of
+falling off its edge:
+
+- cash-settled future at expiry → one `Payment`
+  (`(final index value − price) × size` at `expiry + payment_lag`);
+- physical delivery, when needed → deliverable position + `Payment`
+  (a statement about what the contract *converts into*, not an
+  `IndexRule` variant);
+- `FxForward` is re-foundable as exactly two `Payment`s (it already
+  carries the fields twice).
+
+## What it buys
+
+Everything from v2 (APOs structural, settlement verification generic,
+risk freezing emergent, index algebra for diffs/cracks, proxy identity,
+the observed smile relation) — plus:
+
+- **Uniform futures**: one struct, one code path, no per-product
+  variants; the BFL differs from naphtha by one registry node
+  (`FrontLine` vs `Published` under the `Average`).
+- **qloxide stays calendar-dumb for windows**: explicit, auditable dates
+  in data; `CalendarSource` de-escalates to in-window day counting only.
+- **Wrong-month binding is machine-checkable** (`window.end == expiry`).
+- **Termination is closed** under the instrument algebra via `Payment`.
 
 ## Migration
 
-Do **not** repurpose the `underlying` string (serialized in every existing
-book; legitimate display role; silent format break). Path: add the optional
-typed field → drivers populate it → label becomes derivable
-(`series.display_name()`) → deprecate the free string in a later 0.x.
+Breaking changes are accepted at the current level (pre-1.0, all books
+regenerable). No compat shims, no versioned format, no dual semantics:
 
-## Open questions — v2 status
+1. Add `SettlementIndex` + registry loading + validation.
+2. Flip `Future.underlying` to `IndexRef` semantics; **rewrite the
+   example books** (`examples/*/instruments.json`) with real index ids.
+3. Derive display labels from the registry; delete label usages of the
+   old free string.
+4. Drivers (qloxide-ice) emit the curated tier alongside their contract
+   mappings and generate the period tier per listed strip.
 
-Resolved by the v2 design / research:
+## Decided / parked
 
-- ~~Window resolution mechanics (load vs pricing time)~~ — neither: bound at
-  **generation time** by the driver, as explicit dates on the instrument
-  (Strata's Resolved pattern). Balmo is likewise contract masterdata.
-- ~~Where does roll live~~ — in the series definition (`FrontLine`), per the
-  ICE contract spec ("the pricing quotation rolls to the following month's
-  contract").
-- ~~Spread scope~~ — weighted legs from day one, populated ±1 until cracks
-  need real weights/unit conversions ($/tonne vs $/bbl, 42-gal factor).
-- ~~Validation~~ — dangling refs + cycle DFS at load. Independent quick win,
-  shippable now: dangling `option.underlying` silently defaults
-  `contract_size = 1` today (`portfolio.rs`) — warn first, error later.
+Decided in v3:
 
-Still open:
+- ~~Window location~~ — in the index graph as per-period `Average`
+  entries (v1 had it on the index as a family, v2 on the instrument;
+  v3 materializes it per period). The instrument carries no dates but
+  expiry.
+- ~~Migration policy~~ — hard referential integrity; breaking.
+- ~~`RateIndex` relation~~ — separate namespaces; an `IndexRef` never
+  names a `RateIndex`. State it in module docs.
+- ~~Naming asymmetry~~ — `underlying` means "the thing one level down":
+  instrument id on options, index id on futures. Accepted; document.
+- ~~Cash representation~~ — `Payment` instrument (shipped).
 
-- **`RateIndex` relation**: recommendation — separate namespaces, an
-  `IndexRef` never names a `RateIndex`; confirm and state it in module docs.
-- **Convexity overlay** (margined future vs decomposed expectation): when is
-  it material for oil averaging futures, and where does it live (pricer
-  config vs market data)? Defer until a consumer needs it.
+Parked deliberately:
+
+- **Physical delivery**: nothing in the current book needs it; design
+  "position + Payment" when a product arrives, don't speculate.
+- **Terminal publication lag** (Brent Index prints the day after
+  expiry): use expiry adjusted by the index calendar until a real
+  mispricing forces a `DateRule` on the index.
+- **Convexity overlay**: defer until a consumer needs it (unchanged
+  from v2).
 - **`AsianOption`**: new instrument type (recommended — its pricer can
-  structurally *require* `AverageOf` terms) vs extending `EuropeanOption`.
-- **Calendar source** for in-window day counting: a `CalendarSource` trait on
-  the pricing context with a weekday-approximation fallback (leaning), vs
-  driver-materialized fixing-date lists.
-- **First slice**: M1 = types + serde + embed/consistency + validation (+ the
-  `contract_size` warning); M2 = driver population (bitrepo, can trail);
-  M3 = `AsianOption` + Turnbull–Wakeman with the seasoned-strike rewrite
-  K̂ = (nK − mĀ)/(n−m) (K̂ ≤ 0 ⇒ discounted cash + forward strip).
+  structurally require an `Average` underlying) vs extending
+  `EuropeanOption`; decide at M3.
+
+## Slices
+
+- **M1** — `SettlementIndex` types + registry + serde + embed/consistency
+  + dangling-ref/cycle/window-expiry validation; `Future.underlying` →
+  `IndexRef`; rewrite examples; `contract_size` warning quick win.
+- **M2** — resolve + partition in the pricing module
+  (`PricingContext::fixing(series_id, date)`, shared with swap floating
+  legs); driver population (qloxide-ice curated tier + generated period
+  tier; bitrepo trails).
+- **M3** — `AsianOption` + Turnbull–Wakeman with the seasoned-strike
+  rewrite K̂ = (nK − mĀ)/(n−m) (K̂ ≤ 0 ⇒ discounted cash + forward
+  strip).
 
 ## References
 
 - [`settlement-index-research-quantmath.md`](settlement-index-research-quantmath.md) —
-  upstream QuantMath: `dependencies()`/`DependencyCollector`, `FixingTable`,
-  `Instrument::fix` self-decomposition, `RequiredOnlyForValuation`, bump
-  machinery with fixing freezing.
+  upstream QuantMath: `dependencies()`/`DependencyCollector`,
+  `FixingTable`, `Instrument::fix` self-decomposition,
+  `RequiredOnlyForValuation`, bump machinery with fixing freezing.
 - [`settlement-index-research-industry.md`](settlement-index-research-industry.md) —
   Strata `OvernightFuture`/`ResolvedOvernightFuture`, QuantLib
   `OvernightIndexFuture` + Asian machinery, ICE BFL spec & 2012
   swaps-to-futures conversion, Endur/Murex practice, Henrard convexity,
   Hoogland & Neumann seasoned-strike identity.
-- bitrepo/icedat `docs/option_model_conventions.md` — the APO vol-convention
-  section (T_eff fingerprint, SOFR discounting, flat-surface relation).
-- qloxide-ice `src/registry.rs` — the `BFL` entry whose comment this proposal
-  turns into data.
+- ICE Naphtha CIF NWE Cargoes Future (product 6753535) — the v3 worked
+  case: LTD last working day of the month, cash two clearing-house
+  business days later, final settle = monthly average of Platts daily
+  publications, running-month prints = realized/balmo weighted average.
+- bitrepo/icedat `docs/option_model_conventions.md` — the APO
+  vol-convention section (T_eff fingerprint, SOFR discounting,
+  flat-surface relation).
+- qloxide-ice `src/registry.rs` — the `BFL` entry whose comment this
+  proposal turns into data.
 - dpdev `ql/brent-apo` — the worked case (real ICE marks via
   `qloxide-ice gen-series`).
