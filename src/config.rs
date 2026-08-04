@@ -34,6 +34,10 @@ use crate::trades::Deal;
 #[serde(deny_unknown_fields)]
 pub struct BookConfig {
     pub instruments: Vec<PathBuf>,
+    /// Settlement-index registry files. Every `Future.underlying` must
+    /// resolve here — a book with futures and no indices is a config error.
+    #[serde(default)]
+    pub indices: Vec<PathBuf>,
     pub deals: Vec<PathBuf>,
     /// The book's market history file.
     #[serde(default)]
@@ -73,6 +77,9 @@ pub struct BookConfig {
 #[serde(deny_unknown_fields)]
 pub struct RiskConfig {
     pub instruments: Vec<PathBuf>,
+    /// Settlement-index registry files (same semantics as the book tier).
+    #[serde(default)]
+    pub indices: Vec<PathBuf>,
     pub deals: Vec<PathBuf>,
     /// The book's market history file.
     #[serde(default)]
@@ -93,6 +100,7 @@ pub struct RiskConfig {
 /// The tier-independent loading recipe a config resolves to.
 struct LoadSpec {
     instruments: Vec<PathBuf>,
+    indices: Vec<PathBuf>,
     deals: Vec<PathBuf>,
     market: Option<PathBuf>,
     vol_data: Vec<PathBuf>,
@@ -142,6 +150,9 @@ pub struct Portfolio {
     pub integrity_errors: Vec<String>,
     /// Validated proxy-mark policy (see [`BookConfig::proxy_marks`]).
     pub proxy_marks: crate::portfolio::ProxyMarks,
+    /// The settlement-index registry (validated: refs resolve, no cycles,
+    /// every future's underlying resolves, Average windows end on expiry).
+    pub indices: crate::reference_data::SettlementIndexRegistry,
     pub reports: Vec<String>,
 }
 
@@ -163,6 +174,7 @@ pub fn load_book(config_path: &Path, as_of: Option<Date>) -> core::Result<Portfo
     })?;
     let spec = LoadSpec {
         instruments: config.instruments,
+        indices: config.indices,
         deals: config.deals,
         market: config.market,
         vol_data: Vec::new(),
@@ -192,6 +204,7 @@ pub fn load_risk(
     })?;
     let spec = LoadSpec {
         instruments: config.instruments,
+        indices: config.indices,
         deals: config.deals,
         market: config.market,
         vol_data: config.vol_data,
@@ -237,6 +250,54 @@ fn load_impl(
                 )));
             }
             instruments.insert(id, inst);
+        }
+    }
+
+    // Load the settlement-index registry (design note v3): duplicate ids
+    // error per-file at insert; graph validation (dangling refs, cycles)
+    // runs on the assembled whole.
+    let mut all_indices: Vec<crate::reference_data::SettlementIndex> = Vec::new();
+    for rel_path in &config.indices {
+        let path = config_dir.join(rel_path);
+        let json = read_json_file(&path)?;
+        let loaded: Vec<crate::reference_data::SettlementIndex> = serde_json::from_str(&json)
+            .map_err(|e| {
+                core::Error::Config(format!("invalid indices file {}: {}", path.display(), e))
+            })?;
+        all_indices.extend(loaded);
+    }
+    let indices = crate::reference_data::SettlementIndexRegistry::from_indices(all_indices)?;
+    indices.validate()?;
+
+    // Every future's underlying must resolve (no opaque-leaf-by-absence),
+    // and an Average determination period must end on the contract's
+    // expiry — both are the last working day of the determination month,
+    // so a mismatch means the contract points at the wrong period entry.
+    {
+        let mut ids: Vec<&String> = instruments.keys().collect();
+        ids.sort();
+        for id in ids {
+            let Some(fut) = instruments[id]
+                .as_any()
+                .downcast_ref::<crate::instruments::Future>()
+            else {
+                continue;
+            };
+            let Some(index) = indices.get(&fut.underlying) else {
+                return Err(core::Error::Config(format!(
+                    "future '{}' references unknown settlement index '{}'",
+                    id, fut.underlying,
+                )));
+            };
+            if let crate::reference_data::IndexRule::Average { window, .. } = &index.rule
+                && window.1 != fut.expiry
+            {
+                return Err(core::Error::Config(format!(
+                    "future '{}': determination window of '{}' ends {} but expiry is {} \
+                     — contract points at the wrong period entry",
+                    id, fut.underlying, window.1, fut.expiry,
+                )));
+            }
         }
     }
 
@@ -600,6 +661,7 @@ fn load_impl(
         warnings,
         integrity_errors,
         proxy_marks: config.proxy_marks,
+        indices,
         reports: config.reports,
     })
 }
@@ -833,9 +895,22 @@ mod tests {
             dir.join("pricing.toml"),
             r#"
 instruments = ["instruments.json"]
+indices = ["indices.json"]
 deals = ["deals.json"]
 market = "market.json"
 "#,
+        )
+        .unwrap();
+
+        // Settlement-index registry
+        fs::write(
+            dir.join("indices.json"),
+            r#"[{
+  "id": "ICE-BRENT-INDEX",
+  "display_name": "Brent",
+  "rule": { "Published": { "source": "ICE" } },
+  "calendar": "ICEUK"
+}]"#,
         )
         .unwrap();
 
@@ -845,7 +920,7 @@ market = "market.json"
             r#"{
   "type": "Future",
   "id": "ICE-BRN-K26",
-  "underlying": "Brent",
+  "underlying": "ICE-BRENT-INDEX",
   "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
   "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
   "clearing": "cleared",
@@ -901,7 +976,7 @@ market = "market.json"
         // No market_data key: static reports run, valuation refuses.
         fs::write(
             dir.path().join("pricing.toml"),
-            "instruments = [\"instruments.json\"]\ndeals = [\"deals.json\"]\n",
+            "instruments = [\"instruments.json\"]\nindices = [\"indices.json\"]\ndeals = [\"deals.json\"]\n",
         )
         .unwrap();
 
@@ -918,6 +993,45 @@ market = "market.json"
             .unwrap_err()
             .to_string();
         assert!(err.contains("requires market_data"), "{err}");
+    }
+
+    #[test]
+    fn dangling_future_underlying_errors() {
+        let dir = tempfile::tempdir().unwrap();
+        write_test_files(dir.path());
+
+        // Empty registry: no opaque-leaf-by-absence — this is an error.
+        fs::write(dir.path().join("indices.json"), "[]").unwrap();
+
+        let err = load(&dir.path().join("pricing.toml"))
+            .unwrap_err()
+            .to_string();
+        assert!(
+            err.contains("unknown settlement index 'ICE-BRENT-INDEX'"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn average_window_must_end_on_expiry() {
+        let dir = tempfile::tempdir().unwrap();
+        write_test_files(dir.path());
+
+        // Fixture future expires 2026-03-31; point it at a period entry
+        // whose window ends a day earlier — the wrong month binding.
+        fs::write(
+            dir.path().join("indices.json"),
+            r#"[
+  {"id": "ICE-BRENT-1L", "rule": {"Published": {"source": "ICE"}}, "calendar": "ICEUK"},
+  {"id": "ICE-BRENT-INDEX", "rule": {"Average": {"of": "ICE-BRENT-1L", "window": ["2026-03-01", "2026-03-30"]}}}
+]"#,
+        )
+        .unwrap();
+
+        let err = load(&dir.path().join("pricing.toml"))
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("wrong period entry"), "{err}");
     }
 
     /// Rewrite market.json so the 2026-03-04 record optionally lacks the
@@ -938,7 +1052,7 @@ market = "market.json"
 
     fn config_with_series(extra: &str) -> String {
         format!(
-            "instruments = [\"instruments.json\"]\ndeals = [\"deals.json\"]\n\
+            "instruments = [\"instruments.json\"]\nindices = [\"indices.json\"]\ndeals = [\"deals.json\"]\n\
              market = \"market.json\"\n{extra}"
         )
     }
@@ -1054,7 +1168,7 @@ market = "market.json"
   {
     "type": "Future",
     "id": "ICE-BRN-K26",
-    "underlying": "Brent",
+    "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
     "clearing": "cleared",
@@ -1065,7 +1179,7 @@ market = "market.json"
   {
     "type": "Future",
     "id": "ICE-BRN-M26",
-    "underlying": "Brent",
+    "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
     "clearing": "cleared",
@@ -1093,6 +1207,7 @@ market = "market.json"
             dir.path().join("pricing.toml"),
             r#"
 instruments = ["instruments.json", "instruments2.json"]
+indices = ["indices.json"]
 deals = ["deals.json"]
 market = "market.json"
 "#,
@@ -1220,7 +1335,7 @@ market = "market.json"
   {
     "type": "Future",
     "id": "ICE-BRN-K26",
-    "underlying": "Brent",
+    "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
     "clearing": "cleared",
@@ -1231,7 +1346,7 @@ market = "market.json"
   {
     "type": "Future",
     "id": "ICE-BRN-M26",
-    "underlying": "Brent",
+    "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act365Fixed"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
     "clearing": "cleared",
@@ -1266,7 +1381,7 @@ market = "market.json"
   {
     "type": "Future",
     "id": "ICE-BRN-K26",
-    "underlying": "Brent",
+    "underlying": "ICE-BRENT-INDEX",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
     "clearing": "cleared",
@@ -1388,11 +1503,17 @@ market = "market.json"
             format!(
                 r#"
 instruments = ["instruments.json"]
+indices = ["indices.json"]
 deals = ["deals.json"]
 market = "market.json"
 {config_extra}
 "#
             ),
+        )
+        .unwrap();
+        fs::write(
+            dir.join("indices.json"),
+            r#"[{"id": "ICE-BRENT-INDEX", "display_name": "Brent", "rule": {"Published": {"source": "ICE"}}, "calendar": "ICEUK"}]"#,
         )
         .unwrap();
         fs::write(
@@ -1402,7 +1523,7 @@ market = "market.json"
   {{
     "type": "Future",
     "id": "ICE-BRN-K26",
-    "underlying": "Brent",
+    "underlying": "ICE-BRENT-INDEX",
     "currency": {{"id": "USD", "settlement": "Null", "day_count": "Act360"}},
     "settlement": {{"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"}},
     "clearing": "cleared",
@@ -1554,6 +1675,7 @@ market = "market.json"
             format!(
                 r#"
 instruments = ["instruments.json"]
+indices = ["indices.json"]
 deals = ["deals.json"]
 market = "market.json"
 vol_data = ["vols.json"]
@@ -1668,6 +1790,7 @@ vol_data = ["vols.json"]
             dir.path().join("risk.toml"),
             r#"
 instruments = ["instruments.json"]
+indices = ["indices.json"]
 deals = ["deals.json"]
 vol_data = ["vols.json"]
 "#,

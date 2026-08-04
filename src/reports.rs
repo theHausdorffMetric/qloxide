@@ -96,7 +96,7 @@ pub fn instruments(portfolio: &Portfolio) -> String {
 
         let underlying = any
             .downcast_ref::<Future>()
-            .map(|f| f.underlying.as_str())
+            .map(|f| portfolio.indices.label(&f.underlying))
             .or_else(|| {
                 any.downcast_ref::<EuropeanOption>()
                     .map(|o| o.underlying.as_str())
@@ -788,6 +788,7 @@ mod tests {
             market_data: None,
             history: Some(history),
             proxy_marks: Default::default(),
+            indices: Default::default(),
             warnings: vec![],
             integrity_errors: vec![],
             reports: vec![],
@@ -831,6 +832,7 @@ mod tests {
             market_data: None,
             history: None,
             proxy_marks: Default::default(),
+            indices: Default::default(),
             warnings: vec![],
             integrity_errors: vec![],
             reports: vec![],
@@ -927,6 +929,7 @@ mod risk_tests {
             market_data: Some(md),
             history: None,
             proxy_marks: Default::default(),
+            indices: Default::default(),
             warnings: vec![],
             integrity_errors: vec![],
             reports: vec![],

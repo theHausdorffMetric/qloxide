@@ -1,4 +1,5 @@
 instruments = ["instruments.json", "options.json"]
+indices = ["indices.json"]
 deals = ["deals.json"]
 market = "market.json"
 reports = ["instruments", "deals", "positions", "pnl"]

@@ -2,7 +2,7 @@
   {
     "type": "Future",
     "id": "ICE-BFL-Q26",
-    "underlying": "Brent 1st Line",
+    "underlying": "ICE-BRENT-1L-AVG-2026-08",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
     "clearing": "cleared",
@@ -13,7 +13,7 @@
   {
     "type": "Future",
     "id": "ICE-BFL-U26",
-    "underlying": "Brent 1st Line",
+    "underlying": "ICE-BRENT-1L-AVG-2026-09",
     "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
     "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
     "clearing": "cleared",

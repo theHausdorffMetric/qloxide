@@ -1,0 +1,22 @@
+[
+  {
+    "id": "ICE-BRN",
+    "display_name": "Brent futures (ICE)",
+    "rule": { "Published": { "source": "ICE" } },
+    "calendar": "ICEUK"
+  },
+  {
+    "id": "ICE-BRENT-1L",
+    "display_name": "Brent 1st Line",
+    "rule": { "FrontLine": { "of": "ICE-BRN", "roll": "RollOnExpiry" } },
+    "calendar": "ICEUK"
+  },
+  {
+    "id": "ICE-BRENT-1L-AVG-2026-08",
+    "rule": { "Average": { "of": "ICE-BRENT-1L", "window": ["2026-08-01", "2026-08-31"] } }
+  },
+  {
+    "id": "ICE-BRENT-1L-AVG-2026-09",
+    "rule": { "Average": { "of": "ICE-BRENT-1L", "window": ["2026-09-01", "2026-09-30"] } }
+  }
+]

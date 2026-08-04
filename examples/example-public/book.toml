@@ -10,6 +10,7 @@
 #   cargo run --bin qloxide-book -- --config examples/example-public/book.toml
 #   cargo run --example example-public     # regenerate market.json + vols.json
 instruments = ["instruments.json"]
+indices = ["indices.json"]
 deals = ["deals.json"]
 market = "market.json"
 reports = ["instruments", "deals", "positions", "pnl"]

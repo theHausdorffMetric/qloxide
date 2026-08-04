@@ -2,6 +2,7 @@
 # as book.toml, plus the risk-tier vol history. Consumed by qloxide-risk
 # only; scenario overlays come in via --market (see scenarios/).
 instruments = ["instruments.json"]
+indices = ["indices.json"]
 deals = ["deals.json"]
 market = "market.json"
 vol_data = ["vols.json"]

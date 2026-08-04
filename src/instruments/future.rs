@@ -5,13 +5,19 @@ use serde::{Deserialize, Serialize};
 
 use crate::dates::Date;
 use crate::instruments::{ClearingStatus, FinancialInstrument, Settlement};
-use crate::reference_data::Currency;
+use crate::reference_data::{Currency, IndexRef};
 
 /// An exchange-traded future contract.
+///
+/// Structurally identical across products: what the contract settles
+/// against lives in the settlement-index registry behind `underlying`;
+/// the contract itself owns exactly one date (`expiry`).
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Future {
     pub id: String,
-    pub underlying: String,
+    /// What the contract settles against: a settlement-index id, resolved
+    /// against the book's registry at load (dangling = config error).
+    pub underlying: IndexRef,
     pub currency: Arc<Currency>,
     pub settlement: Settlement,
     /// Where the contract clears — required, no default: every instrument
@@ -36,7 +42,7 @@ impl Future {
     ) -> Future {
         Future {
             id: id.to_string(),
-            underlying: underlying.to_string(),
+            underlying: IndexRef::new(underlying),
             currency,
             settlement,
             clearing,

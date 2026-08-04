@@ -1,6 +1,7 @@
 # Risk config for the legacy brent book (arch §9): same data files as
 # brent.toml, plus the risk-tier vol history.
 instruments = ["instruments.json", "options.json"]
+indices = ["indices.json"]
 deals = ["deals.json"]
 market = "market.json"
 vol_data = ["vols.json"]

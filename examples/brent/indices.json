@@ -1,0 +1,8 @@
+[
+  {
+    "id": "ICE-BRENT-INDEX",
+    "display_name": "ICE Brent Index",
+    "rule": { "Published": { "source": "ICE" } },
+    "calendar": "ICEUK"
+  }
+]

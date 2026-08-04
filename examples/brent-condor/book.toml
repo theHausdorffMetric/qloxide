@@ -11,6 +11,7 @@
 #   just day 2026-07-16   (what-if: current book vs one history day)
 #   just series           (P&L across all history days)
 instruments = ["instruments.json"]
+indices = ["indices.json"]
 deals = ["deals.json"]
 market = "market.json"
 reports = ["instruments", "deals", "positions", "pnl"]

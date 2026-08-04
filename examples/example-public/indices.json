@@ -1,0 +1,7 @@
+[
+  {
+    "id": "SYN-INDEX",
+    "display_name": "Synthetic Crude",
+    "rule": { "Published": { "source": "SYN" } }
+  }
+]
