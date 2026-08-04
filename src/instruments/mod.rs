@@ -4,6 +4,7 @@ pub mod equity;
 pub mod future;
 pub mod fx;
 pub mod option;
+pub mod payment;
 pub mod swap;
 
 use serde::{Deserialize, Serialize};
@@ -205,6 +206,7 @@ pub use equity::Equity;
 pub use future::Future;
 pub use fx::FxForward;
 pub use option::EuropeanOption;
+pub use payment::Payment;
 pub use swap::{FixedLeg, FloatingLeg, PayReceive, Swap};
 
 #[cfg(test)]

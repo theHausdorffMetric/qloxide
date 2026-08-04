@@ -4,6 +4,7 @@ pub mod european;
 pub mod future;
 pub mod implied;
 pub mod no_arb;
+pub mod payment;
 
 use crate::core;
 use crate::curves::DiscountCurve;
@@ -12,6 +13,7 @@ use crate::instruments::FinancialInstrument;
 use crate::instruments::bond::Bond;
 use crate::instruments::future::Future as FutureInst;
 use crate::instruments::option::EuropeanOption;
+use crate::instruments::payment::Payment;
 use crate::market_data::MarketData;
 
 /// Convert a Decimal to f64 for pricing math, erroring on overflow.
@@ -58,6 +60,9 @@ pub fn price(inst: &dyn FinancialInstrument, ctx: &dyn PricingContext) -> core::
     }
     if let Some(o) = any.downcast_ref::<EuropeanOption>() {
         return european::price_european(o, ctx);
+    }
+    if let Some(p) = any.downcast_ref::<Payment>() {
+        return payment::price_payment(p, ctx);
     }
 
     Err(core::Error::Pricer(format!(
