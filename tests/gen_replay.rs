@@ -112,6 +112,11 @@ fn replay_brent_timespread() {
     replay_book("brent-timespread", &["instruments.json"]);
 }
 
+#[test]
+fn replay_brent_future() {
+    replay_book("brent-future", &["instruments.json"]);
+}
+
 /// The legacy brent book is hand-written, not generator output (settle-time
 /// as_of, no header stamps) — byte-identical regeneration is a property of
 /// generated files only, so it runs the conformance kit alone.

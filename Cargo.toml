@@ -15,6 +15,7 @@ exclude = [
     "examples/brent/",
     "examples/brent-apo/",
     "examples/brent-condor/",
+    "examples/brent-future/",
     "examples/brent-option/",
     "examples/brent-timespread/",
 ]
