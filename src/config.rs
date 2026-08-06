@@ -398,7 +398,8 @@ fn load_impl(
     let mut sorted_ids: Vec<&String> = instruments.keys().collect();
     sorted_ids.sort(); // deterministic "first seen" for stable warnings
     for id in sorted_ids {
-        let ccy = instruments[id].currency();
+        let inst = &instruments[id];
+        let ccy = inst.currency();
         match currencies.get(&ccy.id) {
             None => {
                 currencies.insert(ccy.id.clone(), (id.clone(), ccy.clone()));
@@ -410,6 +411,33 @@ fn load_impl(
                 ));
             }
             Some(_) => {}
+        }
+
+        // Dollar-terms P&L inherits an option's contract size from its
+        // underlying future; anything else silently defaults to 1
+        // (`portfolio::contract_size`) — surface that at load. Warn now,
+        // error later (settlement-index design note, validation).
+        if let Some(opt) = inst
+            .as_any()
+            .downcast_ref::<crate::instruments::EuropeanOption>()
+        {
+            match instruments.get(&opt.underlying) {
+                None => warnings.push(format!(
+                    "option '{}': unknown underlying '{}'",
+                    id, opt.underlying,
+                )),
+                Some(u)
+                    if u.as_any()
+                        .downcast_ref::<crate::instruments::Future>()
+                        .is_none() =>
+                {
+                    warnings.push(format!(
+                        "option '{}': underlying '{}' is not a future — contract_size defaults to 1",
+                        id, opt.underlying,
+                    ));
+                }
+                Some(_) => {}
+            }
         }
     }
 
@@ -518,12 +546,6 @@ fn load_impl(
                 .as_any()
                 .downcast_ref::<crate::instruments::EuropeanOption>()
             {
-                if !instruments.contains_key(&opt.underlying) {
-                    warnings.push(format!(
-                        "option '{}': unknown underlying '{}'",
-                        id, opt.underlying,
-                    ));
-                }
                 let model_marked = matches!(inst.clearing(), Some(ClearingStatus::Uncleared))
                     && !config.proxy_marks.contains_key(id.as_str());
                 if !expired && model_marked {
@@ -1416,6 +1438,20 @@ market = "market.json"
     "put_or_call": "Call",
     "exercise_style": "European",
     "option_settlement": "Cash"
+  },
+  {
+    "type": "EuropeanOption",
+    "id": "OPT-ON-OPT",
+    "underlying": "OPT-NO-VOL",
+    "credit_id": "ICE",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "clearing": "cleared",
+    "expiry": "2026-03-27",
+    "strike": "75",
+    "put_or_call": "Call",
+    "exercise_style": "European",
+    "option_settlement": "Cash"
   }
 ]"#,
         )
@@ -1448,6 +1484,16 @@ market = "market.json"
                 .iter()
                 .any(|w| w.contains("OPT-NO-UNDERLYING") && w.contains("unknown underlying")),
             "expected unknown underlying warning, got: {:?}",
+            portfolio.warnings,
+        );
+        // An underlying that resolves but is not a future silently prices
+        // dollar-terms P&L with contract_size = 1 — must draw a warning.
+        assert!(
+            portfolio
+                .warnings
+                .iter()
+                .any(|w| w.contains("OPT-ON-OPT") && w.contains("contract_size defaults to 1")),
+            "expected non-future underlying warning, got: {:?}",
             portfolio.warnings,
         );
         // Options must NOT trigger the generic "no market price" warning
