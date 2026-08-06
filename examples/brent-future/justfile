@@ -1,0 +1,22 @@
+# Brent Dec26 outright — recipes for this example book.
+# Run from this directory (`just` finds the nearest justfile).
+
+qloxide := "../.."
+
+# List available recipes
+default:
+    @just --list --unsorted
+
+# All reports, valued at the last history day
+book:
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- --config book.toml
+
+# P&L history from inception (2026-07-01, EOD fill at the settle)
+series:
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- \
+        --config book.toml --report pnl-series
+
+# Model-world risk: futures delta + model book value
+risk:
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-risk -- \
+        --config risk.toml

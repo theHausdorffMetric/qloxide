@@ -1,0 +1,13 @@
+[
+  {
+    "type": "Future",
+    "id": "ICE-B-Z26",
+    "underlying": "ICE-BRENT-INDEX",
+    "currency": {"id": "USD", "settlement": "Null", "day_count": "Act360"},
+    "settlement": {"venue": "ICE", "session": "SETTLE", "time": "19:30", "timezone": "Europe/London", "payment_lag": "Null"},
+    "clearing": "cleared",
+    "expiry": "2026-10-30",
+    "contract_size": "1000",
+    "tick_size": "0.01"
+  }
+]

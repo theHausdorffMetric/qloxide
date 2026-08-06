@@ -1,0 +1,12 @@
+# The simplest possible real book: long 10 Dec26 Brent (Z26), bought
+# 2026-07-01 at that day's ICE settle (72.16 — an EOD fill, so day-one
+# P&L is zero) and held outright.
+#
+# market.json is the one-file market history (arch §9): every trading
+# day from deal inception to the generation point, futures only — no
+# vols. Derived from ICE cleared settlements via qloxide-ice.
+instruments = ["instruments.json"]
+indices = ["indices.json"]
+deals = ["deals.json"]
+market = "market.json"
+reports = ["instruments", "deals", "positions", "pnl"]

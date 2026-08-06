@@ -1,0 +1,11 @@
+[
+  {
+    "id": "FUT-Z26",
+    "instrument_id": "ICE-B-Z26",
+    "direction": "Buy",
+    "quantity": "10",
+    "price": "72.16",
+    "timestamp": "2026-07-01T18:30:00Z",
+    "counterparty": "Marex"
+  }
+]
