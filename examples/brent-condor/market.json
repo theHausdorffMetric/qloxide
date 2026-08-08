@@ -3,7 +3,11 @@
   "generator": "qloxide-ice 0.0.0 (vol-source=ice-vol)",
   "skipped_days": [
     "2026-07-18",
-    "2026-07-19"
+    "2026-07-19",
+    "2026-07-25",
+    "2026-07-26",
+    "2026-08-01",
+    "2026-08-02"
   ],
   "days": [
     {
@@ -154,6 +158,252 @@
             ],
             [
               "2126-06-28",
+              0.04
+            ]
+          ]
+        }
+      },
+      "vol_surfaces": {}
+    },
+    {
+      "valuation_date": "2026-07-23",
+      "as_of": "2026-07-23T00:00:00Z",
+      "market_prices": {
+        "ICE-B-U26": 100.69
+      },
+      "settlement_prices": {
+        "ICE-B-U26": 100.69,
+        "ICE-BUL-U26-C-88": 13.01,
+        "ICE-BUL-U26-C-93": 8.57,
+        "ICE-BUL-U26-P-78": 0.06,
+        "ICE-BUL-U26-P-83": 0.13
+      },
+      "discount_curves": {
+        "USD": {
+          "base_date": "2026-07-23",
+          "day_count": "Act360",
+          "pillars": [
+            [
+              "2026-07-24",
+              0.04
+            ],
+            [
+              "2126-06-29",
+              0.04
+            ]
+          ]
+        }
+      },
+      "vol_surfaces": {}
+    },
+    {
+      "valuation_date": "2026-07-24",
+      "as_of": "2026-07-24T00:00:00Z",
+      "market_prices": {
+        "ICE-B-U26": 96.78
+      },
+      "settlement_prices": {
+        "ICE-B-U26": 96.78,
+        "ICE-BUL-U26-C-88": 9.11,
+        "ICE-BUL-U26-C-93": 4.77,
+        "ICE-BUL-U26-P-78": 0.05,
+        "ICE-BUL-U26-P-83": 0.12
+      },
+      "discount_curves": {
+        "USD": {
+          "base_date": "2026-07-24",
+          "day_count": "Act360",
+          "pillars": [
+            [
+              "2026-07-25",
+              0.04
+            ],
+            [
+              "2126-06-30",
+              0.04
+            ]
+          ]
+        }
+      },
+      "vol_surfaces": {}
+    },
+    {
+      "valuation_date": "2026-07-27",
+      "as_of": "2026-07-27T00:00:00Z",
+      "market_prices": {
+        "ICE-B-U26": 88.36
+      },
+      "settlement_prices": {
+        "ICE-B-U26": 88.36,
+        "ICE-BUL-U26-C-88": 1.62,
+        "ICE-BUL-U26-C-93": 0.43,
+        "ICE-BUL-U26-P-78": 0.04,
+        "ICE-BUL-U26-P-83": 0.13
+      },
+      "discount_curves": {
+        "USD": {
+          "base_date": "2026-07-27",
+          "day_count": "Act360",
+          "pillars": [
+            [
+              "2026-07-28",
+              0.04
+            ],
+            [
+              "2126-07-03",
+              0.04
+            ]
+          ]
+        }
+      },
+      "vol_surfaces": {}
+    },
+    {
+      "valuation_date": "2026-07-28",
+      "as_of": "2026-07-28T00:00:00Z",
+      "market_prices": {
+        "ICE-B-U26": 84.09
+      },
+      "settlement_prices": {
+        "ICE-B-U26": 84.09,
+        "ICE-BUL-U26-C-88": 0.0,
+        "ICE-BUL-U26-C-93": 0.0,
+        "ICE-BUL-U26-P-78": 0.0,
+        "ICE-BUL-U26-P-83": 0.0
+      },
+      "discount_curves": {
+        "USD": {
+          "base_date": "2026-07-28",
+          "day_count": "Act360",
+          "pillars": [
+            [
+              "2026-07-29",
+              0.04
+            ],
+            [
+              "2126-07-04",
+              0.04
+            ]
+          ]
+        }
+      },
+      "vol_surfaces": {}
+    },
+    {
+      "valuation_date": "2026-07-29",
+      "as_of": "2026-07-29T00:00:00Z",
+      "market_prices": {
+        "ICE-B-U26": 90.74
+      },
+      "settlement_prices": {
+        "ICE-B-U26": 90.74,
+        "ICE-BUL-U26-C-88": 0.0,
+        "ICE-BUL-U26-C-93": 0.0,
+        "ICE-BUL-U26-P-78": 0.0,
+        "ICE-BUL-U26-P-83": 0.0
+      },
+      "discount_curves": {
+        "USD": {
+          "base_date": "2026-07-29",
+          "day_count": "Act360",
+          "pillars": [
+            [
+              "2026-07-30",
+              0.04
+            ],
+            [
+              "2126-07-05",
+              0.04
+            ]
+          ]
+        }
+      },
+      "vol_surfaces": {}
+    },
+    {
+      "valuation_date": "2026-07-30",
+      "as_of": "2026-07-30T00:00:00Z",
+      "market_prices": {
+        "ICE-B-U26": 89.03
+      },
+      "settlement_prices": {
+        "ICE-B-U26": 89.03,
+        "ICE-BUL-U26-C-88": 0.0,
+        "ICE-BUL-U26-C-93": 0.0,
+        "ICE-BUL-U26-P-78": 0.0,
+        "ICE-BUL-U26-P-83": 0.0
+      },
+      "discount_curves": {
+        "USD": {
+          "base_date": "2026-07-30",
+          "day_count": "Act360",
+          "pillars": [
+            [
+              "2026-07-31",
+              0.04
+            ],
+            [
+              "2126-07-06",
+              0.04
+            ]
+          ]
+        }
+      },
+      "vol_surfaces": {}
+    },
+    {
+      "valuation_date": "2026-07-31",
+      "as_of": "2026-07-31T00:00:00Z",
+      "market_prices": {
+        "ICE-B-U26": 90.12
+      },
+      "settlement_prices": {
+        "ICE-B-U26": 90.12,
+        "ICE-BUL-U26-C-88": 0.0,
+        "ICE-BUL-U26-C-93": 0.0,
+        "ICE-BUL-U26-P-78": 0.0,
+        "ICE-BUL-U26-P-83": 0.0
+      },
+      "discount_curves": {
+        "USD": {
+          "base_date": "2026-07-31",
+          "day_count": "Act360",
+          "pillars": [
+            [
+              "2026-08-01",
+              0.04
+            ],
+            [
+              "2126-07-07",
+              0.04
+            ]
+          ]
+        }
+      },
+      "vol_surfaces": {}
+    },
+    {
+      "valuation_date": "2026-08-03",
+      "as_of": "2026-08-03T00:00:00Z",
+      "market_prices": {},
+      "settlement_prices": {
+        "ICE-B-U26": 90.12,
+        "ICE-BUL-U26-C-88": 0.0,
+        "ICE-BUL-U26-C-93": 0.0,
+        "ICE-BUL-U26-P-78": 0.0,
+        "ICE-BUL-U26-P-83": 0.0
+      },
+      "discount_curves": {
+        "USD": {
+          "base_date": "2026-08-03",
+          "day_count": "Act360",
+          "pillars": [
+            [
+              "2026-08-04",
+              0.04
+            ],
+            [
+              "2126-07-10",
               0.04
             ]
           ]

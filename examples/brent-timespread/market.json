@@ -50,7 +50,11 @@
     "2026-07-11",
     "2026-07-12",
     "2026-07-18",
-    "2026-07-19"
+    "2026-07-19",
+    "2026-07-25",
+    "2026-07-26",
+    "2026-08-01",
+    "2026-08-02"
   ],
   "days": [
     {
@@ -3546,6 +3550,230 @@
             ],
             [
               "2126-06-28",
+              0.04
+            ]
+          ]
+        }
+      },
+      "vol_surfaces": {}
+    },
+    {
+      "valuation_date": "2026-07-23",
+      "as_of": "2026-07-23T00:00:00Z",
+      "market_prices": {
+        "ICE-B-Z26": 86.97
+      },
+      "settlement_prices": {
+        "ICE-B-N26": 92.05,
+        "ICE-B-Z26": 86.97
+      },
+      "discount_curves": {
+        "USD": {
+          "base_date": "2026-07-23",
+          "day_count": "Act360",
+          "pillars": [
+            [
+              "2026-07-24",
+              0.04
+            ],
+            [
+              "2126-06-29",
+              0.04
+            ]
+          ]
+        }
+      },
+      "vol_surfaces": {}
+    },
+    {
+      "valuation_date": "2026-07-24",
+      "as_of": "2026-07-24T00:00:00Z",
+      "market_prices": {
+        "ICE-B-Z26": 85.52
+      },
+      "settlement_prices": {
+        "ICE-B-N26": 92.05,
+        "ICE-B-Z26": 85.52
+      },
+      "discount_curves": {
+        "USD": {
+          "base_date": "2026-07-24",
+          "day_count": "Act360",
+          "pillars": [
+            [
+              "2026-07-25",
+              0.04
+            ],
+            [
+              "2126-06-30",
+              0.04
+            ]
+          ]
+        }
+      },
+      "vol_surfaces": {}
+    },
+    {
+      "valuation_date": "2026-07-27",
+      "as_of": "2026-07-27T00:00:00Z",
+      "market_prices": {
+        "ICE-B-Z26": 81.99
+      },
+      "settlement_prices": {
+        "ICE-B-N26": 92.05,
+        "ICE-B-Z26": 81.99
+      },
+      "discount_curves": {
+        "USD": {
+          "base_date": "2026-07-27",
+          "day_count": "Act360",
+          "pillars": [
+            [
+              "2026-07-28",
+              0.04
+            ],
+            [
+              "2126-07-03",
+              0.04
+            ]
+          ]
+        }
+      },
+      "vol_surfaces": {}
+    },
+    {
+      "valuation_date": "2026-07-28",
+      "as_of": "2026-07-28T00:00:00Z",
+      "market_prices": {
+        "ICE-B-Z26": 78.75
+      },
+      "settlement_prices": {
+        "ICE-B-N26": 92.05,
+        "ICE-B-Z26": 78.75
+      },
+      "discount_curves": {
+        "USD": {
+          "base_date": "2026-07-28",
+          "day_count": "Act360",
+          "pillars": [
+            [
+              "2026-07-29",
+              0.04
+            ],
+            [
+              "2126-07-04",
+              0.04
+            ]
+          ]
+        }
+      },
+      "vol_surfaces": {}
+    },
+    {
+      "valuation_date": "2026-07-29",
+      "as_of": "2026-07-29T00:00:00Z",
+      "market_prices": {
+        "ICE-B-Z26": 83.44
+      },
+      "settlement_prices": {
+        "ICE-B-N26": 92.05,
+        "ICE-B-Z26": 83.44
+      },
+      "discount_curves": {
+        "USD": {
+          "base_date": "2026-07-29",
+          "day_count": "Act360",
+          "pillars": [
+            [
+              "2026-07-30",
+              0.04
+            ],
+            [
+              "2126-07-05",
+              0.04
+            ]
+          ]
+        }
+      },
+      "vol_surfaces": {}
+    },
+    {
+      "valuation_date": "2026-07-30",
+      "as_of": "2026-07-30T00:00:00Z",
+      "market_prices": {
+        "ICE-B-Z26": 81.73
+      },
+      "settlement_prices": {
+        "ICE-B-N26": 92.05,
+        "ICE-B-Z26": 81.73
+      },
+      "discount_curves": {
+        "USD": {
+          "base_date": "2026-07-30",
+          "day_count": "Act360",
+          "pillars": [
+            [
+              "2026-07-31",
+              0.04
+            ],
+            [
+              "2126-07-06",
+              0.04
+            ]
+          ]
+        }
+      },
+      "vol_surfaces": {}
+    },
+    {
+      "valuation_date": "2026-07-31",
+      "as_of": "2026-07-31T00:00:00Z",
+      "market_prices": {
+        "ICE-B-Z26": 82.23
+      },
+      "settlement_prices": {
+        "ICE-B-N26": 92.05,
+        "ICE-B-Z26": 82.23
+      },
+      "discount_curves": {
+        "USD": {
+          "base_date": "2026-07-31",
+          "day_count": "Act360",
+          "pillars": [
+            [
+              "2026-08-01",
+              0.04
+            ],
+            [
+              "2126-07-07",
+              0.04
+            ]
+          ]
+        }
+      },
+      "vol_surfaces": {}
+    },
+    {
+      "valuation_date": "2026-08-03",
+      "as_of": "2026-08-03T00:00:00Z",
+      "market_prices": {
+        "ICE-B-Z26": 79.22
+      },
+      "settlement_prices": {
+        "ICE-B-N26": 92.05,
+        "ICE-B-Z26": 79.22
+      },
+      "discount_curves": {
+        "USD": {
+          "base_date": "2026-08-03",
+          "day_count": "Act360",
+          "pillars": [
+            [
+              "2026-08-04",
+              0.04
+            ],
+            [
+              "2126-07-10",
               0.04
             ]
           ]
