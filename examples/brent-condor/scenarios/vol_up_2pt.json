@@ -1,23 +1,23 @@
 {
   "days": [
     {
-      "valuation_date": "2026-08-03",
-      "as_of": "2026-08-03T00:00:00Z",
+      "valuation_date": "2026-08-06",
+      "as_of": "2026-08-06T00:00:00Z",
       "source": "scenario:vol+2pt",
       "generator": "qloxide-ice 0.0.0 gen-bumps",
       "market_prices": {},
       "settlement_prices": {},
       "discount_curves": {
         "USD": {
-          "base_date": "2026-08-03",
+          "base_date": "2026-08-06",
           "day_count": "Act360",
           "pillars": [
             [
-              "2026-08-04",
+              "2026-08-07",
               0.04
             ],
             [
-              "2126-07-10",
+              "2126-07-13",
               0.04
             ]
           ]
