@@ -20,15 +20,15 @@ pub struct DayStats {
     pub sd: f64,
     pub skew: f64,
     pub kurt: f64,
-    /// Quantiles at [p01, p05, p10, p50, p90, p95, p99].
-    pub quantiles: [f64; 7],
+    /// Quantiles at [p01, p05, p10, p25, p50, p75, p90, p95, p99].
+    pub quantiles: [f64; 9],
     pub xi_left: f64,
     pub xi_right: f64,
     pub max_fit_err: f64,
     pub min_gamma: f64,
 }
 
-pub const QUANTILE_LEVELS: [f64; 7] = [0.01, 0.05, 0.10, 0.50, 0.90, 0.95, 0.99];
+pub const QUANTILE_LEVELS: [f64; 9] = [0.01, 0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95, 0.99];
 
 /// Run the full pipeline once: the stat vector plus the stitched density
 /// it was read from (kept for plotting and envelope evaluation).
@@ -41,7 +41,7 @@ pub fn pipeline(
     let fit = fengler::fit(&slice.strikes, &slice.calls, slice.f, cfg)?;
     let dens = density::extract(&fit);
     let st = tails::graft(slice, &fit, &dens, alpha, min_premium)?;
-    let mut quantiles = [f64::NAN; 7];
+    let mut quantiles = [f64::NAN; 9];
     for (q, &lvl) in quantiles.iter_mut().zip(&QUANTILE_LEVELS) {
         *q = st.quantile(lvl).unwrap_or(f64::NAN);
     }
@@ -234,7 +234,9 @@ pub fn run(slice: &SmileSlice, cfg: &PerturbConfig) -> Result<PerturbReport> {
         baseline.kurt,
         draws.iter().map(|s| s.kurt).collect(),
     );
-    let names = ["p01", "p05", "p10", "p50", "p90", "p95", "p99"];
+    let names = [
+        "p01", "p05", "p10", "p25", "p50", "p75", "p90", "p95", "p99",
+    ];
     for (i, name) in names.into_iter().enumerate() {
         push(
             name,
