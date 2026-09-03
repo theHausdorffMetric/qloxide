@@ -1,0 +1,44 @@
+# Brent Sep26 iron condor — recipes for this example book.
+# Run from this directory (`just` finds the nearest justfile), or from the
+# repo root via `just -f examples/brent-condor/justfile <recipe>`.
+
+qloxide := "../../.."
+
+# List available recipes
+default:
+    @just --list --unsorted
+
+# All reports, valued at the last history day
+book:
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- --config book.toml
+
+# What-if: the full current book against one history day
+# (includes deals struck later — not P&L history; that's `just series`)
+day date:
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- \
+        --config book.toml --as-of {{date}} --report pnl
+
+# True P&L history over the market history, in one invocation:
+# composition-aware (deals count from inception), with daily changes
+series:
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- \
+        --config book.toml --report pnl-series
+
+# Model-world risk: position greeks, calibration residuals (model vs
+# settle), model book value
+risk:
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-risk -- \
+        --config risk.toml
+
+# Model book value under each committed scenario (settles stripped, so
+# only the model responds; scenario P&L = value minus base)
+scenarios:
+    @echo "== base"
+    @cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-risk -- \
+        --config risk.toml 2>/dev/null | grep 'Model value'
+    @for f in scenarios/*.json; do \
+        echo "== $(basename $f .json)"; \
+        cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-risk -- \
+            --config risk.toml --market $f 2>/dev/null \
+            | grep 'Model value'; \
+    done
