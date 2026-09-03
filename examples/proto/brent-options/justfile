@@ -1,0 +1,31 @@
+# Brent Nov26 options prototype — recipes for this proto book.
+# Run from this directory (`just` finds the nearest justfile), or from the
+# repo root via `just -f examples/brent-option/justfile <recipe>`.
+
+qloxide := "../../.."
+
+# List available recipes
+default:
+    @just --list --unsorted
+
+# All reports, valued at the last history day
+book:
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- --config book.toml
+
+# What-if: the full current book against one history day
+# (includes deals struck later — not P&L history; that's `just series`)
+day date:
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- \
+        --config book.toml --as-of {{date}} --report pnl
+
+# True P&L history over the market history, in one invocation:
+# composition-aware (deals count from inception), with daily changes
+series:
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-book -- \
+        --config book.toml --report pnl-series
+
+# Model-world risk: position greeks, calibration residuals (model vs
+# settle), model book value
+risk:
+    cargo run --quiet --manifest-path {{qloxide}}/Cargo.toml --bin qloxide-risk -- \
+        --config risk.toml

@@ -18,6 +18,7 @@ exclude = [
     "examples/brent-future/",
     "examples/brent-option/",
     "examples/brent-timespread/",
+    "examples/proto/",
 ]
 
 [workspace]
