@@ -316,6 +316,15 @@ pub struct Settlement {
 
 A contract says "ICE SETTLE at 19:30 Europe/London" — sufficient for both pricing (convert to day fraction) and operations (reconciliation, blotter matching). `at_date(date)` resolves the settlement instant as a `Zoned`; `pay_date(date)` applies the payment lag.
 
+### 6.4 Instrument identifiers
+
+An instrument id is the reconciliation key against the outside world, so it is not free text:
+
+- **Cleared / listed products carry the exchange's own contract name.** The id is `<VENUE>-<contract code>-<month code>`, with `-<C|P>-<strike>` appended for options, where the contract code is the venue's code for that listing, not a commodity nickname. ICE Brent futures are `ICE-B-Z26` (ICE code `B`); the cash-settled Brent European option is its own listing, `ICE-BUL-Z26-C-72` (ICE code `BUL`); Brent 1st Line is `ICE-I-U26`. Never `ICE-BRN-…`. A settlement row, a clearing statement and a qloxide position then share one key with no mapping table in between.
+- **Made-up ids are reserved for bilateral OTC deals**, where no exchange name exists.
+
+Today the rule is enforced at the driver boundary: qloxide-ice keys its contract registry by these codes and rejects legacy commodity-symbol ids. qloxide itself does not validate id shape.
+
 ---
 
 ## 7. Domain Model Summary

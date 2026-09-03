@@ -304,6 +304,9 @@ Decided in v3:
 - ~~Naming asymmetry~~ — `underlying` means "the thing one level down":
   instrument id on options, index id on futures. Accepted; document.
 - ~~Cash representation~~ — `Payment` instrument (shipped).
+- ~~Id scheme~~ — cleared/listed ids carry the venue's contract code
+  (`ICE-B-*`, `ICE-BUL-*`, `ICE-I-*`; commit 8f717bd); made-up ids only
+  for bilateral OTC deals. Stated in ARCHITECTURE.md §6.4.
 
 Parked deliberately:
 
