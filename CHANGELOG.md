@@ -5,6 +5,17 @@ All notable changes to qloxide are documented here. The format follows
 [Semantic Versioning](https://semver.org/) (pre-1.0: breaking changes bump
 the minor version).
 
+## [Unreleased]
+
+### Changed
+
+- Repository moved from sourcehut to GitHub
+  (`https://github.com/theHausdorffMetric/qloxide`): `repository` in both
+  crate manifests, the architecture doc's hosting section and the justfile
+  note follow. `Cargo.toml` now states what ships with an `include`
+  allowlist (`just pkg-check` still guards the example boundary) instead of
+  an `exclude` list, and declares `rust-version = "1.98"`. No code changes.
+
 ## [0.5.0] — 2026-07-28
 
 ### Added

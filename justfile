@@ -49,8 +49,8 @@ bond:
 # examples/brent-option/justfile
 
 # ── crate boundary ───────────────────────────────────────────────────
-# Only the two public examples may ship in the crate; Cargo.toml `exclude`
-# keeps the ICE-derived books and everything under examples/proto/ out.
+# Only the two public examples may ship in the crate; Cargo.toml `include`
+# names just those two, so the ICE-derived books and examples/proto/ stay out.
 
 # Fail if `cargo package` would ship any example beyond example-public / bond_pricing
 pkg-check:

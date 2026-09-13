@@ -96,55 +96,33 @@ Mono-repo root: `~/dev/sourcehut/ql/`
 
 ## 4. Repository & Publishing
 
-### 4.1 Standalone Repo
-
-qloxide gets its own git repo, separate from the `ql/` parent which holds QuantMath reference code.
+### 4.1 One public repo (since 2026-09-13)
 
 | Aspect | Detail |
 |--------|--------|
-| **Local path** | `/home/dan/dev/ql/qloxide/` (standalone git repo) |
-| **Git hosting** | sr.ht (sourcehut) |
-| **Master repo** | `git.sr.ht/~danprobst/qloxide` |
-| **Dev fork** | `git.sr.ht/~dpclaude/qloxide` |
-| **Publishing** | crates.io (`qloxide`) |
-| **Workflow** | Develop on `dpclaude` fork, merge to `danprobst` master via sr.ht patches |
+| **Repository** | `https://github.com/theHausdorffMetric/qloxide` — development and releases in one repo, branch `master` |
+| **Local clones** | `~/dev/ideas/sourcehut/qloxide/` (submodule of the `ideas` monorepo, workstation) and Dan's clones on Tuxedo |
+| **Who pushes** | the agent from the workstation (fine-grained token scoped to this repo, contents only) and Dan |
+| **Publishing** | crates.io (`qloxide`); `qloxide-analytics` (`analytics/`) is a workspace member and is not published |
+| **Release** | Dan, on Tuxedo: review `git diff v<prev>..master`, `just ci`, `cargo publish --no-verify`; the published commit is then tagged `v<version>` |
+| **Guards** | GitHub ruleset on `master` (no force-push, no deletion); publishing is never automated, so a tag alone publishes nothing |
 
-### 4.2 sr.ht Patch Workflow
+### 4.2 History
 
-Sourcehut uses email-based patches rather than GitHub-style pull requests. The workflow:
-
-1. Develop on `dpclaude`'s fork, push to `git.sr.ht/~dpclaude/qloxide`
-2. Submit patches to `danprobst`'s repo via one of:
-   - **`git send-email`** — traditional email patch workflow to the project mailing list
-   - **sr.ht web UI** — paste/upload patches via the "patches" tracker
-   - **`git format-patch` + web submit** — generate patches, submit via sr.ht web
-3. Review and merge on `danprobst`'s master repo
-
-### 4.3 Git Remotes Setup (on this machine)
-
-```bash
-# In /home/dan/dev/ql/qloxide/
-git remote add origin git@git.sr.ht:~dpclaude/qloxide    # dev fork (push here)
-git remote add upstream git@git.sr.ht:~danprobst/qloxide  # master repo (pull from here)
-```
-
-### 4.4 Initial Setup Steps
-
-1. Initialize standalone git repo in `/home/dan/dev/ql/qloxide/`
-2. Add `qloxide/` to parent repo's `.gitignore`
-3. Create repo on sr.ht under `danprobst`: `git.sr.ht/~danprobst/qloxide`
-4. Fork to `dpclaude`: `git.sr.ht/~dpclaude/qloxide`
-5. Set up git remotes locally (origin = dpclaude, upstream = danprobst)
-6. Push initial skeleton to dpclaude, submit first patch to danprobst
-7. Reserve crate name on crates.io (publish empty 0.0.1 or use `cargo owner`)
-
----
+Until 2026-09-13 the code lived on sourcehut in two repos — a private dev
+fork under `~dpclaude` and a public release repo under `~danprobst`, fed by
+patches — and the crates.io metadata pointed at the latter. sourcehut's
+terms of service ban LLM-assisted content from 2026-09-10, so both repos
+were retired and the full dev history (Claude co-author trailers included)
+moved to GitHub. The release copy had been a plain mirror of the dev
+history, so nothing was lost: releases 0.1.0–0.5.0 were cut from that
+setup, and `v0.5.0` on GitHub is the commit crates.io 0.5.0 was built from.
 
 ## 5. Open Items
 
 | Item | Status | Notes |
 |------|--------|-------|
-| sr.ht repo creation | Done | `git.sr.ht/~danprobst/qloxide` + `~dpclaude/qloxide` |
+| Repo hosting | Done | GitHub `theHausdorffMetric/qloxide` since 2026-09-13 (the two sr.ht repos are retired, §4.2) |
 | Settlement session modeling details | Done | Settlement struct: venue + session + time + timezone |
 | Step-by-step implementation plan | Done | All original steps complete or superseded |
 | crates.io name reservation | Done | Published as `qloxide` on crates.io |
