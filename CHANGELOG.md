@@ -7,14 +7,76 @@ the minor version).
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-09-13
+
+Settlement-index groundwork, cash as an instrument, and the move to GitHub.
+Pre-1.0: the `Future.underlying` type change is breaking, hence the minor
+bump; on-disk JSON shapes are unchanged.
+
+### Added
+
+- **`Payment` instrument** (`instruments::payment`, `pricing::payment`) —
+  cash as a bookable instrument: `Payment { id, credit_id, amount, currency,
+  settlement, pay_date }` via typetag (maturity = pay date, no clearing),
+  modeled on `FxForward`. The pricer discounts the amount off the currency
+  curve; payments on or before the valuation date are settled and price at
+  zero, matching the bond pricer's flow cutoff. Groundwork for
+  settlement-as-conversion in the settlement-index redesign.
+
+- **Settlement-index registry** (`reference_data::settlement_index`):
+  `IndexRef`, `SettlementIndex`, `IndexRule { Published, FrontLine, Average,
+  Spread }` and `RollRule`, loaded from a per-book `indices.json` into a
+  validated registry — duplicate ids, dangling references and reference
+  cycles are config errors, and a future on an `Average` index must have
+  `window.end == expiry` (wrong-month binding check). First slice (M1) of
+  the settlement-index design note v3.
+
+- **Config warnings** for an option whose underlying does not resolve, or
+  resolves to something other than a future — dollar-terms P&L inherits the
+  contract size from the underlying future and used to default to 1
+  silently. The unknown-underlying check moved into the static consistency
+  pass, so it also fires in listing-only runs. Warn now, error later.
+
+- **Examples**: `brent-future` (outright long 10 Dec26 filled at the
+  2026-07-01 settle — the simplest real book, with its own replay lock in
+  `gen_replay`) and `brent-apo`; the four generated books extended through
+  2026-08-20 from ICE settlements; the `brent-option` book gains its tier-1
+  `quotes.json` sidecar so `qloxide-analytics` runs against it without the
+  licensed source. `examples/proto/` holds prototype books
+  (`just proto-init <name> [from]`), excluded from the crate wholesale, and
+  `just pkg-check` (part of `just ci`) fails if the package would ship any
+  example beyond `example-public` and `bond_pricing`.
+
+- **Docs**: settlement series & terms design note (v2, with research notes
+  on QuantMath internals and industry practice), superseded by v3 (index
+  registry + uniform futures; Account and cash ladder scheduled as slice
+  M4); `ARCHITECTURE.md` §6.4 states the instrument-id rule.
+
 ### Changed
 
-- Repository moved from sourcehut to GitHub
+- **Breaking: `Future.underlying` is an `IndexRef`** into the
+  settlement-index registry instead of free text. The serde shape is
+  unchanged (still a JSON string), but the referenced index must exist in
+  the book's `indices.json`. Reports derive the Underlying column from the
+  registry's display name.
+
+- **Instrument ids carry the exchange's contract codes**: cleared/listed
+  products are `<VENUE>-<contract code>-<month>[-C|P-<strike>]` — Brent
+  futures `ICE-B-*`, Brent options `ICE-BUL-*`, Brent 1st Line `ICE-I-*` —
+  never a commodity nickname; made-up ids only for bilateral OTC deals.
+  Applied across all example books, fixtures and docs. qloxide does not
+  validate id shape; the driver boundary does.
+
+- **`qloxide-analytics`** (workspace sibling, unpublished): `DayStats`
+  quantiles gain p25/p75 (7 → 9 levels); perturbation bands pick the new
+  names up automatically, consumers indexing the array shift accordingly.
+
+- **Repository moved from sourcehut to GitHub**
   (`https://github.com/theHausdorffMetric/qloxide`): `repository` in both
   crate manifests, the architecture doc's hosting section and the justfile
   note follow. `Cargo.toml` now states what ships with an `include`
   allowlist (`just pkg-check` still guards the example boundary) instead of
-  an `exclude` list, and declares `rust-version = "1.98"`. No code changes.
+  an `exclude` list, and declares `rust-version = "1.98"`.
 
 ## [0.5.0] — 2026-07-28
 

@@ -12,7 +12,7 @@ categories = ["finance"]
 
 [dependencies]
 # The core stays lean (libm-only); the conic-QP solver lives here.
-qloxide = { path = "..", version = "0.5", default-features = false }
+qloxide = { path = "..", version = "0.6", default-features = false }
 # The Fengler QP: interior-point conic solver, pure Rust.
 clarabel = "0.11"
 thiserror = "2"
