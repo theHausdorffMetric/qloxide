@@ -374,5 +374,5 @@ Parked deliberately:
   flat-surface relation).
 - qloxide-ice `src/registry.rs` — the `BFL` entry whose comment this
   proposal turns into data.
-- dpdev `ql/brent-apo` — the worked case (real ICE marks via
+- the `brent-apo` example book — the worked case (real ICE marks via
   `qloxide-ice gen-series`).
