@@ -7,8 +7,8 @@
 #
 # Ids carry ICE's own contract codes (ARCHITECTURE.md §6.4): ICE-B-X26 is
 # the Brent Crude Futures contract (ICE code B), ICE-BUL-X26-C-91 the
-# cash-settled Brent European option (ICE code BUL). Mirrors the team-box
-# book dpdev/ql/brent-option, which still carried the retired ICE-BRN-*
+# cash-settled Brent European option (ICE code BUL). Mirrors an earlier
+# brent-option book, which still carried the retired ICE-BRN-*
 # commodity-symbol ids and a free-text "Brent" underlying; here the future
 # settles against the registry node ICE-BRENT-INDEX like the committed books.
 #

@@ -337,7 +337,7 @@ Parked deliberately:
 - **M2** — resolve + partition in the pricing module
   (`PricingContext::fixing(series_id, date)`, shared with swap floating
   legs); driver population (qloxide-ice curated tier + generated period
-  tier; bitrepo trails).
+  tier).
 - **M3** — `AsianOption` + Turnbull–Wakeman with the seasoned-strike
   rewrite K̂ = (nK − mĀ)/(n−m) (K̂ ≤ 0 ⇒ discounted cash + forward
   strip).
@@ -369,7 +369,7 @@ Parked deliberately:
   case: LTD last working day of the month, cash two clearing-house
   business days later, final settle = monthly average of Platts daily
   publications, running-month prints = realized/balmo weighted average.
-- bitrepo/icedat `docs/option_model_conventions.md` — the APO
+- icedat `docs/option_model_conventions.md` — the APO
   vol-convention section (T_eff fingerprint, SOFR discounting,
   flat-surface relation).
 - qloxide-ice `src/registry.rs` — the `BFL` entry whose comment this
